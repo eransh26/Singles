@@ -37,35 +37,36 @@ export default async function GroupsPage() {
   const pendingCount = groups.filter((group) => group.joinRequests.length > 0).length;
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-6xl flex-col gap-6 px-4 py-6">
-      <section className="rounded-[2rem] border bg-card p-6 shadow-sm">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Groups</p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight">Find your spaces</h1>
-            <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-              Open groups can be joined immediately. Closed and invite-only groups stay intentional through a request flow.
+    <main className="lux-shell">
+      <section className="lux-hero">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-3xl">
+            <p className="lux-overline">Groups</p>
+            <h1 className="lux-title mt-3">Private spaces with clearer boundaries.</h1>
+            <p className="lux-body mt-4">
+              Open groups stay easy to enter. Closed and invite-only rooms feel more selective, quieter, and deliberately held.
             </p>
           </div>
-          <div className="flex flex-wrap gap-2 text-xs">
-            <span className="rounded-full border px-3 py-1.5">Joined: {joinedCount}</span>
-            <span className="rounded-full border px-3 py-1.5">Pending: {pendingCount}</span>
-            <span className="rounded-full border px-3 py-1.5">Available: {groups.length}</span>
+          <div className="flex flex-wrap gap-2.5">
+            <span className="lux-chip">Joined {joinedCount}</span>
+            <span className="lux-chip">Pending {pendingCount}</span>
+            <span className="lux-chip lux-chip-accent">Available {groups.length}</span>
           </div>
         </div>
       </section>
 
       {promotedPlacement ? (
-        <section className="rounded-[2rem] border border-sky-200 bg-sky-50 p-6 shadow-sm" data-testid="groups-promoted-event">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <p className="text-xs uppercase tracking-[0.24em] text-sky-700">Promoted event</p>
-              <h2 className="mt-2 text-2xl font-semibold tracking-tight">{promotedPlacement.eventPromotion.title}</h2>
-              <p className="mt-2 max-w-2xl text-sm text-sky-900/80">
+        <section className="lux-card relative overflow-hidden" data-testid="groups-promoted-event">
+          <div className="absolute inset-y-0 left-0 w-1.5 rounded-full bg-[color:var(--lux-taupe)]" />
+          <div className="flex flex-col gap-4 pl-2 lg:flex-row lg:items-center lg:justify-between">
+            <div className="max-w-3xl">
+              <p className="lux-overline">Promoted event</p>
+              <h2 className="mt-3 text-2xl font-semibold tracking-tight text-[color:var(--lux-text)]">{promotedPlacement.eventPromotion.title}</h2>
+              <p className="lux-body mt-3">
                 {promotedPlacement.eventPromotion.description ?? "A promoted community event is highlighted in the groups area."}
               </p>
             </div>
-            <a className="inline-flex rounded-full border border-sky-400 px-4 py-2 text-sm font-medium text-sky-900" href={promotedPlacement.eventPromotion.externalLink} rel="noreferrer" target="_blank">
+            <a className="lux-button-secondary" href={promotedPlacement.eventPromotion.externalLink} rel="noreferrer" target="_blank">
               View promoted event
             </a>
           </div>
@@ -75,8 +76,8 @@ export default async function GroupsPage() {
       <section className="grid gap-6 lg:grid-cols-[minmax(0,1.7fr)_minmax(320px,0.9fr)]">
         <div className="space-y-4">
           <div>
-            <p className="text-sm text-muted-foreground">Browse and join</p>
-            <h2 className="text-xl font-semibold">Current groups</h2>
+            <p className="lux-overline">Browse and join</p>
+            <h2 className="lux-section-title mt-2">Current groups</h2>
           </div>
           {groups.map((group) => {
             const membership = group.memberships[0];
@@ -84,42 +85,36 @@ export default async function GroupsPage() {
             const isOwner = group.createdByUserId === viewer.id;
 
             return (
-              <article key={group.id} className="rounded-3xl border bg-card p-5 shadow-sm">
-                <div className="flex flex-wrap items-start justify-between gap-4">
+              <article key={group.id} className="lux-card">
+                <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
                   <div className="max-w-2xl">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Link className="text-lg font-semibold underline-offset-4 hover:underline" href={`/groups/${group.id}`}>
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      <Link className="text-xl font-semibold tracking-tight text-[color:var(--lux-text)] underline-offset-4 hover:underline" href={`/groups/${group.id}`}>
                         {group.name}
                       </Link>
-                      <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
-                        {group.groupType}
-                      </span>
-                      {group.isSmallPrivateGroup ? (
-                        <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
-                          Small private
-                        </span>
-                      ) : null}
+                      <span className="lux-chip">{group.groupType}</span>
+                      {group.isSmallPrivateGroup ? <span className="lux-chip lux-chip-muted">Small private</span> : null}
                     </div>
-                    <p className="mt-2 text-sm text-muted-foreground">{group.description ?? "No description yet."}</p>
-                    <div className="mt-4 flex flex-wrap gap-2 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                    <p className="mt-3 text-sm leading-6 text-[color:var(--lux-text-secondary)]">{group.description ?? "No description yet."}</p>
+                    <div className="mt-4 flex flex-wrap gap-2 text-[11px] uppercase tracking-[0.18em] text-[color:var(--lux-text-muted)]">
                       <span>{group._count.memberships} active member{group._count.memberships === 1 ? "" : "s"}</span>
                       {isOwner ? <span>You created this group</span> : null}
                     </div>
                   </div>
-                  <div className="min-w-[180px]">
+                  <div className="min-w-[210px]">
                     {isOwner ? (
-                      <span className="inline-flex rounded-full border px-3 py-1.5 text-xs font-medium">Owner</span>
+                      <span className="lux-chip lux-chip-accent">Owner</span>
                     ) : membership?.status === MembershipStatus.ACTIVE ? (
-                      <span className="inline-flex rounded-full border px-3 py-1.5 text-xs font-medium">Joined</span>
+                      <span className="lux-chip">Joined</span>
                     ) : hasPendingRequest ? (
-                      <span className="inline-flex rounded-full border px-3 py-1.5 text-xs font-medium">Request pending</span>
+                      <span className="lux-chip">Request pending</span>
                     ) : (
-                      <form action={joinGroupAction} className="grid gap-2">
+                      <form action={joinGroupAction} className="grid gap-3">
                         <input name="groupId" type="hidden" value={group.id} />
                         {group.groupType !== GroupType.OPEN ? (
-                          <input className="rounded-2xl border px-3 py-2 text-sm" name="requestMessage" placeholder="Optional request note" />
+                          <input className="lux-input" name="requestMessage" placeholder="Optional request note" />
                         ) : null}
-                        <button className="rounded-full bg-primary px-3 py-2 text-sm font-medium text-primary-foreground" type="submit">
+                        <button className="lux-button-primary" type="submit">
                           {group.groupType === GroupType.OPEN ? "Join group" : "Request to join"}
                         </button>
                       </form>
@@ -132,55 +127,53 @@ export default async function GroupsPage() {
         </div>
 
         <aside className="space-y-6">
-          <section className="rounded-3xl border bg-card p-5 shadow-sm">
-            <div className="border-b pb-4">
-              <p className="text-sm text-muted-foreground">Create a group</p>
-              <h2 className="mt-1 text-xl font-semibold">Start a niche space</h2>
-              <p className="mt-2 text-sm text-muted-foreground">
+          <section className="lux-card">
+            <div className="border-b lux-divider pb-5">
+              <p className="lux-overline">Create a group</p>
+              <h2 className="mt-3 text-2xl font-semibold tracking-tight text-[color:var(--lux-text)]">Start a more curated room</h2>
+              <p className="lux-body mt-3">
                 Keep it minimal: name it clearly, define the tone, and choose the right access model.
               </p>
             </div>
-            <form action={createGroupAction} className="mt-5 grid gap-3 text-sm">
+            <form action={createGroupAction} className="mt-5 grid gap-3 text-sm text-[color:var(--lux-text-secondary)]">
               <label className="grid gap-2">
-                <span>Name</span>
-                <input className="rounded-2xl border bg-background px-4 py-3" name="name" required />
+                <span className="font-medium text-[color:var(--lux-text)]">Name</span>
+                <input className="lux-input" name="name" required />
               </label>
               <label className="grid gap-2">
-                <span>Description</span>
-                <textarea className="min-h-24 rounded-2xl border bg-background px-4 py-3" name="description" />
+                <span className="font-medium text-[color:var(--lux-text)]">Description</span>
+                <textarea className="lux-textarea min-h-24" name="description" />
               </label>
               <label className="grid gap-2">
-                <span>Group type</span>
-                <select className="rounded-2xl border bg-background px-4 py-3" defaultValue={GroupType.OPEN} name="groupType">
+                <span className="font-medium text-[color:var(--lux-text)]">Group type</span>
+                <select className="lux-select" defaultValue={GroupType.OPEN} name="groupType">
                   {Object.values(GroupType).map((value) => (
                     <option key={value} value={value}>{value}</option>
                   ))}
                 </select>
               </label>
-              <label className="flex items-center gap-2 rounded-2xl border px-4 py-3">
-                <input name="isSmallPrivateGroup" type="checkbox" />
+              <label className="lux-panel flex items-center gap-3">
+                <input className="size-4 accent-[color:var(--lux-gold)]" name="isSmallPrivateGroup" type="checkbox" />
                 <span>Small private group</span>
               </label>
-              <button className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground" type="submit">
-                Create group
-              </button>
+              <button className="lux-button-primary" type="submit">Create group</button>
             </form>
           </section>
 
-          <section className="rounded-3xl border bg-card p-5 shadow-sm">
-            <p className="text-sm text-muted-foreground">Quick guide</p>
+          <section className="lux-card">
+            <p className="lux-overline">Access guide</p>
             <div className="mt-4 grid gap-3 text-sm">
-              <div className="rounded-2xl border p-4">
-                <p className="font-medium">Open</p>
-                <p className="mt-1 text-muted-foreground">Anyone can join immediately.</p>
+              <div className="lux-card-soft">
+                <p className="text-base font-semibold tracking-tight text-[color:var(--lux-text)]">Open</p>
+                <p className="mt-2 text-sm leading-6 text-[color:var(--lux-text-secondary)]">Anyone can join immediately.</p>
               </div>
-              <div className="rounded-2xl border p-4">
-                <p className="font-medium">Closed</p>
-                <p className="mt-1 text-muted-foreground">Users request access and wait for approval.</p>
+              <div className="lux-card-soft">
+                <p className="text-base font-semibold tracking-tight text-[color:var(--lux-text)]">Closed</p>
+                <p className="mt-2 text-sm leading-6 text-[color:var(--lux-text-secondary)]">Users request access and wait for approval.</p>
               </div>
-              <div className="rounded-2xl border p-4">
-                <p className="font-medium">Invite only</p>
-                <p className="mt-1 text-muted-foreground">Use for the most curated spaces.</p>
+              <div className="lux-card-soft">
+                <p className="text-base font-semibold tracking-tight text-[color:var(--lux-text)]">Invite only</p>
+                <p className="mt-2 text-sm leading-6 text-[color:var(--lux-text-secondary)]">Use for the most curated spaces.</p>
               </div>
             </div>
           </section>

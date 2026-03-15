@@ -3,32 +3,74 @@
 @tailwind utilities;
 
 :root {
-  --background: 0 0% 100%;
-  --foreground: 240 10% 3.9%;
-  --card: 0 0% 100%;
-  --card-foreground: 240 10% 3.9%;
-  --border: 240 5.9% 90%;
-  --input: 240 5.9% 90%;
-  --ring: 240 5.9% 10%;
-  --primary: 240 5.9% 10%;
-  --primary-foreground: 0 0% 98%;
-  --muted: 240 4.8% 95.9%;
-  --muted-foreground: 240 3.8% 46.1%;
-  --radius: 0.5rem;
+  --background: 34 27% 95%;
+  --foreground: 24 16% 11%;
+  --card: 30 60% 99%;
+  --card-foreground: 24 16% 11%;
+  --border: 28 24% 82%;
+  --input: 31 30% 88%;
+  --ring: 31 24% 61%;
+  --primary: 24 16% 11%;
+  --primary-foreground: 30 100% 97%;
+  --muted: 30 25% 90%;
+  --muted-foreground: 28 11% 34%;
+  --radius: 1.5rem;
+
+  --lux-bg: #f7f3ee;
+  --lux-secondary: #efe7de;
+  --lux-card: #fffdfc;
+  --lux-elevated: #ffffff;
+  --lux-text: #1f1a17;
+  --lux-text-secondary: #5f544c;
+  --lux-text-muted: #8e8177;
+  --lux-border: #ddd2c8;
+  --lux-border-soft: #eae2d9;
+  --lux-divider: #e4dbd2;
+  --lux-champagne: #c6a66b;
+  --lux-gold: #a8844a;
+  --lux-taupe: #b39a88;
+  --lux-mauve: #b58c93;
+  --lux-cta: #1f1a17;
+  --lux-cta-text: #fff8f2;
+  --lux-danger: #8a5b52;
+  --lux-danger-bg: rgba(138, 91, 82, 0.1);
+  --lux-success: #6d7d61;
+  --lux-success-bg: rgba(109, 125, 97, 0.12);
 }
 
 .dark {
-  --background: 240 10% 3.9%;
-  --foreground: 0 0% 98%;
-  --card: 240 10% 3.9%;
-  --card-foreground: 0 0% 98%;
-  --border: 240 3.7% 15.9%;
-  --input: 240 3.7% 15.9%;
-  --ring: 240 4.9% 83.9%;
-  --primary: 0 0% 98%;
-  --primary-foreground: 240 5.9% 10%;
-  --muted: 240 3.7% 15.9%;
-  --muted-foreground: 240 5% 64.9%;
+  --background: 24 16% 7%;
+  --foreground: 32 46% 94%;
+  --card: 26 15% 11%;
+  --card-foreground: 32 46% 94%;
+  --border: 25 16% 20%;
+  --input: 24 18% 17%;
+  --ring: 30 25% 58%;
+  --primary: 31 46% 90%;
+  --primary-foreground: 24 18% 10%;
+  --muted: 26 16% 12%;
+  --muted-foreground: 30 22% 74%;
+
+  --lux-bg: #14110f;
+  --lux-secondary: #1c1714;
+  --lux-card: #211c18;
+  --lux-elevated: #2a241f;
+  --lux-text: #f6eee7;
+  --lux-text-secondary: #c9bbae;
+  --lux-text-muted: #9f9184;
+  --lux-border: #3a312b;
+  --lux-border-soft: #2e2722;
+  --lux-divider: #342c26;
+  --lux-champagne: #c9a76e;
+  --lux-gold: #ae8951;
+  --lux-taupe: #9c8575;
+  --lux-mauve: #9f7c82;
+  --lux-cta: #f2e5d7;
+  --lux-cta-text: #1a1512;
+  --lux-danger: #d2a198;
+  --lux-danger-bg: rgba(210, 161, 152, 0.12);
+  --lux-success: #b8c5a6;
+  --lux-success-bg: rgba(184, 197, 166, 0.12);
 }
 
 @layer base {
@@ -36,7 +78,412 @@
     @apply border-border;
   }
 
+  html {
+    min-height: 100%;
+    background-color: var(--lux-bg);
+  }
+
   body {
-    @apply bg-background text-foreground antialiased;
+    min-height: 100vh;
+    background:
+      radial-gradient(circle at top left, rgba(198, 166, 107, 0.18), transparent 24%),
+      radial-gradient(circle at 85% 12%, rgba(181, 140, 147, 0.11), transparent 16%),
+      radial-gradient(circle at bottom right, rgba(31, 26, 23, 0.06), transparent 28%),
+      linear-gradient(180deg, #f1e8de 0%, var(--lux-bg) 24%, #f5f1eb 100%);
+    color: var(--lux-text);
+    @apply antialiased;
+  }
+
+  .dark body {
+    background:
+      radial-gradient(circle at top left, rgba(201, 167, 110, 0.12), transparent 24%),
+      radial-gradient(circle at 80% 10%, rgba(159, 124, 130, 0.08), transparent 16%),
+      linear-gradient(180deg, #181310 0%, var(--lux-bg) 24%, #100d0b 100%);
+  }
+
+  a {
+    color: inherit;
+  }
+
+  ::selection {
+    background: rgba(198, 166, 107, 0.24);
+    color: var(--lux-text);
+  }
+
+  input,
+  textarea,
+  select,
+  button {
+    font: inherit;
+  }
+
+  input:focus,
+  textarea:focus,
+  select:focus,
+  button:focus-visible {
+    outline: none;
+  }
+}
+
+@layer components {
+  .lux-shell {
+    @apply mx-auto flex min-h-screen max-w-6xl flex-col gap-7 px-4 py-6 md:px-6 md:py-8;
+  }
+
+  .lux-hero {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(179, 154, 136, 0.28);
+    border-radius: 2rem;
+    background:
+      linear-gradient(145deg, rgba(255, 255, 255, 0.76), rgba(255, 253, 252, 0.92) 58%, rgba(239, 231, 222, 0.72)),
+      linear-gradient(180deg, rgba(198, 166, 107, 0.08), transparent 46%);
+    box-shadow: 0 22px 54px rgba(31, 26, 23, 0.05);
+    @apply p-6 md:p-8;
+  }
+
+  .dark .lux-hero {
+    background:
+      linear-gradient(145deg, rgba(43, 36, 31, 0.96), rgba(33, 28, 24, 0.96) 58%, rgba(28, 23, 20, 0.98)),
+      linear-gradient(180deg, rgba(201, 167, 110, 0.08), transparent 55%);
+    box-shadow: 0 20px 48px rgba(0, 0, 0, 0.22);
+  }
+
+  .lux-hero::before {
+    content: "";
+    position: absolute;
+    inset: 1px;
+    border-radius: calc(2rem - 1px);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.2), transparent 30%);
+    pointer-events: none;
+  }
+
+  .lux-hero::after {
+    content: "";
+    position: absolute;
+    inset: auto -10% -42% auto;
+    width: 24rem;
+    height: 24rem;
+    border-radius: 999px;
+    background: radial-gradient(circle, rgba(198, 166, 107, 0.2), transparent 64%);
+    pointer-events: none;
+  }
+
+  .lux-card {
+    position: relative;
+    border: 1px solid rgba(179, 154, 136, 0.26);
+    border-radius: 1.75rem;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.84), rgba(255, 253, 252, 0.92)),
+      linear-gradient(180deg, rgba(198, 166, 107, 0.05), transparent 46%);
+    box-shadow: 0 16px 38px rgba(31, 26, 23, 0.045);
+    @apply p-5 md:p-6;
+  }
+
+  .lux-card::before {
+    content: "";
+    position: absolute;
+    inset: 1px;
+    border-radius: calc(1.75rem - 1px);
+    border: 1px solid rgba(255, 255, 255, 0.36);
+    pointer-events: none;
+  }
+
+  .dark .lux-card {
+    background:
+      linear-gradient(180deg, rgba(35, 29, 25, 0.94), rgba(28, 23, 20, 0.98)),
+      linear-gradient(180deg, rgba(201, 167, 110, 0.05), transparent 52%);
+    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.18);
+  }
+
+  .dark .lux-card::before {
+    border-color: rgba(255, 255, 255, 0.04);
+  }
+
+  .lux-card-soft {
+    border: 1px solid rgba(179, 154, 136, 0.18);
+    border-radius: 1.5rem;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.58), rgba(255, 255, 255, 0.4));
+    @apply p-4;
+  }
+
+  .dark .lux-card-soft {
+    background: linear-gradient(180deg, rgba(42, 36, 31, 0.66), rgba(42, 36, 31, 0.52));
+  }
+
+  .lux-panel {
+    border: 1px solid rgba(179, 154, 136, 0.18);
+    border-radius: 1.25rem;
+    background: rgba(255, 255, 255, 0.46);
+    @apply p-4;
+  }
+
+  .dark .lux-panel {
+    background: rgba(42, 36, 31, 0.6);
+  }
+
+  .lux-overline {
+    color: var(--lux-text-muted);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    @apply text-[11px] font-medium;
+  }
+
+  .lux-title {
+    color: var(--lux-text);
+    @apply text-[2.35rem] font-semibold tracking-tight md:text-[3rem] md:leading-[1.05];
+  }
+
+  .lux-section-title {
+    color: var(--lux-text);
+    @apply text-[1.75rem] font-semibold tracking-tight md:text-[2rem];
+  }
+
+  .lux-body {
+    color: var(--lux-text-secondary);
+    @apply text-sm leading-7 md:text-[15px];
+  }
+
+  .lux-chip {
+    border: 1px solid rgba(179, 154, 136, 0.28);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.46);
+    color: var(--lux-text-secondary);
+    @apply inline-flex items-center gap-2 px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.16em];
+  }
+
+  .dark .lux-chip {
+    background: rgba(42, 36, 31, 0.78);
+  }
+
+  .lux-chip-accent {
+    border-color: rgba(198, 166, 107, 0.34);
+    background: rgba(198, 166, 107, 0.12);
+    color: var(--lux-gold);
+  }
+
+  .lux-chip-muted {
+    border-color: rgba(179, 154, 136, 0.18);
+    background: rgba(179, 154, 136, 0.1);
+  }
+
+  .lux-divider {
+    border-color: rgba(179, 154, 136, 0.22);
+  }
+
+  .lux-input,
+  .lux-textarea,
+  .lux-select {
+    width: 100%;
+    border: 1px solid rgba(179, 154, 136, 0.28);
+    border-radius: 1.125rem;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.76), rgba(255, 253, 252, 0.58));
+    color: var(--lux-text);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+    transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+    @apply px-4 py-3;
+  }
+
+  .dark .lux-input,
+  .dark .lux-textarea,
+  .dark .lux-select {
+    background: linear-gradient(180deg, rgba(42, 36, 31, 0.88), rgba(33, 28, 24, 0.8));
+    box-shadow: none;
+  }
+
+  .lux-input:focus,
+  .lux-textarea:focus,
+  .lux-select:focus {
+    border-color: rgba(179, 154, 136, 0.72);
+    box-shadow: 0 0 0 4px rgba(179, 154, 136, 0.14);
+  }
+
+  .lux-textarea {
+    @apply min-h-28;
+  }
+
+  .lux-button-primary,
+  .lux-button-secondary,
+  .lux-button-subtle,
+  .lux-button-danger,
+  .admin-button-primary,
+  .admin-button-secondary {
+    border-radius: 999px;
+    transition: transform 180ms ease, border-color 180ms ease, background-color 180ms ease, color 180ms ease;
+    @apply inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium;
+  }
+
+  .lux-button-primary {
+    background: linear-gradient(180deg, rgba(31, 26, 23, 0.98), rgba(24, 20, 17, 0.98));
+    color: var(--lux-cta-text);
+    border: 1px solid transparent;
+  }
+
+  .dark .lux-button-primary {
+    background: linear-gradient(180deg, rgba(242, 229, 215, 0.96), rgba(228, 212, 194, 0.96));
+  }
+
+  .lux-button-primary:hover,
+  .admin-button-primary:hover {
+    transform: translateY(-1px);
+  }
+
+  .lux-button-secondary {
+    border: 1px solid rgba(179, 154, 136, 0.26);
+    background: rgba(255, 255, 255, 0.48);
+    color: var(--lux-text);
+  }
+
+  .dark .lux-button-secondary {
+    background: rgba(42, 36, 31, 0.72);
+  }
+
+  .lux-button-subtle {
+    border: 1px solid transparent;
+    background: rgba(179, 154, 136, 0.12);
+    color: var(--lux-text-secondary);
+  }
+
+  .lux-button-danger {
+    border: 1px solid rgba(138, 91, 82, 0.3);
+    background: var(--lux-danger-bg);
+    color: var(--lux-danger);
+  }
+
+  .lux-empty {
+    border: 1px dashed rgba(179, 154, 136, 0.34);
+    border-radius: 1.5rem;
+    background: rgba(255, 255, 255, 0.28);
+    color: var(--lux-text-muted);
+    @apply p-6 text-sm leading-6;
+  }
+
+  .dark .lux-empty {
+    background: rgba(42, 36, 31, 0.36);
+  }
+
+  .member-nav-link {
+    border: 1px solid rgba(179, 154, 136, 0.18);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.36);
+    color: var(--lux-text-secondary);
+    @apply inline-flex items-center px-4 py-2 text-sm font-medium transition;
+  }
+
+  .member-nav-link:hover {
+    border-color: rgba(198, 166, 107, 0.24);
+  }
+
+  .member-nav-link-active {
+    border-color: rgba(198, 166, 107, 0.32);
+    background: linear-gradient(180deg, rgba(198, 166, 107, 0.18), rgba(198, 166, 107, 0.1));
+    color: var(--lux-text);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  }
+
+  .admin-shell {
+    background:
+      radial-gradient(circle at top left, rgba(201, 167, 110, 0.12), transparent 22%),
+      radial-gradient(circle at bottom right, rgba(159, 124, 130, 0.08), transparent 18%),
+      linear-gradient(180deg, #171311 0%, #100d0b 100%);
+  }
+
+  .admin-surface {
+    border: 1px solid rgba(90, 76, 66, 0.52);
+    border-radius: 1.9rem;
+    background: linear-gradient(180deg, rgba(33, 28, 24, 0.9), rgba(24, 20, 17, 0.94));
+    box-shadow: 0 22px 54px rgba(0, 0, 0, 0.22);
+  }
+
+  .admin-card {
+    border: 1px solid rgba(90, 76, 66, 0.45);
+    border-radius: 1.5rem;
+    background: linear-gradient(180deg, rgba(39, 33, 28, 0.88), rgba(28, 23, 20, 0.88));
+    @apply p-5;
+  }
+
+  .admin-sidebar-link {
+    border: 1px solid rgba(90, 76, 66, 0.42);
+    border-radius: 1.125rem;
+    background: rgba(31, 26, 23, 0.36);
+    color: #d7c8bb;
+    @apply flex items-center justify-between px-4 py-3 text-sm transition;
+  }
+
+  .admin-sidebar-link-active {
+    border-color: rgba(201, 167, 110, 0.42);
+    background: linear-gradient(180deg, rgba(201, 167, 110, 0.16), rgba(201, 167, 110, 0.08));
+    color: #fff4ea;
+  }
+
+  .admin-input,
+  .admin-select,
+  .admin-textarea {
+    width: 100%;
+    border: 1px solid rgba(90, 76, 66, 0.46);
+    border-radius: 1.1rem;
+    background: linear-gradient(180deg, rgba(22, 18, 16, 0.92), rgba(19, 15, 13, 0.92));
+    color: #fff4ea;
+    @apply px-4 py-3 text-sm;
+  }
+
+  .admin-input:focus,
+  .admin-select:focus,
+  .admin-textarea:focus {
+    border-color: rgba(201, 167, 110, 0.46);
+    box-shadow: 0 0 0 4px rgba(201, 167, 110, 0.12);
+  }
+
+  .admin-button-primary {
+    border: 1px solid transparent;
+    background: linear-gradient(180deg, rgba(255, 244, 234, 0.96), rgba(230, 214, 198, 0.96));
+    color: #1a1512;
+  }
+
+  .admin-button-secondary {
+    border: 1px solid rgba(90, 76, 66, 0.5);
+    background: rgba(31, 26, 23, 0.46);
+    color: #fff4ea;
+  }
+
+  .admin-pill {
+    border: 1px solid rgba(90, 76, 66, 0.44);
+    border-radius: 999px;
+    background: rgba(43, 36, 31, 0.72);
+    color: #cdbdaf;
+    @apply inline-flex items-center px-3 py-1 text-[11px] font-medium uppercase tracking-[0.16em];
+  }
+
+  .admin-empty {
+    border: 1px dashed rgba(90, 76, 66, 0.5);
+    border-radius: 1.5rem;
+    background: rgba(31, 26, 23, 0.42);
+    color: #aa9788;
+    @apply p-5 text-sm leading-6;
+  }
+
+  .admin-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .admin-table thead {
+    background: rgba(20, 16, 14, 0.84);
+    color: #9f9184;
+  }
+
+  .admin-table th {
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    font-size: 11px;
+    font-weight: 500;
+  }
+
+  .admin-table tbody tr {
+    border-top: 1px solid rgba(90, 76, 66, 0.36);
+  }
+
+  .admin-table tbody tr:hover {
+    background: rgba(201, 167, 110, 0.04);
   }
 }

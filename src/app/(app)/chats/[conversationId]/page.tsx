@@ -68,46 +68,46 @@ export default async function ConversationPage({ params }: { params: Promise<{ c
   const otherUser = conversation.userOne.id === viewer.id ? conversation.userTwo : conversation.userOne;
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-4xl flex-col gap-6 px-4 py-6">
-      <section className="rounded-[2rem] border bg-card p-6 shadow-sm">
+    <main className="mx-auto flex min-h-screen max-w-4xl flex-col gap-6 px-4 py-6 md:px-6 md:py-8">
+      <section className="lux-hero">
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Conversation</p>
-            <div className="mt-2 flex flex-wrap items-center gap-3">
-              <h1 className="text-3xl font-semibold tracking-tight">{otherUser.displayName}</h1>
+          <div className="max-w-2xl">
+            <p className="lux-overline">Conversation</p>
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <h1 className="lux-title !text-[2.3rem] md:!text-[2.8rem]">{otherUser.displayName}</h1>
               {otherUser.verificationStatus === VerificationStatus.APPROVED && otherUser.verifiedBadgeVisible ? (
-                <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">Verified</span>
+                <span className="lux-chip lux-chip-accent">Verified</span>
               ) : null}
             </div>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Continue the direct conversation here. Times are shown in 24-hour format.
+            <p className="lux-body mt-4">
+              A private thread for a slower, more direct exchange. Times are shown in 24-hour format.
             </p>
           </div>
           <div className="flex gap-2 text-sm">
-            <Link className="rounded-full border px-3 py-1.5" href="/chats">
-              Back to chats
-            </Link>
-            <Link className="rounded-full border px-3 py-1.5" href={`/users/${otherUser.id}`}>
-              View profile
-            </Link>
+            <Link className="lux-button-secondary" href="/chats">Back to chats</Link>
+            <Link className="lux-button-subtle" href={`/users/${otherUser.id}`}>View profile</Link>
           </div>
         </div>
       </section>
 
-      <section className="rounded-3xl border bg-card p-6 shadow-sm">
+      <section className="lux-card overflow-hidden">
         <div className="space-y-3">
           {conversation.messages.length === 0 ? (
-            <p className="rounded-3xl border border-dashed p-5 text-sm text-muted-foreground">
-              No messages yet. Send the first one below.
-            </p>
+            <p className="lux-empty">No messages yet. Send the first one below.</p>
           ) : (
             conversation.messages.map((message) => {
               const isMine = message.senderUserId === viewer.id;
               return (
                 <div key={message.id} className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
-                  <div className={`max-w-[80%] rounded-3xl px-4 py-3 text-sm shadow-sm ${isMine ? "bg-primary text-primary-foreground" : "border bg-muted/40"}`}>
-                    <p className="whitespace-pre-wrap leading-6">{message.body}</p>
-                    <p className={`mt-2 text-[11px] ${isMine ? "text-primary-foreground/80" : "text-muted-foreground"}`}>
+                  <div
+                    className={`max-w-[84%] rounded-[1.6rem] px-4 py-3 text-sm shadow-sm ${
+                      isMine
+                        ? "border border-[color:rgba(31,26,23,0.06)] bg-[linear-gradient(180deg,rgba(31,26,23,0.98),rgba(24,20,17,0.98))] text-[color:var(--lux-cta-text)] dark:border-[color:rgba(242,229,215,0.08)] dark:bg-[linear-gradient(180deg,rgba(242,229,215,0.96),rgba(228,212,194,0.96))] dark:text-[color:var(--lux-cta-text)] dark:!text-[#1a1512]"
+                        : "border border-[color:rgba(179,154,136,0.18)] bg-[color:rgba(255,255,255,0.42)] text-[color:var(--lux-text)] dark:bg-[color:rgba(42,36,31,0.62)]"
+                    }`}
+                  >
+                    <p className="whitespace-pre-wrap leading-7">{message.body}</p>
+                    <p className={`mt-2 text-[11px] uppercase tracking-[0.14em] ${isMine ? "text-current/70" : "text-[color:var(--lux-text-muted)]"}`}>
                       {formatDateTime(message.createdAt)}
                     </p>
                   </div>
@@ -117,22 +117,19 @@ export default async function ConversationPage({ params }: { params: Promise<{ c
           )}
         </div>
 
-        <form action={sendMessageAction} className="mt-6 flex flex-col gap-3 border-t pt-5">
+        <form action={sendMessageAction} className="mt-6 flex flex-col gap-3 border-t lux-divider pt-5">
           <input name="conversationId" type="hidden" value={conversation.id} />
           <textarea
-            className="min-h-24 rounded-2xl border bg-background px-4 py-3 text-sm"
+            className="lux-textarea min-h-28"
             name="body"
             placeholder={`Write a message to ${otherUser.displayName}`}
             required
           />
           <div className="flex justify-end">
-            <button className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground" type="submit">
-              Send message
-            </button>
+            <button className="lux-button-primary" type="submit">Send message</button>
           </div>
         </form>
       </section>
     </main>
   );
 }
-

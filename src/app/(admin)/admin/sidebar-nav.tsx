@@ -17,26 +17,22 @@ export function AdminSidebarNav({ items }: { items: AdminNavItem[] }) {
   const pathname = usePathname() ?? "";
 
   return (
-    <nav className="grid gap-2" data-testid="admin-sidebar-nav">
+    <nav className="grid gap-2.5" data-testid="admin-sidebar-nav">
       {items.map((item) => {
         const isActive = item.href === "/admin" ? pathname === "/admin" : pathname.startsWith(item.href);
 
         return (
           <Link
             key={item.href}
-            className={`flex items-center justify-between rounded-2xl border px-4 py-3 text-sm transition ${
-              isActive
-                ? "border-slate-200 bg-slate-100 text-slate-950 shadow-sm"
-                : "border-slate-800 text-slate-200 hover:border-slate-700 hover:bg-slate-800/60"
-            }`}
+            className={`admin-sidebar-link ${isActive ? "admin-sidebar-link-active" : ""}`}
             data-testid={navTestId(item.label)}
             href={item.href}
           >
-            <span className="font-medium">{item.label}</span>
+            <span className="font-medium tracking-[0.01em]">{item.label}</span>
             {typeof item.badge === "number" ? (
               <span
                 className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                  isActive ? "bg-slate-950 text-slate-100" : "bg-slate-800 text-slate-200"
+                  isActive ? "bg-[rgba(255,248,242,0.14)] text-[#fff4ea]" : "bg-[rgba(255,248,242,0.08)] text-[#d7c8bb]"
                 }`}
               >
                 {item.badge}

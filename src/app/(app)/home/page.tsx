@@ -77,20 +77,20 @@ export default async function HomePage() {
   ]);
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-6xl flex-col gap-6 px-4 py-6">
-      <section className="rounded-[2rem] border bg-card p-6 shadow-sm">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Community feed</p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight">Welcome back, {viewer.displayName}</h1>
-            <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-              Share a short update, follow the latest community activity, and keep the conversation moving without exposing more than you want.
+    <main className="lux-shell">
+      <section className="lux-hero">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-3xl">
+            <p className="lux-overline">Member home</p>
+            <h1 className="lux-title mt-3">A quieter place to share, notice, and respond.</h1>
+            <p className="lux-body mt-4">
+              Welcome back, {viewer.displayName}. The feed keeps private community activity close at hand without turning the space into a noisy social stream.
             </p>
           </div>
-          <div className="flex flex-wrap gap-2 text-xs">
-            <span className="rounded-full border px-3 py-1.5">Visible groups: {visibleGroupIds.length}</span>
-            <span className="rounded-full border px-3 py-1.5">Recent posts: {posts.length}</span>
-            <Link className="rounded-full border px-3 py-1.5" href="/groups">
+          <div className="flex max-w-xl flex-wrap gap-2.5">
+            <span className="lux-chip lux-chip-accent">Visible groups {visibleGroupIds.length}</span>
+            <span className="lux-chip">Recent posts {posts.length}</span>
+            <Link className="lux-chip" href="/groups">
               Browse groups
             </Link>
           </div>
@@ -98,50 +98,51 @@ export default async function HomePage() {
       </section>
 
       {promotedPlacement ? (
-        <section className="rounded-[2rem] border border-amber-200 bg-amber-50 p-6 shadow-sm" data-testid="home-promoted-event">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <p className="text-xs uppercase tracking-[0.24em] text-amber-700">Promoted event</p>
-              <h2 className="mt-2 text-2xl font-semibold tracking-tight">{promotedPlacement.eventPromotion.title}</h2>
-              <p className="mt-2 max-w-2xl text-sm text-amber-900/80">
+        <section className="lux-card relative overflow-hidden" data-testid="home-promoted-event">
+          <div className="absolute inset-y-0 left-0 w-1.5 rounded-full bg-[color:var(--lux-champagne)]" />
+          <div className="flex flex-col gap-4 pl-2 lg:flex-row lg:items-center lg:justify-between">
+            <div className="max-w-3xl">
+              <p className="lux-overline">Promoted event</p>
+              <h2 className="mt-3 text-2xl font-semibold tracking-tight text-[color:var(--lux-text)]">{promotedPlacement.eventPromotion.title}</h2>
+              <p className="lux-body mt-3">
                 {promotedPlacement.eventPromotion.description ?? "A promoted community event is currently highlighted here."}
               </p>
               {promotedPlacement.eventPromotion.couponCode ? (
-                <p className="mt-2 text-xs font-medium uppercase tracking-[0.18em] text-amber-800">
-                  Coupon: {promotedPlacement.eventPromotion.couponCode}
+                <p className="mt-3 text-xs font-medium uppercase tracking-[0.18em] text-[color:var(--lux-gold)]">
+                  Coupon {promotedPlacement.eventPromotion.couponCode}
                 </p>
               ) : null}
             </div>
-            <a className="inline-flex rounded-full border border-amber-400 px-4 py-2 text-sm font-medium text-amber-900" href={promotedPlacement.eventPromotion.externalLink} rel="noreferrer" target="_blank">
+            <a className="lux-button-secondary" href={promotedPlacement.eventPromotion.externalLink} rel="noreferrer" target="_blank">
               View promoted event
             </a>
           </div>
         </section>
       ) : null}
 
-      <section className="grid gap-6 lg:grid-cols-[minmax(0,1.8fr)_minmax(300px,0.9fr)]">
+      <section className="grid gap-6 lg:grid-cols-[minmax(0,1.8fr)_minmax(320px,0.95fr)]">
         <div className="space-y-6">
-          <section className="rounded-3xl border bg-card p-5 shadow-sm">
-            <div className="border-b pb-4">
-              <p className="text-sm text-muted-foreground">Create a post</p>
-              <h2 className="mt-1 text-xl font-semibold">Share with the community</h2>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Anonymous posting is available only in the global feed.
+          <section className="lux-card">
+            <div className="border-b lux-divider pb-5">
+              <p className="lux-overline">Share something small</p>
+              <h2 className="mt-3 text-2xl font-semibold tracking-tight text-[color:var(--lux-text)]">Compose for the community</h2>
+              <p className="lux-body mt-3">
+                Keep it short, warm, and intentional. Anonymous posting remains available only in the global feed.
               </p>
             </div>
-            <form action={createPostAction} className="mt-5 flex flex-col gap-3">
+            <form action={createPostAction} className="mt-5 flex flex-col gap-4">
               <textarea
-                className="min-h-32 rounded-2xl border bg-background px-4 py-3 text-sm outline-none"
+                className="lux-textarea min-h-36"
                 name="contentText"
-                placeholder="What would you like to share today?"
+                placeholder="What feels worth sharing today?"
                 required
               />
-              <label className="flex items-center gap-2 rounded-2xl border px-4 py-3 text-sm text-muted-foreground">
-                <input name="isAnonymous" type="checkbox" />
+              <label className="lux-panel flex items-center gap-3 text-sm text-[color:var(--lux-text-secondary)]">
+                <input className="size-4 accent-[color:var(--lux-gold)]" name="isAnonymous" type="checkbox" />
                 <span>Post anonymously in the global feed</span>
               </label>
               <div className="flex justify-end">
-                <button className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground" type="submit">
+                <button className="lux-button-primary" type="submit">
                   Publish post
                 </button>
               </div>
@@ -151,14 +152,12 @@ export default async function HomePage() {
           <section className="space-y-4">
             <div className="flex items-end justify-between gap-3">
               <div>
-                <p className="text-sm text-muted-foreground">Timeline</p>
-                <h2 className="text-xl font-semibold">Latest activity</h2>
+                <p className="lux-overline">Latest activity</p>
+                <h2 className="lux-section-title mt-2">Community rhythm</h2>
               </div>
             </div>
             {posts.length === 0 ? (
-              <div className="rounded-3xl border border-dashed p-8 text-sm text-muted-foreground">
-                No posts yet. Create the first one from the composer above.
-              </div>
+              <div className="lux-empty">No posts yet. Create the first one from the composer above.</div>
             ) : (
               posts.map((post) => {
                 const isAnonymousToViewer = post.isAnonymous && post.authorUserId !== viewer.id;
@@ -168,76 +167,78 @@ export default async function HomePage() {
                 const authorProfileHref = post.authorUserId === viewer.id ? "/me" : `/users/${post.author.id}`;
 
                 return (
-                  <article key={post.id} className="rounded-3xl border bg-card p-5 shadow-sm">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <div className="flex flex-wrap items-center gap-2">
+                  <article key={post.id} className="lux-card">
+                    <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                      <div className="max-w-3xl">
+                        <div className="flex flex-wrap items-center gap-2.5">
                           {canOpenAuthorProfile ? (
-                            <Link className="font-medium underline underline-offset-4" href={authorProfileHref}>
+                            <Link className="text-base font-semibold tracking-tight text-[color:var(--lux-text)] underline-offset-4 hover:underline" href={authorProfileHref}>
                               {authorLabel}
                             </Link>
                           ) : (
-                            <p className="font-medium">{authorLabel}</p>
+                            <p className="text-base font-semibold tracking-tight text-[color:var(--lux-text)]">{authorLabel}</p>
                           )}
                           {isAnonymousAuthorView ? (
-                            <span className="text-xs text-muted-foreground">Shown only to you. Anonymous to everyone else.</span>
+                            <span className="lux-chip lux-chip-muted normal-case tracking-normal">Shown only to you. Anonymous to everyone else.</span>
                           ) : null}
                           {post.group ? (
-                            <Link className="rounded-full bg-muted px-2.5 py-1 text-[11px] font-medium text-muted-foreground" href={`/groups/${post.group.id}`}>
+                            <Link className="lux-chip" href={`/groups/${post.group.id}`}>
                               {post.group.name}
                             </Link>
                           ) : (
-                            <span className="rounded-full bg-muted px-2.5 py-1 text-[11px] font-medium text-muted-foreground">Global feed</span>
+                            <span className="lux-chip">Global feed</span>
                           )}
                         </div>
-                        <p className="mt-1 text-xs text-muted-foreground">{formatDateTime(post.createdAt)}</p>
+                        <p className="mt-3 text-xs uppercase tracking-[0.16em] text-[color:var(--lux-text-muted)]">{formatDateTime(post.createdAt)}</p>
                       </div>
                       {canOpenAuthorProfile ? (
                         <div className="flex flex-wrap gap-2">
-                          <Link className="rounded-full border px-3 py-1.5 text-xs font-medium" href={authorProfileHref}>
+                          <Link className="lux-button-secondary" href={authorProfileHref}>
                             {post.authorUserId === viewer.id ? "Open my profile" : "View profile"}
                           </Link>
                           {post.authorUserId !== viewer.id ? (
-                            <Link className="rounded-full border px-3 py-1.5 text-xs font-medium" href={`/users/${post.author.id}`}>
+                            <Link className="lux-button-subtle" href={`/users/${post.author.id}`}>
                               Chat
                             </Link>
                           ) : null}
                         </div>
                       ) : null}
                     </div>
-                    <p className="mt-4 whitespace-pre-wrap text-sm leading-6">{post.contentText}</p>
+                    <p className="mt-5 whitespace-pre-wrap text-[15px] leading-7 text-[color:var(--lux-text-secondary)]">{post.contentText}</p>
 
-                    <div className="mt-5 space-y-3 rounded-3xl bg-muted/40 p-4">
-                      <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Comments</p>
-                      {post.comments.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">No comments yet.</p>
-                      ) : (
-                        post.comments.map((comment) => {
-                          const commentAuthorHref = comment.authorUserId === viewer.id ? "/me" : `/users/${comment.author.id}`;
+                    <div className="mt-6 rounded-[1.5rem] border border-[color:var(--lux-border-soft)] bg-[color:rgba(255,255,255,0.34)] p-4 dark:bg-[color:rgba(42,36,31,0.5)]">
+                      <p className="lux-overline">Comments</p>
+                      <div className="mt-4 space-y-3">
+                        {post.comments.length === 0 ? (
+                          <p className="text-sm text-[color:var(--lux-text-muted)]">No comments yet.</p>
+                        ) : (
+                          post.comments.map((comment) => {
+                            const commentAuthorHref = comment.authorUserId === viewer.id ? "/me" : `/users/${comment.author.id}`;
 
-                          return (
-                            <div key={comment.id} className="rounded-2xl border bg-background px-3 py-3 text-sm">
-                              <div className="flex items-center justify-between gap-3">
-                                <Link className="font-medium underline underline-offset-4" href={commentAuthorHref}>
-                                  {comment.author.displayName}
-                                </Link>
-                                <p className="text-[11px] text-muted-foreground">{formatDateTime(comment.createdAt)}</p>
+                            return (
+                              <div key={comment.id} className="lux-panel">
+                                <div className="flex items-center justify-between gap-3">
+                                  <Link className="font-medium text-[color:var(--lux-text)] underline-offset-4 hover:underline" href={commentAuthorHref}>
+                                    {comment.author.displayName}
+                                  </Link>
+                                  <p className="text-[11px] uppercase tracking-[0.14em] text-[color:var(--lux-text-muted)]">{formatDateTime(comment.createdAt)}</p>
+                                </div>
+                                <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[color:var(--lux-text-secondary)]">{comment.contentText}</p>
                               </div>
-                              <p className="mt-1 whitespace-pre-wrap text-muted-foreground">{comment.contentText}</p>
-                            </div>
-                          );
-                        })
-                      )}
-                      <form action={createCommentAction} className="flex flex-col gap-2">
+                            );
+                          })
+                        )}
+                      </div>
+                      <form action={createCommentAction} className="mt-4 flex flex-col gap-3">
                         <input name="postId" type="hidden" value={post.id} />
                         <textarea
-                          className="min-h-20 rounded-2xl border bg-background px-3 py-2 text-sm outline-none"
+                          className="lux-textarea min-h-20"
                           name="contentText"
                           placeholder="Write a comment"
                           required
                         />
                         <div className="flex justify-end">
-                          <button className="rounded-full border px-3 py-1.5 text-sm" type="submit">
+                          <button className="lux-button-secondary" type="submit">
                             Add comment
                           </button>
                         </div>
@@ -251,43 +252,43 @@ export default async function HomePage() {
         </div>
 
         <aside className="space-y-6">
-          <section className="rounded-3xl border bg-card p-5 shadow-sm">
-            <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Your spaces</p>
+          <section className="lux-card">
+            <p className="lux-overline">Your spaces</p>
             <div className="mt-4 grid gap-3 text-sm">
-              <div className="rounded-2xl border p-4">
-                <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Groups</p>
-                <p className="mt-2 font-medium">{visibleGroupIds.length} active memberships</p>
+              <div className="lux-card-soft">
+                <p className="lux-overline">Groups</p>
+                <p className="mt-3 text-base font-semibold tracking-tight text-[color:var(--lux-text)]">{visibleGroupIds.length} active memberships</p>
               </div>
-              <div className="rounded-2xl border p-4">
-                <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Profile</p>
-                <Link className="mt-2 inline-block font-medium underline" href="/me">
+              <div className="lux-card-soft">
+                <p className="lux-overline">Profile</p>
+                <Link className="mt-3 inline-flex text-sm font-medium text-[color:var(--lux-text)] underline underline-offset-4" href="/me">
                   Manage profile and privacy
                 </Link>
               </div>
             </div>
           </section>
 
-          <section className="rounded-3xl border bg-card p-5 shadow-sm">
-            <div className="flex items-center justify-between gap-3 border-b pb-4">
+          <section className="lux-card">
+            <div className="flex items-center justify-between gap-3 border-b lux-divider pb-4">
               <div>
-                <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Groups</p>
-                <h2 className="mt-1 text-lg font-semibold">Recommended next</h2>
+                <p className="lux-overline">Recommended next</p>
+                <h2 className="mt-2 text-xl font-semibold tracking-tight text-[color:var(--lux-text)]">Groups to explore</h2>
               </div>
-              <Link className="text-sm underline" href="/groups">
+              <Link className="text-sm font-medium text-[color:var(--lux-text-secondary)] underline-offset-4 hover:underline" href="/groups">
                 View all
               </Link>
             </div>
             <div className="mt-4 space-y-3">
               {recommendedGroups.length === 0 ? (
-                <p className="text-sm text-muted-foreground">You have explored all current groups.</p>
+                <p className="text-sm text-[color:var(--lux-text-muted)]">You have explored all current groups.</p>
               ) : (
                 recommendedGroups.map((group) => (
-                  <Link key={group.id} className="block rounded-3xl border p-4 transition-colors hover:bg-muted/30" href={`/groups/${group.id}`}>
+                  <Link key={group.id} className="lux-card-soft block transition hover:border-[color:rgba(198,166,107,0.26)]" href={`/groups/${group.id}`}>
                     <div className="flex items-center justify-between gap-3">
-                      <p className="font-medium">{group.name}</p>
-                      <span className="rounded-full bg-muted px-2.5 py-1 text-[11px] font-medium text-muted-foreground">{group.groupType}</span>
+                      <p className="text-base font-semibold tracking-tight text-[color:var(--lux-text)]">{group.name}</p>
+                      <span className="lux-chip">{group.groupType}</span>
                     </div>
-                    <p className="mt-2 text-sm text-muted-foreground">{group.description ?? "No description yet."}</p>
+                    <p className="mt-3 text-sm leading-6 text-[color:var(--lux-text-secondary)]">{group.description ?? "No description yet."}</p>
                   </Link>
                 ))
               )}

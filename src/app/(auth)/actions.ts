@@ -82,6 +82,7 @@ export async function signInAction(formData: FormData) {
 }
 
 export async function signInWithGoogleAction() {
+  await clearLocalSession();
   await signIn("google", { redirectTo: "/home" });
 }
 

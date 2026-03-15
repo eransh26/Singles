@@ -14,15 +14,18 @@ export default async function AdminDashboardPage({
       <AdminPageIntro
         eyebrow="Dashboard"
         title="Admin dashboard"
-        description="A focused admin shell for the highest-signal operational work. This landing screen stays lightweight and points into the dedicated admin tools."
+        description="A quieter command space for moderation, verification, and launch operations, with the highest-signal items kept close at hand."
       />
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {dashboard.cards.map((card) => (
-          <article key={card.label} className="rounded-3xl border border-slate-800 bg-slate-900/70 p-5 shadow-sm">
-            <p className="text-sm text-slate-400">{card.label}</p>
-            <p className="mt-3 text-3xl font-semibold text-white">{card.value}</p>
-            <p className="mt-2 text-sm text-slate-500">{card.helper}</p>
+        {dashboard.cards.map((card, index) => (
+          <article
+            key={card.label}
+            className={`admin-card ${index === 0 ? "xl:col-span-2" : ""}`}
+          >
+            <p className="lux-overline text-[#aa9788]">{card.label}</p>
+            <p className="mt-4 text-3xl font-semibold tracking-tight text-[#fff4ea]">{card.value}</p>
+            <p className="mt-3 text-sm leading-6 text-[#bbaea1]">{card.helper}</p>
           </article>
         ))}
       </section>

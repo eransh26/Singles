@@ -141,28 +141,28 @@ export default async function MePage({
   const totalMediaCount = profileMedia.length + galleryMedia.length;
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-6xl flex-col gap-6 px-4 py-6">
+    <main className="lux-shell">
       {savedMessage ? (
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+        <div className="rounded-[1.25rem] border border-[color:rgba(109,125,97,0.28)] bg-[color:var(--lux-success-bg)] px-4 py-3 text-sm text-[color:var(--lux-success)]">
           {savedMessage}
         </div>
       ) : null}
 
-      <section className="rounded-[2rem] border bg-card p-6 shadow-sm">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Profile workspace</p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight">{user.displayName}</h1>
-            <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-              Update the details other members rely on before they join your groups, request your private gallery, or move into a direct conversation.
+      <section className="lux-hero">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-3xl">
+            <p className="lux-overline">Profile workspace</p>
+            <h1 className="lux-title mt-3">{user.displayName}</h1>
+            <p className="lux-body mt-4">
+              Refine the identity, trust signals, and privacy boundaries other members rely on before they step closer.
             </p>
           </div>
-          <div className="flex flex-wrap gap-2 text-xs">
-            <span className="rounded-full border px-3 py-1.5">Theme: {user.settings?.themePreference ?? ThemePreference.LIGHT}</span>
-            <span className="rounded-full border px-3 py-1.5">Groups: {memberships.length}</span>
-            <span className="rounded-full border px-3 py-1.5">Media items: {totalMediaCount}</span>
-            <span className="rounded-full border px-3 py-1.5">Verification: {user.verificationStatus}</span>
-            <Link className="rounded-full border px-3 py-1.5" href={`/users/${user.id}`}>
+          <div className="flex max-w-xl flex-wrap gap-2.5">
+            <span className="lux-chip">Theme {user.settings?.themePreference ?? ThemePreference.LIGHT}</span>
+            <span className="lux-chip">Groups {memberships.length}</span>
+            <span className="lux-chip">Media {totalMediaCount}</span>
+            <span className="lux-chip lux-chip-accent">Verification {user.verificationStatus}</span>
+            <Link className="lux-chip" href={`/users/${user.id}`}>
               Public profile view
             </Link>
           </div>
@@ -170,79 +170,72 @@ export default async function MePage({
       </section>
 
       <section className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.85fr)]">
-        <section className="rounded-3xl border bg-card p-5 shadow-sm">
-          <div className="border-b pb-4">
-            <p className="text-sm text-muted-foreground">Profile details</p>
-            <h2 className="mt-1 text-xl font-semibold">How you appear to the community</h2>
+        <section className="lux-card">
+          <div className="border-b lux-divider pb-5">
+            <p className="lux-overline">Identity</p>
+            <h2 className="mt-3 text-2xl font-semibold tracking-tight text-[color:var(--lux-text)]">How you appear to the community</h2>
           </div>
           <form action={updateProfileAction} className="mt-5 grid gap-4">
-            <label className="grid gap-2 text-sm">
-              <span>Display name</span>
-              <input className="rounded-2xl border bg-background px-4 py-3" defaultValue={user.displayName} name="displayName" required />
+            <label className="grid gap-2 text-sm text-[color:var(--lux-text-secondary)]">
+              <span className="font-medium text-[color:var(--lux-text)]">Display name</span>
+              <input className="lux-input" defaultValue={user.displayName} name="displayName" required />
             </label>
-            <label className="grid gap-2 text-sm">
-              <span>Short bio</span>
-              <textarea
-                className="min-h-32 rounded-2xl border bg-background px-4 py-3"
-                defaultValue={user.bio ?? ""}
-                maxLength={3000}
-                name="bio"
-              />
-              <span className="text-xs text-muted-foreground">Up to 3000 characters.</span>
+            <label className="grid gap-2 text-sm text-[color:var(--lux-text-secondary)]">
+              <span className="font-medium text-[color:var(--lux-text)]">Short bio</span>
+              <textarea className="lux-textarea min-h-36" defaultValue={user.bio ?? ""} maxLength={3000} name="bio" />
+              <span className="text-xs text-[color:var(--lux-text-muted)]">Up to 3000 characters.</span>
             </label>
-            <label className="grid gap-2 text-sm">
-              <span>Region</span>
-              <input className="rounded-2xl border bg-background px-4 py-3" defaultValue={user.region ?? ""} maxLength={100} name="region" />
-              <span className="text-xs text-muted-foreground">Up to 100 characters.</span>
+            <label className="grid gap-2 text-sm text-[color:var(--lux-text-secondary)]">
+              <span className="font-medium text-[color:var(--lux-text)]">Region</span>
+              <input className="lux-input" defaultValue={user.region ?? ""} maxLength={100} name="region" />
+              <span className="text-xs text-[color:var(--lux-text-muted)]">Up to 100 characters.</span>
             </label>
             <fieldset className="grid gap-3 text-sm">
-              <legend className="font-medium">Interests</legend>
+              <legend className="font-medium text-[color:var(--lux-text)]">Interests</legend>
               <div className="grid gap-2 sm:grid-cols-2">
                 {interests.map((interest) => (
-                  <label key={interest.id} className="flex items-center gap-2 rounded-2xl border px-3 py-2 transition-colors hover:bg-muted/40">
-                    <input defaultChecked={selectedInterestIds.has(interest.id)} name="interestIds" type="checkbox" value={interest.id} />
+                  <label key={interest.id} className="lux-panel flex items-center gap-2.5 text-[color:var(--lux-text-secondary)] transition hover:border-[color:rgba(198,166,107,0.24)]">
+                    <input className="size-4 accent-[color:var(--lux-gold)]" defaultChecked={selectedInterestIds.has(interest.id)} name="interestIds" type="checkbox" value={interest.id} />
                     <span>{interest.name}</span>
                   </label>
                 ))}
               </div>
             </fieldset>
             <div className="flex justify-end">
-              <button className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground" type="submit">
-                Save profile
-              </button>
+              <button className="lux-button-primary" type="submit">Save profile</button>
             </div>
           </form>
         </section>
 
         <div className="space-y-6">
-          <section className="rounded-3xl border bg-card p-5 shadow-sm">
-            <div className="border-b pb-4">
-              <p className="text-sm text-muted-foreground">Verification</p>
-              <h2 className="mt-1 text-xl font-semibold">Current verification state</h2>
+          <section className="lux-card">
+            <div className="border-b lux-divider pb-5">
+              <p className="lux-overline">Verification</p>
+              <h2 className="mt-3 text-2xl font-semibold tracking-tight text-[color:var(--lux-text)]">Current trust state</h2>
             </div>
             <div className="mt-5 grid gap-3 text-sm sm:grid-cols-3">
-              <div className="rounded-2xl border p-4">
-                <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Email</p>
-                <p className="mt-2 font-medium">{user.emailVerified ? "Verified" : "Not verified"}</p>
+              <div className="lux-card-soft">
+                <p className="lux-overline">Email</p>
+                <p className="mt-3 text-base font-semibold tracking-tight text-[color:var(--lux-text)]">{user.emailVerified ? "Verified" : "Not verified"}</p>
               </div>
-              <div className="rounded-2xl border p-4">
-                <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Phone</p>
-                <p className="mt-2 font-medium">{user.phoneVerifiedAt ? "Verified" : "Not verified"}</p>
+              <div className="lux-card-soft">
+                <p className="lux-overline">Phone</p>
+                <p className="mt-3 text-base font-semibold tracking-tight text-[color:var(--lux-text)]">{user.phoneVerifiedAt ? "Verified" : "Not verified"}</p>
               </div>
-              <div className="rounded-2xl border p-4">
-                <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">18+</p>
-                <p className="mt-2 font-medium">{user.ageVerified ? "Verified" : "Not verified"}</p>
+              <div className="lux-card-soft">
+                <p className="lux-overline">18+</p>
+                <p className="mt-3 text-base font-semibold tracking-tight text-[color:var(--lux-text)]">{user.ageVerified ? "Verified" : "Not verified"}</p>
               </div>
             </div>
-            <div className="mt-4 rounded-2xl border bg-muted/30 p-4 text-sm">
+            <div className="mt-4 rounded-[1.5rem] border border-[color:rgba(198,166,107,0.24)] bg-[color:rgba(198,166,107,0.08)] p-4 text-sm">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="font-medium">Status: {user.verificationStatus}</p>
-                  <p className="mt-1 text-muted-foreground">{verificationCopy(user.verificationStatus)}</p>
+                  <p className="text-base font-semibold tracking-tight text-[color:var(--lux-text)]">Status {user.verificationStatus}</p>
+                  <p className="mt-2 leading-6 text-[color:var(--lux-text-secondary)]">{verificationCopy(user.verificationStatus)}</p>
                 </div>
                 {user.verificationStatus === VerificationStatus.APPROVED ? null : (
                   <form action={submitVerificationRequestAction}>
-                    <button className="rounded-full border px-4 py-2 text-sm font-medium" type="submit">
+                    <button className="lux-button-secondary" type="submit">
                       {user.verificationStatus === VerificationStatus.PENDING ? "Refresh status" : "Request verification"}
                     </button>
                   </form>
@@ -251,82 +244,80 @@ export default async function MePage({
             </div>
           </section>
 
-          <section className="rounded-3xl border bg-card p-5 shadow-sm">
-            <div className="border-b pb-4">
-              <p className="text-sm text-muted-foreground">Privacy and settings</p>
-              <h2 className="mt-1 text-xl font-semibold">Control your visibility</h2>
+          <section className="lux-card">
+            <div className="border-b lux-divider pb-5">
+              <p className="lux-overline">Privacy and settings</p>
+              <h2 className="mt-3 text-2xl font-semibold tracking-tight text-[color:var(--lux-text)]">Control your visibility</h2>
             </div>
-            <form action={updatePrivacyAction} className="mt-5 grid gap-4 text-sm">
+            <form action={updatePrivacyAction} className="mt-5 grid gap-4 text-sm text-[color:var(--lux-text-secondary)]">
               <label className="grid gap-2">
-                <span>Who can view my profile</span>
-                <select className="rounded-2xl border bg-background px-4 py-3" defaultValue={user.profileVisibility} name="profileVisibility">
+                <span className="font-medium text-[color:var(--lux-text)]">Who can view my profile</span>
+                <select className="lux-select" defaultValue={user.profileVisibility} name="profileVisibility">
                   {Object.values(ProfileVisibility).map((value) => (
                     <option key={value} value={value}>{value}</option>
                   ))}
                 </select>
               </label>
               <label className="grid gap-2">
-                <span>Who can send chat requests</span>
-                <select className="rounded-2xl border bg-background px-4 py-3" defaultValue={user.chatRequestPolicy} name="chatRequestPolicy">
+                <span className="font-medium text-[color:var(--lux-text)]">Who can send chat requests</span>
+                <select className="lux-select" defaultValue={user.chatRequestPolicy} name="chatRequestPolicy">
                   {Object.values(ChatRequestPolicy).map((value) => (
                     <option key={value} value={value}>{value}</option>
                   ))}
                 </select>
               </label>
               <label className="grid gap-2">
-                <span>Photo request policy</span>
-                <select className="rounded-2xl border bg-background px-4 py-3" defaultValue={user.photoRequestPolicy} name="photoRequestPolicy">
+                <span className="font-medium text-[color:var(--lux-text)]">Photo request policy</span>
+                <select className="lux-select" defaultValue={user.photoRequestPolicy} name="photoRequestPolicy">
                   {Object.values(PhotoRequestPolicy).map((value) => (
                     <option key={value} value={value}>{value}</option>
                   ))}
                 </select>
               </label>
               <label className="grid gap-2">
-                <span>Activity visibility</span>
-                <select className="rounded-2xl border bg-background px-4 py-3" defaultValue={user.activityVisibility} name="activityVisibility">
+                <span className="font-medium text-[color:var(--lux-text)]">Activity visibility</span>
+                <select className="lux-select" defaultValue={user.activityVisibility} name="activityVisibility">
                   {Object.values(ActivityVisibility).map((value) => (
                     <option key={value} value={value}>{value}</option>
                   ))}
                 </select>
               </label>
               <label className="grid gap-2">
-                <span>Theme preference</span>
-                <select className="rounded-2xl border bg-background px-4 py-3" defaultValue={user.settings?.themePreference ?? ThemePreference.LIGHT} name="themePreference">
+                <span className="font-medium text-[color:var(--lux-text)]">Theme preference</span>
+                <select className="lux-select" defaultValue={user.settings?.themePreference ?? ThemePreference.LIGHT} name="themePreference">
                   {Object.values(ThemePreference).map((value) => (
                     <option key={value} value={value}>{value}</option>
                   ))}
                 </select>
               </label>
-              <label className="flex items-center gap-2 rounded-2xl border px-4 py-3">
-                <input defaultChecked={user.verifiedBadgeVisible} name="verifiedBadgeVisible" type="checkbox" />
+              <label className="lux-panel flex items-center gap-3">
+                <input className="size-4 accent-[color:var(--lux-gold)]" defaultChecked={user.verifiedBadgeVisible} name="verifiedBadgeVisible" type="checkbox" />
                 <span>Show my verified badge when approved</span>
               </label>
               <div className="flex justify-end">
-                <button className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground" type="submit">
-                  Save privacy
-                </button>
+                <button className="lux-button-primary" type="submit">Save privacy</button>
               </div>
             </form>
           </section>
 
-          <section className="rounded-3xl border bg-card p-5 shadow-sm">
-            <p className="text-sm text-muted-foreground">At a glance</p>
+          <section className="lux-card">
+            <p className="lux-overline">At a glance</p>
             <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
-              <div className="rounded-2xl border p-4">
-                <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Verification</p>
-                <p className="mt-2 font-medium">{user.verificationStatus}</p>
+              <div className="lux-card-soft">
+                <p className="lux-overline">Verification</p>
+                <p className="mt-3 text-base font-semibold tracking-tight text-[color:var(--lux-text)]">{user.verificationStatus}</p>
               </div>
-              <div className="rounded-2xl border p-4">
-                <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Theme</p>
-                <p className="mt-2 font-medium">{user.settings?.themePreference ?? ThemePreference.LIGHT}</p>
+              <div className="lux-card-soft">
+                <p className="lux-overline">Theme</p>
+                <p className="mt-3 text-base font-semibold tracking-tight text-[color:var(--lux-text)]">{user.settings?.themePreference ?? ThemePreference.LIGHT}</p>
               </div>
             </div>
             {memberships.length > 0 ? (
-              <div className="mt-4">
-                <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Recent groups</p>
-                <div className="mt-3 flex flex-wrap gap-2">
+              <div className="mt-5">
+                <p className="lux-overline">Recent groups</p>
+                <div className="mt-3 flex flex-wrap gap-2.5">
                   {memberships.map((membership) => (
-                    <Link key={membership.group.id} className="rounded-full border px-3 py-1.5 text-xs" href={`/groups/${membership.group.id}`}>
+                    <Link key={membership.group.id} className="lux-chip" href={`/groups/${membership.group.id}`}>
                       {membership.group.name}
                     </Link>
                   ))}
@@ -337,101 +328,91 @@ export default async function MePage({
         </div>
       </section>
 
-      <section className="rounded-3xl border bg-card p-5 shadow-sm">
-        <div className="flex flex-wrap items-start justify-between gap-4 border-b pb-4">
-          <div>
-            <p className="text-sm text-muted-foreground">Media management</p>
-            <h2 className="mt-1 text-xl font-semibold">Profile photo and gallery</h2>
-            <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+      <section className="lux-card">
+        <div className="flex flex-wrap items-start justify-between gap-4 border-b lux-divider pb-5">
+          <div className="max-w-2xl">
+            <p className="lux-overline">Media management</p>
+            <h2 className="mt-3 text-2xl font-semibold tracking-tight text-[color:var(--lux-text)]">Profile photo and gallery</h2>
+            <p className="lux-body mt-3">
               Add storage keys or hosted URLs now. Upload integrations can plug into the same records later.
             </p>
           </div>
-          <div className="grid min-w-[180px] gap-2 text-xs text-muted-foreground sm:text-right">
-            <span>Profile items: {profileMedia.length}</span>
-            <span>Gallery items: {galleryMedia.length}</span>
+          <div className="grid min-w-[180px] gap-2 text-right text-xs uppercase tracking-[0.16em] text-[color:var(--lux-text-muted)]">
+            <span>Profile items {profileMedia.length}</span>
+            <span>Gallery items {galleryMedia.length}</span>
           </div>
         </div>
 
         <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(280px,360px)_minmax(0,1fr)]">
-          <form action={addProfileMediaAction} className="rounded-3xl border bg-muted/30 p-4">
-            <div className="grid gap-3 text-sm">
+          <form action={addProfileMediaAction} className="lux-card-soft">
+            <div className="grid gap-3 text-sm text-[color:var(--lux-text-secondary)]">
               <div>
-                <p className="font-medium">Add a media record</p>
-                <p className="mt-1 text-xs text-muted-foreground">Use a URL or storage key and decide who can see it.</p>
+                <p className="text-base font-semibold tracking-tight text-[color:var(--lux-text)]">Add a media record</p>
+                <p className="mt-2 text-xs leading-5 text-[color:var(--lux-text-muted)]">Use a URL or storage key and decide who can see it.</p>
               </div>
               <label className="grid gap-2">
-                <span>Media URL or storage key</span>
-                <input className="rounded-2xl border bg-background px-4 py-3" name="storageKey" placeholder="https://... or object key" required />
+                <span className="font-medium text-[color:var(--lux-text)]">Media URL or storage key</span>
+                <input className="lux-input" name="storageKey" placeholder="https://... or object key" required />
               </label>
               <label className="grid gap-2">
-                <span>Type</span>
-                <select className="rounded-2xl border bg-background px-4 py-3" defaultValue={MediaType.GALLERY} name="mediaType">
+                <span className="font-medium text-[color:var(--lux-text)]">Type</span>
+                <select className="lux-select" defaultValue={MediaType.GALLERY} name="mediaType">
                   <option value={MediaType.PROFILE}>Profile</option>
                   <option value={MediaType.GALLERY}>Gallery</option>
                 </select>
               </label>
               <label className="grid gap-2">
-                <span>Visibility</span>
-                <select className="rounded-2xl border bg-background px-4 py-3" defaultValue="PUBLIC" name="visibilityLevel">
+                <span className="font-medium text-[color:var(--lux-text)]">Visibility</span>
+                <select className="lux-select" defaultValue="PUBLIC" name="visibilityLevel">
                   <option value="PUBLIC">Public to members</option>
                   <option value="APPROVED">Approved viewers only</option>
                   <option value="PRIVATE">Private</option>
                 </select>
               </label>
-              <button className="rounded-full border px-4 py-3 text-sm font-medium" type="submit">
-                Add media
-              </button>
+              <button className="lux-button-secondary" type="submit">Add media</button>
             </div>
           </form>
 
           <div className="grid gap-4 lg:grid-cols-2">
             <div className="space-y-3">
-              <h3 className="text-sm font-medium">Profile media</h3>
+              <h3 className="text-lg font-semibold tracking-tight text-[color:var(--lux-text)]">Profile media</h3>
               {profileMedia.length === 0 ? (
-                <p className="rounded-3xl border border-dashed p-5 text-sm text-muted-foreground">No profile media yet.</p>
+                <p className="lux-empty">No profile media yet.</p>
               ) : (
                 profileMedia.map((item) => (
-                  <div key={item.id} className="rounded-3xl border p-4 text-sm shadow-sm">
+                  <div key={item.id} className="lux-card-soft text-sm">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{mediaLabel(item.mediaType)}</p>
-                        <p className="mt-2 break-all font-medium">{item.storageKey}</p>
+                        <p className="lux-overline">{mediaLabel(item.mediaType)}</p>
+                        <p className="mt-3 break-all text-sm font-medium text-[color:var(--lux-text)]">{item.storageKey}</p>
                       </div>
-                      <span className="rounded-full bg-muted px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
-                        {item.visibilityLevel}
-                      </span>
+                      <span className="lux-chip">{item.visibilityLevel}</span>
                     </div>
                     <form action={deleteProfileMediaAction} className="mt-4">
                       <input name="mediaId" type="hidden" value={item.id} />
-                      <button className="rounded-full border px-3 py-1.5 text-xs" type="submit">
-                        Remove
-                      </button>
+                      <button className="lux-button-danger" type="submit">Remove</button>
                     </form>
                   </div>
                 ))
               )}
             </div>
             <div className="space-y-3">
-              <h3 className="text-sm font-medium">Gallery media</h3>
+              <h3 className="text-lg font-semibold tracking-tight text-[color:var(--lux-text)]">Gallery media</h3>
               {galleryMedia.length === 0 ? (
-                <p className="rounded-3xl border border-dashed p-5 text-sm text-muted-foreground">No gallery media yet.</p>
+                <p className="lux-empty">No gallery media yet.</p>
               ) : (
                 galleryMedia.map((item) => (
-                  <div key={item.id} className="rounded-3xl border p-4 text-sm shadow-sm">
+                  <div key={item.id} className="lux-card-soft text-sm">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{mediaLabel(item.mediaType)}</p>
-                        <p className="mt-2 break-all font-medium">{item.storageKey}</p>
+                        <p className="lux-overline">{mediaLabel(item.mediaType)}</p>
+                        <p className="mt-3 break-all text-sm font-medium text-[color:var(--lux-text)]">{item.storageKey}</p>
                       </div>
-                      <span className="rounded-full bg-muted px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
-                        {item.visibilityLevel}
-                      </span>
+                      <span className="lux-chip">{item.visibilityLevel}</span>
                     </div>
                     <form action={deleteProfileMediaAction} className="mt-4">
                       <input name="mediaId" type="hidden" value={item.id} />
-                      <button className="rounded-full border px-3 py-1.5 text-xs" type="submit">
-                        Remove
-                      </button>
+                      <button className="lux-button-danger" type="submit">Remove</button>
                     </form>
                   </div>
                 ))
@@ -442,42 +423,36 @@ export default async function MePage({
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-        <section className="rounded-3xl border bg-card p-5 shadow-sm">
-          <div className="border-b pb-4">
-            <p className="text-sm text-muted-foreground">Photo access</p>
-            <h2 className="mt-1 text-xl font-semibold">Incoming private gallery requests</h2>
+        <section className="lux-card">
+          <div className="border-b lux-divider pb-5">
+            <p className="lux-overline">Photo access</p>
+            <h2 className="mt-3 text-2xl font-semibold tracking-tight text-[color:var(--lux-text)]">Incoming private gallery requests</h2>
           </div>
           <div className="mt-5 space-y-3">
             {pendingPhotoRequests.length === 0 ? (
-              <p className="rounded-3xl border border-dashed p-5 text-sm text-muted-foreground">No pending photo access requests right now.</p>
+              <p className="lux-empty">No pending photo access requests right now.</p>
             ) : (
               pendingPhotoRequests.map((request) => (
-                <div key={request.id} className="rounded-3xl border p-4 text-sm shadow-sm">
+                <div key={request.id} className="lux-card-soft text-sm">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                      <Link className="font-medium underline" href={`/users/${request.requester.id}`}>
+                      <Link className="font-medium text-[color:var(--lux-text)] underline-offset-4 hover:underline" href={`/users/${request.requester.id}`}>
                         {request.requester.displayName}
                       </Link>
-                      <p className="mt-1 text-xs text-muted-foreground">Requested on {formatDateTime(request.createdAt)}</p>
+                      <p className="mt-2 text-xs uppercase tracking-[0.16em] text-[color:var(--lux-text-muted)]">Requested on {formatDateTime(request.createdAt)}</p>
                     </div>
-                    <span className="rounded-full bg-muted px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
-                      {request.requester.verificationStatus}
-                    </span>
+                    <span className="lux-chip">{request.requester.verificationStatus}</span>
                   </div>
                   <div className="mt-4 flex gap-2">
                     <form action={reviewPhotoAccessRequestAction}>
                       <input name="requestId" type="hidden" value={request.id} />
                       <input name="decision" type="hidden" value="approve" />
-                      <button className="rounded-full bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground" type="submit">
-                        Approve
-                      </button>
+                      <button className="lux-button-primary" type="submit">Approve</button>
                     </form>
                     <form action={reviewPhotoAccessRequestAction}>
                       <input name="requestId" type="hidden" value={request.id} />
                       <input name="decision" type="hidden" value="reject" />
-                      <button className="rounded-full border px-3 py-1.5 text-xs font-medium" type="submit">
-                        Reject
-                      </button>
+                      <button className="lux-button-secondary" type="submit">Reject</button>
                     </form>
                   </div>
                 </div>
@@ -486,22 +461,22 @@ export default async function MePage({
           </div>
         </section>
 
-        <section className="rounded-3xl border bg-card p-5 shadow-sm">
-          <div className="border-b pb-4">
-            <p className="text-sm text-muted-foreground">Approved viewers</p>
-            <h2 className="mt-1 text-xl font-semibold">Members with current gallery access</h2>
+        <section className="lux-card">
+          <div className="border-b lux-divider pb-5">
+            <p className="lux-overline">Approved viewers</p>
+            <h2 className="mt-3 text-2xl font-semibold tracking-tight text-[color:var(--lux-text)]">Members with current gallery access</h2>
           </div>
           <div className="mt-5 space-y-3">
             {activePhotoGrants.length === 0 ? (
-              <p className="rounded-3xl border border-dashed p-5 text-sm text-muted-foreground">No approved viewers yet.</p>
+              <p className="lux-empty">No approved viewers yet.</p>
             ) : (
               activePhotoGrants.map((grant) => (
-                <div key={grant.id} className="rounded-3xl border p-4 text-sm shadow-sm">
+                <div key={grant.id} className="lux-card-soft text-sm">
                   <div className="flex items-center justify-between gap-3">
-                    <Link className="font-medium underline" href={`/users/${grant.grantee.id}`}>
+                    <Link className="font-medium text-[color:var(--lux-text)] underline-offset-4 hover:underline" href={`/users/${grant.grantee.id}`}>
                       {grant.grantee.displayName}
                     </Link>
-                    <span className="text-xs text-muted-foreground">Granted {formatDateTime(grant.grantedAt)}</span>
+                    <span className="text-xs uppercase tracking-[0.16em] text-[color:var(--lux-text-muted)]">Granted {formatDateTime(grant.grantedAt)}</span>
                   </div>
                 </div>
               ))

@@ -90,57 +90,49 @@ export default async function NotificationsPage() {
   const unreadCount = notifications.filter((notification) => !notification.isRead).length;
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-5xl flex-col gap-6 px-4 py-6">
-      <section className="rounded-[2rem] border bg-card p-6 shadow-sm">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Milestone 3</p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight">Notifications</h1>
-            <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-              Track request activity, approvals, and comment alerts in one inbox.
+    <main className="mx-auto flex min-h-screen max-w-5xl flex-col gap-6 px-4 py-6 md:px-6 md:py-8">
+      <section className="lux-hero">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-3xl">
+            <p className="lux-overline">Notifications</p>
+            <h1 className="lux-title mt-3">A private inbox for the moments that matter.</h1>
+            <p className="lux-body mt-4">
+              Requests, approvals, and comment alerts stay collected here so the rest of the experience can remain calm.
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2 text-xs">
-            <span className="rounded-full border px-3 py-1.5">Unread: {unreadCount}</span>
+          <div className="flex flex-wrap items-center gap-2.5 text-xs">
+            <span className="lux-chip lux-chip-accent">Unread {unreadCount}</span>
             <form action={markAllNotificationsReadAction}>
-              <button className="rounded-full border px-3 py-1.5 font-medium" type="submit">
-                Mark all read
-              </button>
+              <button className="lux-button-secondary" type="submit">Mark all read</button>
             </form>
           </div>
         </div>
       </section>
 
-      <section className="rounded-3xl border bg-card p-6 shadow-sm">
+      <section className="lux-card">
         <div className="space-y-3">
           {notifications.length === 0 ? (
-            <p className="rounded-3xl border border-dashed p-5 text-sm text-muted-foreground">No notifications yet.</p>
+            <p className="lux-empty">No notifications yet.</p>
           ) : (
             notifications.map((notification) => {
               const copy = notificationCopy(notification.type, notification.payloadJson);
               return (
-                <div key={notification.id} className={`rounded-3xl border p-4 text-sm shadow-sm ${notification.isRead ? "bg-card" : "bg-muted/30"}`}>
+                <div key={notification.id} className={`rounded-[1.5rem] border p-4 text-sm ${notification.isRead ? "border-[color:rgba(179,154,136,0.18)] bg-[color:rgba(255,255,255,0.34)] dark:bg-[color:rgba(42,36,31,0.54)]" : "border-[color:rgba(198,166,107,0.28)] bg-[color:rgba(198,166,107,0.08)]"}`}>
                   <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="font-medium">{copy.title}</p>
-                        {!notification.isRead ? (
-                          <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary">Unread</span>
-                        ) : null}
+                    <div className="max-w-2xl">
+                      <div className="flex flex-wrap items-center gap-2.5">
+                        <p className="text-base font-semibold tracking-tight text-[color:var(--lux-text)]">{copy.title}</p>
+                        {!notification.isRead ? <span className="lux-chip lux-chip-accent">Unread</span> : null}
                       </div>
-                      <p className="mt-2 text-muted-foreground">{copy.body}</p>
-                      <p className="mt-2 text-xs text-muted-foreground">{formatDateTime(notification.createdAt)}</p>
+                      <p className="mt-3 text-sm leading-6 text-[color:var(--lux-text-secondary)]">{copy.body}</p>
+                      <p className="mt-3 text-xs uppercase tracking-[0.16em] text-[color:var(--lux-text-muted)]">{formatDateTime(notification.createdAt)}</p>
                     </div>
                     <div className="flex gap-2">
-                      <Link className="rounded-full border px-3 py-1.5 text-xs font-medium" href={copy.href}>
-                        Open
-                      </Link>
+                      <Link className="lux-button-secondary" href={copy.href}>Open</Link>
                       {!notification.isRead ? (
                         <form action={markNotificationReadAction}>
                           <input name="notificationId" type="hidden" value={notification.id} />
-                          <button className="rounded-full border px-3 py-1.5 text-xs font-medium" type="submit">
-                            Mark read
-                          </button>
+                          <button className="lux-button-subtle" type="submit">Mark read</button>
                         </form>
                       ) : null}
                     </div>

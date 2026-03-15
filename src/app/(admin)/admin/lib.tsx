@@ -95,10 +95,10 @@ export function AdminPageIntro({
   description: string;
 }) {
   return (
-    <section className="rounded-[2rem] border border-slate-800 bg-slate-900/70 p-6 shadow-sm">
-      <p className="text-xs uppercase tracking-[0.28em] text-slate-400">{eyebrow}</p>
-      <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white">{title}</h1>
-      <p className="mt-2 max-w-3xl text-sm text-slate-300">{description}</p>
+    <section className="admin-surface overflow-hidden p-6 md:p-8">
+      <p className="lux-overline text-[#aa9788]">{eyebrow}</p>
+      <h1 className="mt-3 text-[2.35rem] font-semibold tracking-tight text-[#fff4ea] md:text-[3rem] md:leading-[1.08]">{title}</h1>
+      <p className="mt-3 max-w-3xl text-sm leading-6 text-[#c9bbae] md:text-[15px]">{description}</p>
     </section>
   );
 }
@@ -111,7 +111,7 @@ export function SavedMessageBanner({ saved }: { saved?: string }) {
   }
 
   return (
-    <div className="rounded-2xl border border-emerald-800 bg-emerald-950/60 px-4 py-3 text-sm text-emerald-200">
+    <div className="rounded-[1.25rem] border border-[rgba(184,197,166,0.28)] bg-[rgba(184,197,166,0.12)] px-4 py-3 text-sm text-[#dfe8d5]">
       {message}
     </div>
   );
@@ -125,7 +125,7 @@ export function AdminErrorBanner({ error }: { error?: string }) {
   }
 
   return (
-    <div className="rounded-2xl border border-rose-900 bg-rose-950/60 px-4 py-3 text-sm text-rose-200">
+    <div className="rounded-[1.25rem] border border-[rgba(210,161,152,0.28)] bg-[rgba(210,161,152,0.12)] px-4 py-3 text-sm text-[#f0ccc5]">
       {message}
     </div>
   );
@@ -305,9 +305,10 @@ export async function getActiveGroups() {
 
 export function AdminQuickLink({ href, label, hint }: { href: string; label: string; hint: string }) {
   return (
-    <Link className="rounded-3xl border border-slate-800 bg-slate-900/60 p-5 transition hover:border-slate-700 hover:bg-slate-900" href={href}>
-      <p className="text-sm font-medium text-white">{label}</p>
-      <p className="mt-2 text-sm text-slate-400">{hint}</p>
+    <Link className="admin-card transition hover:border-[rgba(201,167,110,0.34)] hover:bg-[rgba(43,36,31,0.92)]" href={href}>
+      <p className="lux-overline text-[#aa9788]">Open</p>
+      <p className="mt-3 text-xl font-semibold tracking-tight text-[#fff4ea]">{label}</p>
+      <p className="mt-3 text-sm leading-6 text-[#bbaea1]">{hint}</p>
     </Link>
   );
 }
