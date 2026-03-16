@@ -149,31 +149,55 @@ export default async function MePage({
       ) : null}
 
       <section className="lux-hero">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-3xl">
-            <p className="lux-overline">Profile workspace</p>
-            <h1 className="lux-title mt-3">{user.displayName}</h1>
-            <p className="lux-body mt-4">
-              Refine the identity, trust signals, and privacy boundaries other members rely on before they step closer.
-            </p>
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)] xl:items-end">
+          <div className="space-y-5">
+            <p className="lux-overline">Private member profile</p>
+            <div className="space-y-3">
+              <h1 className="text-[2.9rem] font-semibold tracking-tight text-[color:var(--lux-text)] md:text-[4rem] md:leading-[0.98]">{user.displayName}</h1>
+              <p className="max-w-2xl text-base leading-8 text-[color:var(--lux-text-secondary)]">
+                This is your private member identity space. Shape how your presence feels, what trust signals you reveal, and how closely others are allowed in.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2.5">
+              <span className="lux-chip lux-chip-accent">{user.verificationStatus}</span>
+              <span className="lux-chip">Theme {user.settings?.themePreference ?? ThemePreference.LIGHT}</span>
+              <span className="lux-chip">Media {totalMediaCount}</span>
+              {user.region ? <span className="lux-chip">{user.region}</span> : null}
+            </div>
+            <div className="grid gap-3 md:grid-cols-3">
+              <div className="lux-card-soft">
+                <p className="lux-overline">Verification</p>
+                <p className="mt-3 text-lg font-semibold tracking-tight text-[color:var(--lux-text)]">{user.verificationStatus}</p>
+              </div>
+              <div className="lux-card-soft">
+                <p className="lux-overline">Groups</p>
+                <p className="mt-3 text-lg font-semibold tracking-tight text-[color:var(--lux-text)]">{memberships.length} active</p>
+              </div>
+              <div className="lux-card-soft">
+                <p className="lux-overline">Visibility</p>
+                <p className="mt-3 text-lg font-semibold tracking-tight text-[color:var(--lux-text)]">{user.profileVisibility}</p>
+              </div>
+            </div>
           </div>
-          <div className="flex max-w-xl flex-wrap gap-2.5">
-            <span className="lux-chip">Theme {user.settings?.themePreference ?? ThemePreference.LIGHT}</span>
-            <span className="lux-chip">Groups {memberships.length}</span>
-            <span className="lux-chip">Media {totalMediaCount}</span>
-            <span className="lux-chip lux-chip-accent">Verification {user.verificationStatus}</span>
-            <Link className="lux-chip" href={`/users/${user.id}`}>
-              Public profile view
-            </Link>
-          </div>
+
+          <aside className="rounded-[1.9rem] border border-[color:rgba(198,166,107,0.22)] bg-[color:rgba(255,248,242,0.22)] p-5 dark:bg-[color:rgba(42,36,31,0.56)]">
+            <p className="lux-overline">Member signature</p>
+            <p className="mt-4 text-sm leading-7 text-[color:var(--lux-text-secondary)]">{user.bio?.trim() || "Add a short note about yourself so your profile feels curated, personal, and intentional to the members who can see it."}</p>
+            <div className="mt-5 flex flex-wrap gap-2.5">
+              <Link className="lux-button-secondary" href={`/users/${user.id}`}>Public profile view</Link>
+              {memberships.length > 0 ? memberships.slice(0, 2).map((membership) => (
+                <Link key={membership.group.id} className="lux-chip" href={`/groups/${membership.group.id}`}>{membership.group.name}</Link>
+              )) : null}
+            </div>
+          </aside>
         </div>
       </section>
 
-      <section className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.85fr)]">
+      <section className="grid gap-6 xl:grid-cols-[minmax(0,1.08fr)_minmax(320px,0.92fr)]">
         <section className="lux-card">
           <div className="border-b lux-divider pb-5">
-            <p className="lux-overline">Identity</p>
-            <h2 className="mt-3 text-2xl font-semibold tracking-tight text-[color:var(--lux-text)]">How you appear to the community</h2>
+            <p className="lux-overline">Identity details</p>
+            <h2 className="mt-3 text-[2rem] font-semibold tracking-tight text-[color:var(--lux-text)]">Refine how your profile reads</h2>
           </div>
           <form action={updateProfileAction} className="mt-5 grid gap-4">
             <label className="grid gap-2 text-sm text-[color:var(--lux-text-secondary)]">
@@ -182,7 +206,7 @@ export default async function MePage({
             </label>
             <label className="grid gap-2 text-sm text-[color:var(--lux-text-secondary)]">
               <span className="font-medium text-[color:var(--lux-text)]">Short bio</span>
-              <textarea className="lux-textarea min-h-36" defaultValue={user.bio ?? ""} maxLength={3000} name="bio" />
+              <textarea className="lux-textarea min-h-40" defaultValue={user.bio ?? ""} maxLength={3000} name="bio" />
               <span className="text-xs text-[color:var(--lux-text-muted)]">Up to 3000 characters.</span>
             </label>
             <label className="grid gap-2 text-sm text-[color:var(--lux-text-secondary)]">
@@ -210,120 +234,91 @@ export default async function MePage({
         <div className="space-y-6">
           <section className="lux-card">
             <div className="border-b lux-divider pb-5">
-              <p className="lux-overline">Verification</p>
-              <h2 className="mt-3 text-2xl font-semibold tracking-tight text-[color:var(--lux-text)]">Current trust state</h2>
+              <p className="lux-overline">Trust and visibility</p>
+              <h2 className="mt-3 text-[1.9rem] font-semibold tracking-tight text-[color:var(--lux-text)]">Verification and privacy</h2>
             </div>
-            <div className="mt-5 grid gap-3 text-sm sm:grid-cols-3">
-              <div className="lux-card-soft">
-                <p className="lux-overline">Email</p>
-                <p className="mt-3 text-base font-semibold tracking-tight text-[color:var(--lux-text)]">{user.emailVerified ? "Verified" : "Not verified"}</p>
-              </div>
-              <div className="lux-card-soft">
-                <p className="lux-overline">Phone</p>
-                <p className="mt-3 text-base font-semibold tracking-tight text-[color:var(--lux-text)]">{user.phoneVerifiedAt ? "Verified" : "Not verified"}</p>
-              </div>
-              <div className="lux-card-soft">
-                <p className="lux-overline">18+</p>
-                <p className="mt-3 text-base font-semibold tracking-tight text-[color:var(--lux-text)]">{user.ageVerified ? "Verified" : "Not verified"}</p>
-              </div>
-            </div>
-            <div className="mt-4 rounded-[1.5rem] border border-[color:rgba(198,166,107,0.24)] bg-[color:rgba(198,166,107,0.08)] p-4 text-sm">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p className="text-base font-semibold tracking-tight text-[color:var(--lux-text)]">Status {user.verificationStatus}</p>
-                  <p className="mt-2 leading-6 text-[color:var(--lux-text-secondary)]">{verificationCopy(user.verificationStatus)}</p>
+            <div className="mt-5 space-y-5">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="lux-card-soft">
+                  <p className="lux-overline">Email</p>
+                  <p className="mt-3 text-base font-semibold tracking-tight text-[color:var(--lux-text)]">{user.emailVerified ? "Verified" : "Not verified"}</p>
                 </div>
-                {user.verificationStatus === VerificationStatus.APPROVED ? null : (
-                  <form action={submitVerificationRequestAction}>
-                    <button className="lux-button-secondary" type="submit">
-                      {user.verificationStatus === VerificationStatus.PENDING ? "Refresh status" : "Request verification"}
-                    </button>
-                  </form>
-                )}
-              </div>
-            </div>
-          </section>
-
-          <section className="lux-card">
-            <div className="border-b lux-divider pb-5">
-              <p className="lux-overline">Privacy and settings</p>
-              <h2 className="mt-3 text-2xl font-semibold tracking-tight text-[color:var(--lux-text)]">Control your visibility</h2>
-            </div>
-            <form action={updatePrivacyAction} className="mt-5 grid gap-4 text-sm text-[color:var(--lux-text-secondary)]">
-              <label className="grid gap-2">
-                <span className="font-medium text-[color:var(--lux-text)]">Who can view my profile</span>
-                <select className="lux-select" defaultValue={user.profileVisibility} name="profileVisibility">
-                  {Object.values(ProfileVisibility).map((value) => (
-                    <option key={value} value={value}>{value}</option>
-                  ))}
-                </select>
-              </label>
-              <label className="grid gap-2">
-                <span className="font-medium text-[color:var(--lux-text)]">Who can send chat requests</span>
-                <select className="lux-select" defaultValue={user.chatRequestPolicy} name="chatRequestPolicy">
-                  {Object.values(ChatRequestPolicy).map((value) => (
-                    <option key={value} value={value}>{value}</option>
-                  ))}
-                </select>
-              </label>
-              <label className="grid gap-2">
-                <span className="font-medium text-[color:var(--lux-text)]">Photo request policy</span>
-                <select className="lux-select" defaultValue={user.photoRequestPolicy} name="photoRequestPolicy">
-                  {Object.values(PhotoRequestPolicy).map((value) => (
-                    <option key={value} value={value}>{value}</option>
-                  ))}
-                </select>
-              </label>
-              <label className="grid gap-2">
-                <span className="font-medium text-[color:var(--lux-text)]">Activity visibility</span>
-                <select className="lux-select" defaultValue={user.activityVisibility} name="activityVisibility">
-                  {Object.values(ActivityVisibility).map((value) => (
-                    <option key={value} value={value}>{value}</option>
-                  ))}
-                </select>
-              </label>
-              <label className="grid gap-2">
-                <span className="font-medium text-[color:var(--lux-text)]">Theme preference</span>
-                <select className="lux-select" defaultValue={user.settings?.themePreference ?? ThemePreference.LIGHT} name="themePreference">
-                  {Object.values(ThemePreference).map((value) => (
-                    <option key={value} value={value}>{value}</option>
-                  ))}
-                </select>
-              </label>
-              <label className="lux-panel flex items-center gap-3">
-                <input className="size-4 accent-[color:var(--lux-gold)]" defaultChecked={user.verifiedBadgeVisible} name="verifiedBadgeVisible" type="checkbox" />
-                <span>Show my verified badge when approved</span>
-              </label>
-              <div className="flex justify-end">
-                <button className="lux-button-primary" type="submit">Save privacy</button>
-              </div>
-            </form>
-          </section>
-
-          <section className="lux-card">
-            <p className="lux-overline">At a glance</p>
-            <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
-              <div className="lux-card-soft">
-                <p className="lux-overline">Verification</p>
-                <p className="mt-3 text-base font-semibold tracking-tight text-[color:var(--lux-text)]">{user.verificationStatus}</p>
-              </div>
-              <div className="lux-card-soft">
-                <p className="lux-overline">Theme</p>
-                <p className="mt-3 text-base font-semibold tracking-tight text-[color:var(--lux-text)]">{user.settings?.themePreference ?? ThemePreference.LIGHT}</p>
-              </div>
-            </div>
-            {memberships.length > 0 ? (
-              <div className="mt-5">
-                <p className="lux-overline">Recent groups</p>
-                <div className="mt-3 flex flex-wrap gap-2.5">
-                  {memberships.map((membership) => (
-                    <Link key={membership.group.id} className="lux-chip" href={`/groups/${membership.group.id}`}>
-                      {membership.group.name}
-                    </Link>
-                  ))}
+                <div className="lux-card-soft">
+                  <p className="lux-overline">Phone</p>
+                  <p className="mt-3 text-base font-semibold tracking-tight text-[color:var(--lux-text)]">{user.phoneVerifiedAt ? "Verified" : "Not verified"}</p>
+                </div>
+                <div className="lux-card-soft">
+                  <p className="lux-overline">18+</p>
+                  <p className="mt-3 text-base font-semibold tracking-tight text-[color:var(--lux-text)]">{user.ageVerified ? "Verified" : "Not verified"}</p>
                 </div>
               </div>
-            ) : null}
+
+              <div className="rounded-[1.5rem] border border-[color:rgba(198,166,107,0.22)] bg-[color:rgba(198,166,107,0.08)] p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-base font-semibold tracking-tight text-[color:var(--lux-text)]">Status {user.verificationStatus}</p>
+                    <p className="mt-2 text-sm leading-6 text-[color:var(--lux-text-secondary)]">{verificationCopy(user.verificationStatus)}</p>
+                  </div>
+                  {user.verificationStatus === VerificationStatus.APPROVED ? null : (
+                    <form action={submitVerificationRequestAction}>
+                      <button className="lux-button-secondary" type="submit">
+                        {user.verificationStatus === VerificationStatus.PENDING ? "Refresh status" : "Request verification"}
+                      </button>
+                    </form>
+                  )}
+                </div>
+              </div>
+
+              <form action={updatePrivacyAction} className="grid gap-4 text-sm text-[color:var(--lux-text-secondary)]">
+                <label className="grid gap-2">
+                  <span className="font-medium text-[color:var(--lux-text)]">Who can view my profile</span>
+                  <select className="lux-select" defaultValue={user.profileVisibility} name="profileVisibility">
+                    {Object.values(ProfileVisibility).map((value) => (
+                      <option key={value} value={value}>{value}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="grid gap-2">
+                  <span className="font-medium text-[color:var(--lux-text)]">Who can send chat requests</span>
+                  <select className="lux-select" defaultValue={user.chatRequestPolicy} name="chatRequestPolicy">
+                    {Object.values(ChatRequestPolicy).map((value) => (
+                      <option key={value} value={value}>{value}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="grid gap-2">
+                  <span className="font-medium text-[color:var(--lux-text)]">Photo request policy</span>
+                  <select className="lux-select" defaultValue={user.photoRequestPolicy} name="photoRequestPolicy">
+                    {Object.values(PhotoRequestPolicy).map((value) => (
+                      <option key={value} value={value}>{value}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="grid gap-2">
+                  <span className="font-medium text-[color:var(--lux-text)]">Activity visibility</span>
+                  <select className="lux-select" defaultValue={user.activityVisibility} name="activityVisibility">
+                    {Object.values(ActivityVisibility).map((value) => (
+                      <option key={value} value={value}>{value}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="grid gap-2">
+                  <span className="font-medium text-[color:var(--lux-text)]">Theme preference</span>
+                  <select className="lux-select" defaultValue={user.settings?.themePreference ?? ThemePreference.LIGHT} name="themePreference">
+                    {Object.values(ThemePreference).map((value) => (
+                      <option key={value} value={value}>{value}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="lux-panel flex items-center gap-3">
+                  <input className="size-4 accent-[color:var(--lux-gold)]" defaultChecked={user.verifiedBadgeVisible} name="verifiedBadgeVisible" type="checkbox" />
+                  <span>Show my verified badge when approved</span>
+                </label>
+                <div className="flex justify-end">
+                  <button className="lux-button-primary" type="submit">Save privacy</button>
+                </div>
+              </form>
+            </div>
           </section>
         </div>
       </section>
@@ -331,11 +326,9 @@ export default async function MePage({
       <section className="lux-card">
         <div className="flex flex-wrap items-start justify-between gap-4 border-b lux-divider pb-5">
           <div className="max-w-2xl">
-            <p className="lux-overline">Media management</p>
-            <h2 className="mt-3 text-2xl font-semibold tracking-tight text-[color:var(--lux-text)]">Profile photo and gallery</h2>
-            <p className="lux-body mt-3">
-              Add storage keys or hosted URLs now. Upload integrations can plug into the same records later.
-            </p>
+            <p className="lux-overline">Media collection</p>
+            <h2 className="mt-3 text-[2rem] font-semibold tracking-tight text-[color:var(--lux-text)]">Profile photo and gallery</h2>
+            <p className="text-sm leading-7 text-[color:var(--lux-text-secondary)]">Curate the images and private layers that shape how close others can come.</p>
           </div>
           <div className="grid min-w-[180px] gap-2 text-right text-xs uppercase tracking-[0.16em] text-[color:var(--lux-text-muted)]">
             <span>Profile items {profileMedia.length}</span>
@@ -343,11 +336,11 @@ export default async function MePage({
           </div>
         </div>
 
-        <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(280px,360px)_minmax(0,1fr)]">
-          <form action={addProfileMediaAction} className="lux-card-soft">
+        <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(280px,360px)_minmax(0,1fr)]">
+          <form action={addProfileMediaAction} className="rounded-[1.8rem] border border-[color:rgba(198,166,107,0.18)] bg-[color:rgba(255,248,242,0.24)] p-5 dark:bg-[color:rgba(42,36,31,0.56)]">
             <div className="grid gap-3 text-sm text-[color:var(--lux-text-secondary)]">
               <div>
-                <p className="text-base font-semibold tracking-tight text-[color:var(--lux-text)]">Add a media record</p>
+                <p className="text-lg font-semibold tracking-tight text-[color:var(--lux-text)]">Add a media record</p>
                 <p className="mt-2 text-xs leading-5 text-[color:var(--lux-text-muted)]">Use a URL or storage key and decide who can see it.</p>
               </div>
               <label className="grid gap-2">
@@ -375,7 +368,7 @@ export default async function MePage({
 
           <div className="grid gap-4 lg:grid-cols-2">
             <div className="space-y-3">
-              <h3 className="text-lg font-semibold tracking-tight text-[color:var(--lux-text)]">Profile media</h3>
+              <h3 className="text-xl font-semibold tracking-tight text-[color:var(--lux-text)]">Profile media</h3>
               {profileMedia.length === 0 ? (
                 <p className="lux-empty">No profile media yet.</p>
               ) : (
@@ -397,7 +390,7 @@ export default async function MePage({
               )}
             </div>
             <div className="space-y-3">
-              <h3 className="text-lg font-semibold tracking-tight text-[color:var(--lux-text)]">Gallery media</h3>
+              <h3 className="text-xl font-semibold tracking-tight text-[color:var(--lux-text)]">Gallery media</h3>
               {galleryMedia.length === 0 ? (
                 <p className="lux-empty">No gallery media yet.</p>
               ) : (
@@ -426,7 +419,7 @@ export default async function MePage({
         <section className="lux-card">
           <div className="border-b lux-divider pb-5">
             <p className="lux-overline">Photo access</p>
-            <h2 className="mt-3 text-2xl font-semibold tracking-tight text-[color:var(--lux-text)]">Incoming private gallery requests</h2>
+            <h2 className="mt-3 text-[1.9rem] font-semibold tracking-tight text-[color:var(--lux-text)]">Incoming private gallery requests</h2>
           </div>
           <div className="mt-5 space-y-3">
             {pendingPhotoRequests.length === 0 ? (
@@ -464,7 +457,7 @@ export default async function MePage({
         <section className="lux-card">
           <div className="border-b lux-divider pb-5">
             <p className="lux-overline">Approved viewers</p>
-            <h2 className="mt-3 text-2xl font-semibold tracking-tight text-[color:var(--lux-text)]">Members with current gallery access</h2>
+            <h2 className="mt-3 text-[1.9rem] font-semibold tracking-tight text-[color:var(--lux-text)]">Members with current gallery access</h2>
           </div>
           <div className="mt-5 space-y-3">
             {activePhotoGrants.length === 0 ? (

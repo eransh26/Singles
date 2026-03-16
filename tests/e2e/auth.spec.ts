@@ -14,15 +14,15 @@ test("credentials sign-in reaches the authenticated home page", async ({ page })
   await page.getByRole("button", { name: "Sign in" }).click();
 
   await expect(page).toHaveURL(/\/home$/);
-  await expect(page.getByRole("heading", { name: "A quieter place to share, notice, and respond." })).toBeVisible();
-  await expect(page.getByText(`Welcome back, ${seed.users.member.displayName}.`)).toBeVisible();
+  await expect(page.getByPlaceholder("What would you like to share?")).toBeVisible();
+  await expect(page.getByText(seed.users.member.displayName).first()).toBeVisible();
 });
 
 test("protected routes redirect anonymous visitors to sign in", async ({ page }) => {
   await page.goto("/home");
 
   await expect(page).toHaveURL(/\/login$/);
-  await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
+  await expect(page.getByText("Evyta access")).toBeVisible();
   await expect(page.getByRole("button", { name: "Sign in" })).toBeVisible();
 });
 
@@ -33,7 +33,7 @@ test("non-admin users are redirected away from admin routes", async ({ page }) =
   await page.goto("/admin");
 
   await expect(page).toHaveURL(/\/home$/);
-  await expect(page.getByRole("heading", { name: "A quieter place to share, notice, and respond." })).toBeVisible();
+  await expect(page.getByPlaceholder("What would you like to share?")).toBeVisible();
 });
 
 test("admins sign in directly into the admin dashboard", async ({ page }) => {

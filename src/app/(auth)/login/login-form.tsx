@@ -50,14 +50,14 @@ export function LoginForm() {
       }}
     >
       {errorMessage ? (
-        <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+        <div className="rounded-[1.1rem] border border-[color:rgba(138,91,82,0.24)] bg-[color:rgba(138,91,82,0.08)] px-4 py-3 text-sm leading-6 text-[color:var(--lux-danger)]">
           {errorMessage}
         </div>
       ) : null}
-      <input className="rounded-md border p-2" name="email" type="email" placeholder="Email" required />
-      <input className="rounded-md border p-2" name="password" type="password" placeholder="Password" required />
+      <input className="lux-input" name="email" placeholder="Email" required type="email" />
+      <input className="lux-input" name="password" placeholder="Password" required type="password" />
       <button
-        className="rounded-md bg-primary p-2 text-primary-foreground disabled:cursor-not-allowed disabled:opacity-60"
+        className="lux-button-primary w-full justify-center disabled:cursor-not-allowed disabled:opacity-60"
         disabled={!isHydrated || isPending}
         onClick={(event) => {
           const form = event.currentTarget.form;
