@@ -295,6 +295,7 @@ export default async function MemberProfilePage({
                       ) : (
                         <form action={sendChatRequestAction}>
                           <input name="targetUserId" type="hidden" value={user.id} />
+                          <input name="sourcePath" type="hidden" value={`/users/${user.id}`} />
                           <button className="rounded-full bg-primary px-4 py-2 font-medium text-primary-foreground" type="submit">
                             Send chat request
                           </button>
@@ -324,6 +325,7 @@ export default async function MemberProfilePage({
                       ) : (
                         <form action={sendPhotoAccessRequestAction}>
                           <input name="ownerUserId" type="hidden" value={user.id} />
+                          <input name="sourcePath" type="hidden" value={`/users/${user.id}`} />
                           <button className="rounded-full border px-4 py-2 font-medium" type="submit">
                             Request photo access
                           </button>
@@ -355,6 +357,8 @@ export default async function MemberProfilePage({
     </main>
   );
 }
+
+
 
 
 

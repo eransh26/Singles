@@ -12,7 +12,6 @@ import {
   MembershipStatus,
   PhotoRequestPolicy,
   ProfileVisibility,
-  ThemePreference,
   VerificationStatus,
   PostContextType,
   UserRole,
@@ -63,6 +62,7 @@ if (!process.env.DATABASE_URL) {
 
 const prisma = new PrismaClient();
 const PASSWORD = "12345678a";
+const TEST_USER_PASSWORD = "Test1234!";
 const VERIFIED_AT = new Date("2026-01-15T10:00:00.000Z");
 
 async function upsertInterest(name: string, slug: string) {
@@ -84,11 +84,29 @@ async function createUser(options: {
   profileVisibility?: ProfileVisibility;
   chatRequestPolicy?: ChatRequestPolicy;
   photoRequestPolicy?: PhotoRequestPolicy;
+  image?: string;
+  bio?: string;
 }) {
   const verifiedPrerequisites = options.verifiedPrerequisites ?? false;
 
-  const user = await prisma.user.create({
-    data: {
+  const user = await prisma.user.upsert({
+    where: { email: options.email },
+    update: {
+      passwordHash: options.passwordHash,
+      displayName: options.displayName,
+      role: options.role ?? UserRole.USER,
+      accountStatus: AccountStatus.ACTIVE,
+      profileVisibility: options.profileVisibility ?? ProfileVisibility.MEMBERS_ONLY,
+      chatRequestPolicy: options.chatRequestPolicy ?? ChatRequestPolicy.EVERYONE,
+      photoRequestPolicy: options.photoRequestPolicy ?? PhotoRequestPolicy.VERIFIED_ONLY,
+      emailVerified: verifiedPrerequisites ? VERIFIED_AT : null,
+      phoneVerifiedAt: verifiedPrerequisites ? VERIFIED_AT : null,
+      ageVerified: verifiedPrerequisites,
+      verificationStatus: options.verificationStatus ?? (verifiedPrerequisites ? VerificationStatus.APPROVED : VerificationStatus.NONE),
+      image: options.image,
+      bio: options.bio,
+    },
+    create: {
       email: options.email,
       passwordHash: options.passwordHash,
       displayName: options.displayName,
@@ -101,18 +119,14 @@ async function createUser(options: {
       phoneVerifiedAt: verifiedPrerequisites ? VERIFIED_AT : null,
       ageVerified: verifiedPrerequisites,
       verificationStatus: options.verificationStatus ?? (verifiedPrerequisites ? VerificationStatus.APPROVED : VerificationStatus.NONE),
+      image: options.image,
+      bio: options.bio,
     },
     select: {
       id: true,
       email: true,
       displayName: true,
-    },
-  });
-
-  await prisma.userSettings.create({
-    data: {
-      userId: user.id,
-      themePreference: ThemePreference.LIGHT,
+      image: true,
     },
   });
 
@@ -121,14 +135,18 @@ async function createUser(options: {
 
 async function main() {
   const passwordHash = await bcrypt.hash(PASSWORD, 10);
+  const testUserPasswordHash = await bcrypt.hash(TEST_USER_PASSWORD, 10);
 
   await prisma.notification.deleteMany();
   await prisma.report.deleteMany();
   await prisma.auditLog.deleteMany();
+  await prisma.messageAttachment.deleteMany();
+  await prisma.videoCallRecord.deleteMany();
   await prisma.message.deleteMany();
   await prisma.conversation.deleteMany();
   await prisma.chatRequest.deleteMany();
   await prisma.comment.deleteMany();
+  await prisma.postReaction.deleteMany();
   await prisma.postMedia.deleteMany();
   await prisma.post.deleteMany();
   await prisma.groupJoinAnswer.deleteMany();
@@ -218,6 +236,44 @@ async function main() {
     verifiedPrerequisites: true,
     verificationStatus: VerificationStatus.PENDING,
   });
+
+  const defaultTestUsers = await Promise.all([
+    createUser({
+      email: "test.male1@evyta.dev",
+      displayName: "Eitan Vale",
+      passwordHash: testUserPasswordHash,
+      image: "/avatars/avatar-male-1.svg",
+      bio: "Default seeded male profile for local testing.",
+    }),
+    createUser({
+      email: "test.female1@evyta.dev",
+      displayName: "Lia Morel",
+      passwordHash: testUserPasswordHash,
+      image: "/avatars/avatar-female-1.svg",
+      bio: "Default seeded female profile for local testing.",
+    }),
+    createUser({
+      email: "test.male2@evyta.dev",
+      displayName: "Noam Darel",
+      passwordHash: testUserPasswordHash,
+      image: "/avatars/avatar-male-2.svg",
+      bio: "Default seeded male profile for local testing.",
+    }),
+    createUser({
+      email: "test.female2@evyta.dev",
+      displayName: "Maya Sol",
+      passwordHash: testUserPasswordHash,
+      image: "/avatars/avatar-female-2.svg",
+      bio: "Default seeded female profile for local testing.",
+    }),
+    createUser({
+      email: "test.user@evyta.dev",
+      displayName: "Ari Quinn",
+      passwordHash: testUserPasswordHash,
+      image: "/avatars/avatar-neutral-1.svg",
+      bio: "Default seeded neutral profile for local testing.",
+    }),
+  ]);
 
   await prisma.userInterest.createMany({
     data: [
@@ -312,8 +368,37 @@ async function main() {
     },
   });
 
+  const approvedChatRequest = await prisma.chatRequest.create({
+    data: {
+      fromUserId: owner.id,
+      toUserId: verified.id,
+      pairKey: [owner.id, verified.id].sort().join(":"),
+      status: "ACCEPTED",
+      respondedAt: new Date("2026-02-01T10:00:00.000Z"),
+    },
+    select: { id: true },
+  });
+
+  const approvedConversation = await prisma.conversation.create({
+    data: {
+      userOneId: owner.id,
+      userTwoId: verified.id,
+      pairKey: [owner.id, verified.id].sort().join(":"),
+      createdFromChatRequestId: approvedChatRequest.id,
+      status: "ACTIVE",
+      messages: {
+        create: {
+          senderUserId: owner.id,
+          body: "Welcome to the private chat.",
+        },
+      },
+    },
+    select: { id: true },
+  });
+
   const manifest = {
     password: PASSWORD,
+    defaultTestUserPassword: TEST_USER_PASSWORD,
     users: {
       admin,
       owner,
@@ -323,6 +408,7 @@ async function main() {
       blockedTarget,
       verificationApproveUser,
       verificationRejectUser,
+      defaultTestUsers,
     },
     groups: {
       closedGroup,
@@ -332,6 +418,9 @@ async function main() {
     },
     reports: {
       postReport,
+    },
+    conversations: {
+      approvedConversation,
     },
   };
 
@@ -350,5 +439,6 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
+
 
 

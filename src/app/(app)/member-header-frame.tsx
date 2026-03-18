@@ -7,7 +7,7 @@ export function MemberHeaderFrame({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const onScroll = () => {
-      setScrolled(window.scrollY > 36);
+      setScrolled(window.scrollY > 20);
     };
 
     onScroll();

@@ -32,7 +32,7 @@ export function AdminSidebarNav({ items }: { items: AdminNavItem[] }) {
             {typeof item.badge === "number" ? (
               <span
                 className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                  isActive ? "bg-[rgba(255,248,242,0.14)] text-[#fff4ea]" : "bg-[rgba(255,248,242,0.08)] text-[#d7c8bb]"
+                  isActive ? "bg-[rgba(107,68,101,0.12)] text-[color:var(--lux-accent-deep)]" : "bg-[rgba(107,68,101,0.08)] text-[color:var(--lux-text-secondary)]"
                 }`}
               >
                 {item.badge}

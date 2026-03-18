@@ -12,7 +12,6 @@ import {
   PostVisibilityStatus,
   ReportStatus,
   ReportTargetType,
-  ThemePreference,
   UserRole,
   VerificationStatus,
 } from "@prisma/client";
@@ -119,11 +118,6 @@ export async function createAdminUserAction(formData: FormData) {
         role,
         accountStatus,
         isTestUser,
-        settings: {
-          create: {
-            themePreference: ThemePreference.LIGHT,
-          },
-        },
       },
       select: { id: true },
     });
@@ -537,3 +531,4 @@ export async function savePromotedEventAction(formData: FormData) {
   }
   redirect(`/admin/events?saved=event&eventId=${savedEvent.id}`);
 }
+

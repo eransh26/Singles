@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 90">
+  <style>
+    .wordmark {
+      font-family: "Playfair Display", serif;
+      font-size: 56px;
+      letter-spacing: 1.5px;
+      fill: #C8A96A;
+    }
+  </style>
+  <text x="10" y="60" class="wordmark">Evyta</text>
+</svg>

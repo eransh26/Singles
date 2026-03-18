@@ -3,17 +3,7 @@ import { VerificationStatus } from "@prisma/client";
 import { reviewChatRequestAction } from "../actions";
 import { requireUser } from "@/lib/auth/guards";
 import { prisma } from "@/lib/db/prisma";
-
-function formatDateTime(value: Date) {
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).format(value);
-}
+import { RelativeTime } from "@/components/relative-time";
 
 export default async function ChatsPage({
   searchParams,
@@ -134,7 +124,7 @@ export default async function ChatsPage({
                 const lastMessage = conversation.messages[0];
 
                 return (
-                  <Link key={conversation.id} className="lux-card-soft block transition hover:border-[color:rgba(198,166,107,0.26)]" href={`/chats/${conversation.id}`}>
+                  <Link key={conversation.id} className="lux-card-soft block transition hover:border-[color:var(--lux-accent-border)]" href={`/chats/${conversation.id}`}>
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <div className="flex flex-wrap items-center gap-2.5">
@@ -143,9 +133,7 @@ export default async function ChatsPage({
                             <span className="lux-chip lux-chip-accent">Verified</span>
                           ) : null}
                         </div>
-                        <p className="mt-3 text-xs uppercase tracking-[0.16em] text-[color:var(--lux-text-muted)]">
-                          {lastMessage ? formatDateTime(lastMessage.createdAt) : formatDateTime(conversation.updatedAt)}
-                        </p>
+                        <RelativeTime className="mt-3 block text-xs uppercase tracking-[0.16em] text-[color:var(--lux-text-muted)]" value={(lastMessage ? lastMessage.createdAt : conversation.updatedAt).toISOString()} />
                       </div>
                       <span className="lux-button-subtle px-3 py-1.5 text-xs">Open chat</span>
                     </div>
@@ -176,7 +164,10 @@ export default async function ChatsPage({
                         <Link className="font-medium text-[color:var(--lux-text)] underline-offset-4 hover:underline" href={`/users/${request.fromUser.id}`}>
                           {request.fromUser.displayName}
                         </Link>
-                        <p className="mt-2 text-xs uppercase tracking-[0.16em] text-[color:var(--lux-text-muted)]">Requested on {formatDateTime(request.createdAt)}</p>
+                        <div className="mt-2 text-xs uppercase tracking-[0.16em] text-[color:var(--lux-text-muted)]">
+                          <span className="mr-1">Requested</span>
+                          <RelativeTime value={request.createdAt.toISOString()} />
+                        </div>
                       </div>
                       <span className="lux-chip">{request.fromUser.verificationStatus}</span>
                     </div>
@@ -217,7 +208,10 @@ export default async function ChatsPage({
                       <Link className="font-medium text-[color:var(--lux-text)] underline-offset-4 hover:underline" href={`/users/${request.toUser.id}`}>
                         {request.toUser.displayName}
                       </Link>
-                      <span className="text-xs uppercase tracking-[0.16em] text-[color:var(--lux-text-muted)]">Sent {formatDateTime(request.createdAt)}</span>
+                      <div className="text-xs uppercase tracking-[0.16em] text-[color:var(--lux-text-muted)]">
+                        <span className="mr-1">Sent</span>
+                        <RelativeTime value={request.createdAt.toISOString()} />
+                      </div>
                     </div>
                     <div className="mt-4 flex flex-wrap gap-2">
                       <Link className="lux-button-secondary" href={`/users/${request.toUser.id}`}>

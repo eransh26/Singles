@@ -1,32 +1,22 @@
 import Link from "next/link";
-import { Camera, Heart, ImagePlus, MessageCircle, SmilePlus } from "lucide-react";
-import { MembershipStatus, PlacementType, PostContextType, PostVisibilityStatus } from "@prisma/client";
+import { Search } from "lucide-react";
+import { ChatRequestStatus, MembershipStatus, PhotoAccessRequestStatus, PlacementType, PostContextType, PostVisibilityStatus } from "@prisma/client";
 import { createCommentAction, createPostAction } from "../actions";
-import { requireUser } from "@/lib/auth/guards";
+import { hasMinimalProfileVisibility, isFullyVerifiedUser, requireUser } from "@/lib/auth/guards";
 import { prisma } from "@/lib/db/prisma";
 import { getPromotedPlacement } from "@/lib/promotions";
+import { RelativeTime } from "@/components/relative-time";
+import { HomeComposer } from "./home-composer";
+import { PostAuthorActions } from "@/components/post-author-actions";
+import { PostEngagement } from "@/components/post-engagement";
 
-function formatDateTime(value: Date) {
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).format(value);
-}
-
-function actionLabel(count: number) {
-  if (count === 0) {
-    return "Comment";
-  }
-
-  return `${count} comment${count === 1 ? "" : "s"}`;
+function userPairKey(firstUserId: string, secondUserId: string) {
+  return [firstUserId, secondUserId].sort().join(":");
 }
 
 export default async function HomePage() {
   const viewer = await requireUser();
+  const viewerIsVerified = isFullyVerifiedUser(viewer);
 
   const memberships = await prisma.groupMembership.findMany({
     where: { userId: viewer.id, status: MembershipStatus.ACTIVE },
@@ -58,7 +48,15 @@ export default async function HomePage() {
         createdAt: true,
         groupId: true,
         authorUserId: true,
-        author: { select: { id: true, displayName: true } },
+        author: {
+          select: {
+            id: true,
+            displayName: true,
+            profileVisibility: true,
+            chatRequestPolicy: true,
+            photoRequestPolicy: true,
+          },
+        },
         group: { select: { id: true, name: true } },
         comments: {
           where: { moderationStatus: { not: "REMOVED" } },
@@ -70,6 +68,18 @@ export default async function HomePage() {
             createdAt: true,
             authorUserId: true,
             author: { select: { id: true, displayName: true } },
+          },
+        },
+        reactions: {
+          where: { userId: viewer.id },
+          select: { reactionType: true },
+        },
+        _count: {
+          select: {
+            reactions: true,
+            comments: {
+              where: { moderationStatus: { not: "REMOVED" } },
+            },
           },
         },
       },
@@ -86,13 +96,62 @@ export default async function HomePage() {
     getPromotedPlacement(PlacementType.HOME_FEED_CARD),
   ]);
 
+  const actionableAuthorIds = Array.from(
+    new Set(
+      posts
+        .filter((post) => post.authorUserId !== viewer.id)
+        .map((post) => post.authorUserId),
+    ),
+  );
+  const pairKeys = actionableAuthorIds.map((authorUserId) => userPairKey(viewer.id, authorUserId));
+
+  const [conversations, chatRequests, photoRequests, photoGrants, blocks] = actionableAuthorIds.length
+    ? await Promise.all([
+        prisma.conversation.findMany({
+          where: { pairKey: { in: pairKeys } },
+          select: { id: true, pairKey: true },
+        }),
+        prisma.chatRequest.findMany({
+          where: { pairKey: { in: pairKeys }, status: ChatRequestStatus.PENDING },
+          orderBy: { createdAt: "desc" },
+          select: { id: true, pairKey: true, fromUserId: true, toUserId: true },
+        }),
+        prisma.photoAccessRequest.findMany({
+          where: { pairKey: { in: pairKeys }, status: PhotoAccessRequestStatus.PENDING },
+          orderBy: { createdAt: "desc" },
+          select: { id: true, pairKey: true, requesterUserId: true },
+        }),
+        prisma.photoAccessGrant.findMany({
+          where: { ownerUserId: { in: actionableAuthorIds }, granteeUserId: viewer.id, revokedAt: null },
+          select: { ownerUserId: true },
+        }),
+        prisma.userBlock.findMany({
+          where: {
+            OR: [
+              { blockerUserId: viewer.id, blockedUserId: { in: actionableAuthorIds } },
+              { blockerUserId: { in: actionableAuthorIds }, blockedUserId: viewer.id },
+            ],
+          },
+          select: { blockerUserId: true, blockedUserId: true },
+        }),
+      ])
+    : [[], [], [], [], []];
+
+  const conversationByPairKey = new Map(conversations.map((conversation) => [conversation.pairKey, conversation]));
+  const chatRequestByPairKey = new Map(chatRequests.map((request) => [request.pairKey, request]));
+  const photoRequestByPairKey = new Map(photoRequests.map((request) => [request.pairKey, request]));
+  const approvedGalleryOwners = new Set(photoGrants.map((grant) => grant.ownerUserId));
+  const blockedUsers = new Set(
+    blocks.map((block) => (block.blockerUserId === viewer.id ? block.blockedUserId : block.blockerUserId)),
+  );
+
   return (
     <main className="mx-auto flex min-h-screen max-w-7xl flex-col gap-6 px-4 py-5 md:px-6 md:py-6">
       <section className="grid gap-6 lg:grid-cols-[minmax(0,1.65fr)_320px] lg:items-start">
         <div className="space-y-4">
-          <section className="lux-card p-4 md:p-5">
+          <section className="lux-card p-4 shadow-[0_18px_40px_rgba(43,43,43,0.08)] md:p-5">
             <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-full border border-[color:rgba(201,167,110,0.18)] bg-[color:rgba(198,166,107,0.1)] text-sm font-semibold text-[color:var(--lux-gold)]">
+              <div className="flex h-11 w-11 items-center justify-center rounded-full border border-[color:var(--lux-accent-border)] bg-[color:var(--lux-highlight-soft)] text-sm font-semibold text-[color:var(--lux-accent-deep)]">
                 {viewer.displayName.slice(0, 1).toUpperCase()}
               </div>
               <div>
@@ -100,32 +159,7 @@ export default async function HomePage() {
                 <p className="text-xs uppercase tracking-[0.16em] text-[color:var(--lux-text-muted)]">Community feed</p>
               </div>
             </div>
-            <form action={createPostAction} className="mt-4 flex flex-col gap-3">
-              <textarea
-                className="lux-textarea min-h-[112px] border-none bg-[color:rgba(255,255,255,0.34)] px-0 pb-2 pt-1 shadow-none dark:bg-transparent"
-                name="contentText"
-                placeholder="What would you like to share?"
-                required
-              />
-              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[color:rgba(179,154,136,0.16)] pt-3">
-                <div className="flex flex-wrap items-center gap-2 text-[color:var(--lux-text-muted)]">
-                  <span className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[color:rgba(179,154,136,0.16)] bg-[color:rgba(255,255,255,0.34)]" title="Image upload coming soon">
-                    <ImagePlus className="h-4 w-4" />
-                  </span>
-                  <span className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[color:rgba(179,154,136,0.16)] bg-[color:rgba(255,255,255,0.34)]" title="Camera capture coming soon">
-                    <Camera className="h-4 w-4" />
-                  </span>
-                  <span className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[color:rgba(179,154,136,0.16)] bg-[color:rgba(255,255,255,0.34)]" title="Emoji insertion coming soon">
-                    <SmilePlus className="h-4 w-4" />
-                  </span>
-                  <label className="ml-2 inline-flex items-center gap-2 rounded-full border border-[color:rgba(179,154,136,0.16)] px-3 py-2 text-xs uppercase tracking-[0.14em] text-[color:var(--lux-text-secondary)]">
-                    <input className="size-4 accent-[color:var(--lux-gold)]" name="isAnonymous" type="checkbox" />
-                    Anonymous
-                  </label>
-                </div>
-                <button className="lux-button-primary" type="submit">Post</button>
-              </div>
-            </form>
+            <HomeComposer action={createPostAction} />
           </section>
 
           <section className="space-y-4">
@@ -138,11 +172,37 @@ export default async function HomePage() {
                 const authorLabel = isAnonymousToViewer ? "Anonymous member" : post.author.displayName;
                 const canOpenAuthorProfile = !isAnonymousToViewer;
                 const authorProfileHref = post.authorUserId === viewer.id ? "/me" : `/users/${post.author.id}`;
+                const pairKey = userPairKey(viewer.id, post.authorUserId);
+                const existingConversation = conversationByPairKey.get(pairKey);
+                const existingChatRequest = chatRequestByPairKey.get(pairKey);
+                const existingPhotoRequest = photoRequestByPairKey.get(pairKey);
+                const isBlocked = blockedUsers.has(post.authorUserId);
+                const hasApprovedPhotoGrant = approvedGalleryOwners.has(post.authorUserId);
+                const chatState = existingConversation
+                  ? "open"
+                  : existingChatRequest?.toUserId === viewer.id
+                    ? "incoming"
+                    : existingChatRequest?.fromUserId === viewer.id
+                      ? "pending"
+                      : isBlocked || !hasMinimalProfileVisibility(post.author.profileVisibility)
+                        ? "blocked"
+                        : post.author.chatRequestPolicy === "NOBODY"
+                          ? "blocked"
+                          : post.author.chatRequestPolicy === "VERIFIED_ONLY" && !viewerIsVerified
+                            ? "blocked"
+                            : "send";
+                const photoState = hasApprovedPhotoGrant
+                  ? "approved"
+                  : existingPhotoRequest?.requesterUserId === viewer.id
+                    ? "pending"
+                    : isBlocked || post.author.photoRequestPolicy === "NOBODY" || !viewerIsVerified
+                      ? "blocked"
+                      : "request";
 
                 return (
-                  <article key={post.id} className="lux-card p-4 md:p-5">
+                  <article key={post.id} className="lux-card p-4 shadow-[0_10px_24px_rgba(43,43,43,0.04)] md:p-5">
                     <div className="flex flex-col gap-4">
-                      <div className="flex items-start justify-between gap-3">
+                      <div className="group flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2.5">
                             {canOpenAuthorProfile ? (
@@ -155,71 +215,43 @@ export default async function HomePage() {
                             {post.group ? <Link className="lux-chip" href={`/groups/${post.group.id}`}>{post.group.name}</Link> : <span className="lux-chip">Global feed</span>}
                             {isAnonymousAuthorView ? <span className="lux-chip lux-chip-muted normal-case tracking-normal">Visible only to you</span> : null}
                           </div>
-                          <p className="mt-2 text-xs uppercase tracking-[0.16em] text-[color:var(--lux-text-muted)]">{formatDateTime(post.createdAt)}</p>
+                          <RelativeTime className="mt-1 block text-[11px] tracking-normal text-[color:var(--lux-text-muted)]" value={post.createdAt.toISOString()} />
                         </div>
-                        {canOpenAuthorProfile ? (
-                          <Link className="text-xs uppercase tracking-[0.16em] text-[color:var(--lux-text-muted)] underline-offset-4 hover:underline" href={authorProfileHref}>
-                            {post.authorUserId === viewer.id ? "My profile" : "View profile"}
-                          </Link>
-                        ) : null}
+                        <div className="flex items-center gap-2">
+                          {canOpenAuthorProfile && post.authorUserId !== viewer.id ? (
+                            <PostAuthorActions
+                              chatState={chatState}
+                              conversationId={existingConversation?.id}
+                              photoState={photoState}
+                              sourcePath="/home"
+                              targetUserId={post.author.id}
+                            />
+                          ) : null}
+                          {canOpenAuthorProfile ? (
+                            <Link className="text-xs uppercase tracking-[0.16em] text-[color:var(--lux-text-muted)] underline-offset-4 hover:underline" href={authorProfileHref}>
+                              {post.authorUserId === viewer.id ? "My profile" : "View profile"}
+                            </Link>
+                          ) : null}
+                        </div>
                       </div>
 
                       <p className="whitespace-pre-wrap text-[15px] leading-7 text-[color:var(--lux-text-secondary)]">{post.contentText}</p>
 
-                      <div className="flex flex-wrap items-center gap-4 border-t border-[color:rgba(179,154,136,0.16)] pt-3 text-xs uppercase tracking-[0.14em] text-[color:var(--lux-text-muted)]">
-                        <span className="inline-flex items-center gap-2">
-                          <Heart className="h-4 w-4" />
-                          React
-                        </span>
-
-                        <details className="group">
-                          <summary className="inline-flex cursor-pointer list-none items-center gap-2 rounded-full px-0 py-0 text-xs uppercase tracking-[0.14em] text-[color:var(--lux-text-muted)] marker:hidden">
-                            <MessageCircle className="h-4 w-4" />
-                            {actionLabel(post.comments.length)}
-                          </summary>
-                          <div className="mt-4 min-w-[min(100%,36rem)] rounded-[1.4rem] border border-[color:rgba(179,154,136,0.16)] bg-[color:rgba(255,255,255,0.22)] p-4 dark:bg-[color:rgba(42,36,31,0.48)]">
-                            <div className="space-y-3">
-                              {post.comments.length === 0 ? (
-                                <p className="text-sm normal-case tracking-normal text-[color:var(--lux-text-muted)]">No comments yet.</p>
-                              ) : (
-                                post.comments.map((comment) => {
-                                  const commentAuthorHref = comment.authorUserId === viewer.id ? "/me" : `/users/${comment.author.id}`;
-
-                                  return (
-                                    <div key={comment.id} className="lux-panel">
-                                      <div className="flex items-center justify-between gap-3">
-                                        <Link className="font-medium normal-case tracking-normal text-[color:var(--lux-text)] underline-offset-4 hover:underline" href={commentAuthorHref}>
-                                          {comment.author.displayName}
-                                        </Link>
-                                        <p className="text-[11px] uppercase tracking-[0.14em] text-[color:var(--lux-text-muted)]">{formatDateTime(comment.createdAt)}</p>
-                                      </div>
-                                      <p className="mt-2 whitespace-pre-wrap text-sm normal-case tracking-normal leading-6 text-[color:var(--lux-text-secondary)]">{comment.contentText}</p>
-                                    </div>
-                                  );
-                                })
-                              )}
-                            </div>
-                            <form action={createCommentAction} className="mt-4 flex flex-col gap-3 border-t border-[color:rgba(179,154,136,0.14)] pt-4">
-                              <input name="postId" type="hidden" value={post.id} />
-                              <textarea className="lux-textarea min-h-[108px]" name="contentText" placeholder="Write a comment" required />
-                              <div className="flex flex-wrap items-center justify-between gap-3">
-                                <div className="flex gap-2 text-[color:var(--lux-text-muted)]">
-                                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[color:rgba(179,154,136,0.16)]"><ImagePlus className="h-4 w-4" /></span>
-                                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[color:rgba(179,154,136,0.16)]"><Camera className="h-4 w-4" /></span>
-                                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[color:rgba(179,154,136,0.16)]"><SmilePlus className="h-4 w-4" /></span>
-                                </div>
-                                <button className="lux-button-secondary" type="submit">Add comment</button>
-                              </div>
-                            </form>
-                          </div>
-                        </details>
-
-                        {post.group ? (
-                          <Link className="inline-flex items-center gap-2 hover:text-[color:var(--lux-text-secondary)]" href={`/groups/${post.group.id}`}>
-                            Open group
-                          </Link>
-                        ) : null}
-                      </div>
+                      <PostEngagement
+                        commentAction={createCommentAction}
+                        commentCount={post._count.comments}
+                        commentPlaceholder="Write a comment"
+                        commentSubmitLabel="Add comment"
+                        comments={post.comments.map((comment) => ({
+                          ...comment,
+                          createdAt: comment.createdAt.toISOString(),
+                        }))}
+                        groupHref={post.group ? `/groups/${post.group.id}` : undefined}
+                        postId={post.id}
+                        reactionCount={post._count.reactions}
+                        reactionType={post.reactions[0]?.reactionType ?? null}
+                        viewerId={viewer.id}
+                      />
                     </div>
                   </article>
                 );
@@ -228,7 +260,17 @@ export default async function HomePage() {
           </section>
         </div>
 
-        <aside className="space-y-4 lg:sticky lg:top-28">
+        <aside className="space-y-4 lg:sticky lg:top-24">
+          <section className="lux-card p-4">
+            <p className="lux-overline">Search Evyta</p>
+            <form action="/search" className="mt-3">
+              <div className="flex items-center gap-2 rounded-[1rem] border border-[color:var(--lux-border)] bg-white px-3 py-2.5">
+                <Search className="h-4 w-4 text-[color:var(--lux-text-muted)]" />
+                <input className="w-full bg-transparent text-sm text-[color:var(--lux-text)] outline-none placeholder:text-[color:var(--lux-text-muted)]" name="query" placeholder="Members, groups, posts" />
+              </div>
+            </form>
+          </section>
+
           <section className="lux-card p-4">
             <p className="lux-overline">Your spaces</p>
             <div className="mt-3 flex flex-wrap gap-2.5">
@@ -248,13 +290,13 @@ export default async function HomePage() {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="lux-overline">Profile</p>
-                <h2 className="mt-2 text-lg font-semibold tracking-tight text-[color:var(--lux-text)]">Identity and privacy</h2>
+                <h2 className="mt-2 text-lg font-semibold tracking-tight text-[color:var(--lux-text)]">Identity and media</h2>
               </div>
               <Link className="text-xs uppercase tracking-[0.16em] text-[color:var(--lux-text-muted)] underline-offset-4 hover:underline" href="/me">
                 Open
               </Link>
             </div>
-            <p className="mt-3 text-sm leading-6 text-[color:var(--lux-text-secondary)]">Refine your member profile, privacy settings, and verification visibility.</p>
+            <p className="mt-3 text-sm leading-6 text-[color:var(--lux-text-secondary)]">Keep your profile, interests, and media collection curated for the community.</p>
           </section>
 
           {promotedPlacement ? (
@@ -285,7 +327,7 @@ export default async function HomePage() {
                 <p className="text-sm text-[color:var(--lux-text-muted)]">You have explored all current groups.</p>
               ) : (
                 recommendedGroups.map((group) => (
-                  <Link key={group.id} className="block rounded-[1.35rem] border border-[color:rgba(179,154,136,0.14)] bg-[color:rgba(255,255,255,0.2)] px-4 py-4 transition hover:border-[color:rgba(198,166,107,0.24)] dark:bg-[color:rgba(42,36,31,0.42)]" href={`/groups/${group.id}`}>
+                  <Link key={group.id} className="block rounded-[1rem] border border-[color:var(--lux-border)] bg-white px-4 py-4 transition hover:border-[color:var(--lux-accent-border)]" href={`/groups/${group.id}`}>
                     <div className="flex items-center justify-between gap-3">
                       <p className="text-base font-semibold tracking-tight text-[color:var(--lux-text)]">{group.name}</p>
                       <span className="lux-chip">{group.groupType}</span>

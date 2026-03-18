@@ -1,12 +1,10 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 
 const GENERIC_SIGN_IN_ERROR = "We couldn’t sign you in. If the problem continues, please contact support.";
 
 export function LoginForm() {
-  const router = useRouter();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [isHydrated, setIsHydrated] = useState(false);
@@ -36,8 +34,7 @@ export function LoginForm() {
       }
 
       const payload = (await response.json()) as { redirectTo?: string };
-      router.push(payload.redirectTo ?? "/home");
-      router.refresh();
+      window.location.assign(payload.redirectTo ?? "/home");
     });
   }
 

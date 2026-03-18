@@ -20,7 +20,8 @@ import {
   PhotoRequestPolicy,
   PostContextType,
   ProfileVisibility,
-  ThemePreference,
+  ReportTargetType,
+  ReactionType,
   VerificationStatus,
 } from "@prisma/client";
 import { hasMinimalProfileVisibility, isFullyVerifiedUser, requireActiveUser, requireUser } from "@/lib/auth/guards";
@@ -45,6 +46,10 @@ function slugify(value: string) {
 
 function userPairKey(firstUserId: string, secondUserId: string) {
   return [firstUserId, secondUserId].sort().join(":");
+}
+
+function withSavedParam(path: string, saved: string) {
+  return path.includes("?") ? `${path}&saved=${saved}` : `${path}?saved=${saved}`;
 }
 
 async function uniqueGroupSlug(name: string) {
@@ -98,6 +103,108 @@ async function createNotification(userId: string, type: NotificationType, payloa
   });
 }
 
+export async function togglePostReactionAction(formData: FormData) {
+  const user = await requireActiveUser();
+  const postId = textValue(formData, "postId");
+  const groupId = optionalTextValue(formData, "groupId");
+  const reactionType = textValue(formData, "reactionType") as ReactionType;
+
+  if (!postId) {
+    throw new Error("Post not found.");
+  }
+
+  const existingReaction = await prisma.postReaction.findUnique({
+    where: {
+      postId_userId: {
+        postId,
+        userId: user.id,
+      },
+    },
+    select: { id: true, reactionType: true },
+  });
+
+  if (existingReaction?.reactionType === reactionType) {
+    await prisma.postReaction.delete({ where: { id: existingReaction.id } });
+  } else if (existingReaction) {
+    await prisma.postReaction.update({
+      where: { id: existingReaction.id },
+      data: { reactionType },
+    });
+  } else {
+    await prisma.postReaction.create({
+      data: {
+        postId,
+        userId: user.id,
+        reactionType,
+      },
+    });
+  }
+
+  revalidatePath("/home");
+  if (groupId) {
+    revalidatePath(`/groups/${groupId}`);
+  }
+}
+
+export async function blockUserAction(formData: FormData) {
+  const user = await requireActiveUser();
+  const blockedUserId = textValue(formData, "blockedUserId");
+  const sourcePath = optionalTextValue(formData, "sourcePath") ?? "/home";
+  const reason = optionalTextValue(formData, "reason") ?? "Blocked from member post actions";
+
+  if (!blockedUserId || blockedUserId === user.id) {
+    throw new Error("Choose another member to block.");
+  }
+
+  await prisma.userBlock.upsert({
+    where: {
+      blockerUserId_blockedUserId: {
+        blockerUserId: user.id,
+        blockedUserId,
+      },
+    },
+    update: { reason },
+    create: {
+      blockerUserId: user.id,
+      blockedUserId,
+      reason,
+    },
+  });
+
+  revalidatePath("/home");
+  revalidatePath("/chats");
+  revalidatePath(`/users/${blockedUserId}`);
+  if (sourcePath !== "/home") {
+    revalidatePath(sourcePath);
+  }
+}
+
+export async function reportUserAction(formData: FormData) {
+  const user = await requireActiveUser();
+  const targetUserId = textValue(formData, "targetUserId");
+  const sourcePath = optionalTextValue(formData, "sourcePath") ?? "/home";
+  const details = optionalTextValue(formData, "details");
+
+  if (!targetUserId || targetUserId === user.id) {
+    throw new Error("Choose another member to report.");
+  }
+
+  await prisma.report.create({
+    data: {
+      filedByUserId: user.id,
+      targetType: ReportTargetType.USER,
+      targetUserId,
+      reasonCode: "USER_REPORT",
+      details,
+    },
+  });
+
+  revalidatePath("/notifications");
+  if (sourcePath !== "/home") {
+    revalidatePath(sourcePath);
+  }
+}
+
 export async function updateProfileAction(formData: FormData) {
   const user = await requireUser();
 
@@ -108,6 +215,7 @@ export async function updateProfileAction(formData: FormData) {
 
   const bio = optionalTextValue(formData, "bio");
   const region = optionalTextValue(formData, "region");
+  const image = optionalTextValue(formData, "image");
   if (bio && bio.length > 3000) {
     throw new Error("Bio must be 3000 characters or fewer.");
   }
@@ -127,6 +235,7 @@ export async function updateProfileAction(formData: FormData) {
         displayName,
         bio,
         region,
+        image,
       },
     });
 
@@ -152,31 +261,22 @@ export async function updatePrivacyAction(formData: FormData) {
   const chatRequestPolicy = textValue(formData, "chatRequestPolicy") as ChatRequestPolicy;
   const photoRequestPolicy = textValue(formData, "photoRequestPolicy") as PhotoRequestPolicy;
   const activityVisibility = textValue(formData, "activityVisibility") as ActivityVisibility;
-  const themePreference = textValue(formData, "themePreference") as ThemePreference;
   const verifiedBadgeVisible = formData.get("verifiedBadgeVisible") === "on";
 
-  await prisma.$transaction([
-    prisma.user.update({
-      where: { id: user.id },
-      data: {
-        profileVisibility,
-        chatRequestPolicy,
-        photoRequestPolicy,
-        activityVisibility,
-        verifiedBadgeVisible,
-      },
-    }),
-    prisma.userSettings.upsert({
-      where: { userId: user.id },
-      update: { themePreference },
-      create: { userId: user.id, themePreference },
-    }),
-  ]);
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      profileVisibility,
+      chatRequestPolicy,
+      photoRequestPolicy,
+      activityVisibility,
+      verifiedBadgeVisible,
+    },
+  });
 
   revalidatePath("/me");
   revalidatePath(`/users/${user.id}`);
-  revalidatePath("/", "layout");
-  redirect("/me?saved=privacy");
+  redirect("/settings?saved=privacy");
 }
 
 export async function submitVerificationRequestAction() {
@@ -204,7 +304,7 @@ export async function submitVerificationRequestAction() {
 
   revalidatePath("/me");
   revalidatePath(`/users/${user.id}`);
-  redirect("/me?saved=verification");
+  redirect("/settings?saved=verification");
 }
 
 export async function addProfileMediaAction(formData: FormData) {
@@ -594,6 +694,7 @@ export async function reviewGroupJoinRequestAction(formData: FormData) {
 export async function sendChatRequestAction(formData: FormData) {
   const user = await requireActiveUser();
   const targetUserId = textValue(formData, "targetUserId");
+  const sourcePath = optionalTextValue(formData, "sourcePath") ?? "/home";
 
   if (!targetUserId || targetUserId === user.id) {
     throw new Error("Choose another member to contact.");
@@ -655,7 +756,7 @@ export async function sendChatRequestAction(formData: FormData) {
   }
 
   if (existingPendingRequest) {
-    const destination = existingPendingRequest.toUserId === user.id ? "/chats?saved=incoming-chat" : `/users/${targetUserId}?saved=chat-request`;
+    const destination = existingPendingRequest.toUserId === user.id ? withSavedParam("/chats", "incoming-chat") : withSavedParam(sourcePath, "chat-request");
     redirect(destination);
   }
 
@@ -680,7 +781,7 @@ export async function sendChatRequestAction(formData: FormData) {
   revalidatePath(`/users/${targetUserId}`);
   revalidatePath("/chats");
   revalidatePath("/notifications");
-  redirect(`/users/${targetUserId}?saved=chat-request`);
+  redirect(withSavedParam(sourcePath, "chat-request"));
 }
 export async function reviewChatRequestAction(formData: FormData) {
   const user = await requireUser();
@@ -768,6 +869,7 @@ export async function reviewChatRequestAction(formData: FormData) {
 export async function sendPhotoAccessRequestAction(formData: FormData) {
   const user = await requireActiveUser();
   const ownerUserId = textValue(formData, "ownerUserId");
+  const sourcePath = optionalTextValue(formData, "sourcePath") ?? "/home";
 
   if (!ownerUserId || ownerUserId === user.id) {
     throw new Error("Choose another member to request access from.");
@@ -820,7 +922,7 @@ export async function sendPhotoAccessRequestAction(formData: FormData) {
   }
 
   if (existingPendingRequest) {
-    redirect(`/users/${ownerUserId}?saved=photo-request`);
+    redirect(withSavedParam(sourcePath, "photo-request"));
   }
 
   await prisma.photoAccessRequest.create({
@@ -840,7 +942,7 @@ export async function sendPhotoAccessRequestAction(formData: FormData) {
   revalidatePath(`/users/${ownerUserId}`);
   revalidatePath("/me");
   revalidatePath("/notifications");
-  redirect(`/users/${ownerUserId}?saved=photo-request`);
+  redirect(withSavedParam(sourcePath, "photo-request"));
 }
 export async function reviewPhotoAccessRequestAction(formData: FormData) {
   const user = await requireUser();
@@ -916,7 +1018,7 @@ export async function reviewPhotoAccessRequestAction(formData: FormData) {
   revalidatePath(`/users/${request.ownerUserId}`);
   revalidatePath(`/users/${request.requesterUserId}`);
   revalidatePath("/notifications");
-  redirect("/me?saved=photo-review");
+  redirect("/settings?saved=photo-review");
 }
 
 export async function sendMessageAction(formData: FormData) {
@@ -994,6 +1096,11 @@ export async function markAllNotificationsReadAction() {
 
   revalidatePath("/notifications");
 }
+
+
+
+
+
 
 
 

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <style>
+    .mark {
+      font-family: "Playfair Display", serif;
+      font-size: 46px;
+      fill: #6B3E5E;
+    }
+  </style>
+  <text x="18" y="46" class="mark">E</text>
+</svg>

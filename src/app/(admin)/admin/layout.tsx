@@ -18,21 +18,21 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   ];
 
   return (
-    <div className="admin-shell min-h-screen text-[#f6eee7]">
+    <div className="admin-shell min-h-screen text-[color:var(--lux-text)]">
       <div className="mx-auto flex min-h-screen max-w-[1600px] flex-col lg:flex-row lg:gap-6 lg:px-4 lg:py-4">
-        <aside className="border-b border-[rgba(90,76,66,0.5)] bg-[rgba(18,15,13,0.82)] px-4 py-5 backdrop-blur-xl lg:sticky lg:top-4 lg:h-[calc(100vh-2rem)] lg:w-80 lg:flex-none lg:rounded-[2rem] lg:border lg:px-5 lg:py-6">
+        <aside className="border-b border-[color:var(--lux-border)] bg-[rgba(250,247,244,0.86)] px-4 py-5 backdrop-blur-xl lg:sticky lg:top-4 lg:h-[calc(100vh-2rem)] lg:w-80 lg:flex-none lg:rounded-[2rem] lg:border lg:px-5 lg:py-6">
           <div className="flex h-full flex-col gap-6">
             <div className="space-y-4">
               <div>
-                <p className="lux-overline text-[#a99687]">Evyta operational shell</p>
-                <h1 className="mt-2 text-[2.1rem] font-semibold tracking-tight text-[#fff4ea]">Admin</h1>
-                <p className="mt-2 text-sm leading-6 text-[#bbaea1]">
+                <p className="lux-overline text-[color:var(--lux-accent-strong)]">Evyta operational shell</p>
+                <h1 className="mt-2 text-[2.1rem] font-semibold tracking-tight text-[color:var(--lux-text)]">Admin</h1>
+                <p className="mt-2 text-sm leading-6 text-[color:var(--lux-text-secondary)]">
                   A discreet control console for moderation, verification, reporting, and launch operations.
                 </p>
               </div>
               <div className="admin-card">
-                <p className="lux-overline text-[#998877]">Signed in as</p>
-                <p className="mt-3 text-sm font-medium text-[#fff4ea]">{admin.email}</p>
+                <p className="lux-overline text-[color:var(--lux-accent-strong)]">Signed in as</p>
+                <p className="mt-3 text-sm font-medium text-[color:var(--lux-text)]">{admin.email}</p>
               </div>
             </div>
 

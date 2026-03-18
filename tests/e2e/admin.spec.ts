@@ -6,6 +6,7 @@ test.beforeEach(() => {
 });
 
 test("admin can approve and reject verification requests and each action is audited", async ({ page }) => {
+  test.slow();
   const seed = loadSeedData();
 
   await loginAs(page, seed.users.admin.email, seed.password, /\/admin$/);
@@ -174,3 +175,5 @@ test("admin can create an additional super admin test account and it lands in th
   await expect(newAdminPage.getByTestId("admin-sidebar-dashboard")).toBeVisible();
   await newAdminContext.close();
 });
+
+

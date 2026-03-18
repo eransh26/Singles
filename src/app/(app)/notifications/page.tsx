@@ -3,17 +3,7 @@ import { NotificationType } from "@prisma/client";
 import { markAllNotificationsReadAction, markNotificationReadAction } from "../actions";
 import { requireUser } from "@/lib/auth/guards";
 import { prisma } from "@/lib/db/prisma";
-
-function formatDateTime(value: Date) {
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).format(value);
-}
+import { RelativeTime } from "@/components/relative-time";
 
 function payloadField(payload: unknown, key: string) {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
@@ -42,7 +32,7 @@ function notificationCopy(type: NotificationType, payload: unknown) {
       return {
         title: "New photo access request",
         body: `${payloadField(payload, "requesterDisplayName") ?? "A member"} asked to see your approved gallery.`,
-        href: "/me",
+        href: "/settings",
       };
     case NotificationType.PHOTO_ACCESS_APPROVED:
       return {
@@ -117,7 +107,7 @@ export default async function NotificationsPage() {
             notifications.map((notification) => {
               const copy = notificationCopy(notification.type, notification.payloadJson);
               return (
-                <div key={notification.id} className={`rounded-[1.5rem] border p-4 text-sm ${notification.isRead ? "border-[color:rgba(179,154,136,0.18)] bg-[color:rgba(255,255,255,0.34)] dark:bg-[color:rgba(42,36,31,0.54)]" : "border-[color:rgba(198,166,107,0.28)] bg-[color:rgba(198,166,107,0.08)]"}`}>
+                <div key={notification.id} className={`rounded-[1.5rem] border p-4 text-sm ${notification.isRead ? "border-[color:var(--lux-border)] bg-[rgba(255,255,255,0.72)]" : "border-[color:var(--lux-accent-border)] bg-[color:var(--lux-highlight-soft)]"}`}>
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="max-w-2xl">
                       <div className="flex flex-wrap items-center gap-2.5">
@@ -125,7 +115,7 @@ export default async function NotificationsPage() {
                         {!notification.isRead ? <span className="lux-chip lux-chip-accent">Unread</span> : null}
                       </div>
                       <p className="mt-3 text-sm leading-6 text-[color:var(--lux-text-secondary)]">{copy.body}</p>
-                      <p className="mt-3 text-xs uppercase tracking-[0.16em] text-[color:var(--lux-text-muted)]">{formatDateTime(notification.createdAt)}</p>
+                      <RelativeTime className="mt-3 block text-xs uppercase tracking-[0.16em] text-[color:var(--lux-text-muted)]" value={notification.createdAt.toISOString()} />
                     </div>
                     <div className="flex gap-2">
                       <Link className="lux-button-secondary" href={copy.href}>Open</Link>
@@ -146,3 +136,4 @@ export default async function NotificationsPage() {
     </main>
   );
 }
+

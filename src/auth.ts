@@ -1,6 +1,5 @@
 import NextAuth from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
-import { ThemePreference } from "@prisma/client";
 import authConfig from "@/auth.config";
 import { prisma } from "@/lib/db/prisma";
 
@@ -57,21 +56,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.image = userImage ?? fallbackImage;
       }
       return session;
-    },
-  },
-  events: {
-    async createUser({ user }) {
-      if (!user.id) {
-        return;
-      }
-      await prisma.userSettings.upsert({
-        where: { userId: user.id },
-        update: {},
-        create: {
-          userId: user.id,
-          themePreference: ThemePreference.LIGHT,
-        },
-      });
     },
   },
 });

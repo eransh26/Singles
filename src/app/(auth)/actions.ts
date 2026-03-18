@@ -6,7 +6,7 @@ import { z } from "zod";
 import { signIn, signOut } from "@/auth";
 import { prisma } from "@/lib/db/prisma";
 import { clearLocalSession, createLocalSession } from "@/lib/auth/local-session";
-import { AccountStatus, ThemePreference, UserRole } from "@prisma/client";
+import { AccountStatus, UserRole } from "@prisma/client";
 
 const registerSchema = z.object({
   email: z.string().email(),
@@ -42,11 +42,6 @@ export async function registerAction(formData: FormData) {
       email: parsed.data.email,
       displayName: parsed.data.displayName,
       passwordHash,
-      settings: {
-        create: {
-          themePreference: ThemePreference.LIGHT,
-        },
-      },
     },
   });
 

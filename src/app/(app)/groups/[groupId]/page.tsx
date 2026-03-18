@@ -1,24 +1,23 @@
 import Link from "next/link";
 import { GroupRole, GroupType, MembershipStatus, PlacementType, PostContextType, PostVisibilityStatus } from "@prisma/client";
-import { createCommentAction, createPostAction, joinGroupAction, removeGroupMemberAction, reviewGroupJoinRequestAction, updateGroupAction } from "../../actions";
-import { requireUser } from "@/lib/auth/guards";
+import { createPostAction, joinGroupAction, removeGroupMemberAction, reviewGroupJoinRequestAction, updateGroupAction } from "../../actions";
+import { createCommentAction } from "../../actions";
+import { hasMinimalProfileVisibility, isFullyVerifiedUser, requireUser } from "@/lib/auth/guards";
 import { prisma } from "@/lib/db/prisma";
 import { getPromotedPlacement } from "@/lib/promotions";
+import { RelativeTime } from "@/components/relative-time";
 import { notFound } from "next/navigation";
+import { MediaComposer } from "@/components/media-composer";
+import { PostAuthorActions } from "@/components/post-author-actions";
+import { PostEngagement } from "@/components/post-engagement";
 
-function formatDateTime(value: Date) {
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).format(value);
+function userPairKey(firstUserId: string, secondUserId: string) {
+  return [firstUserId, secondUserId].sort().join(":");
 }
 
 export default async function GroupDetailPage({ params }: { params: Promise<{ groupId: string }> }) {
   const viewer = await requireUser();
+  const viewerIsVerified = isFullyVerifiedUser(viewer);
   const { groupId } = await params;
 
   const [group, promotedPlacement] = await Promise.all([
@@ -61,7 +60,15 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ gr
             isAnonymous: true,
             createdAt: true,
             authorUserId: true,
-            author: { select: { displayName: true } },
+            author: {
+              select: {
+                id: true,
+                displayName: true,
+                profileVisibility: true,
+                chatRequestPolicy: true,
+                photoRequestPolicy: true,
+              },
+            },
             comments: {
               where: { moderationStatus: { not: "REMOVED" } },
               orderBy: { createdAt: "asc" },
@@ -70,7 +77,20 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ gr
                 id: true,
                 contentText: true,
                 createdAt: true,
-                author: { select: { displayName: true } },
+                authorUserId: true,
+                author: { select: { id: true, displayName: true } },
+              },
+            },
+            reactions: {
+              where: { userId: viewer.id },
+              select: { reactionType: true },
+            },
+            _count: {
+              select: {
+                reactions: true,
+                comments: {
+                  where: { moderationStatus: { not: "REMOVED" } },
+                },
               },
             },
           },
@@ -89,6 +109,24 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ gr
   const isManager = isOwner || membership?.role === GroupRole.MANAGER || membership?.role === GroupRole.OWNER;
   const isMember = isOwner || Boolean(membership);
   const hasPendingRequest = group.joinRequests.some((request) => request.applicant.id === viewer.id);
+
+  const actionableAuthorIds = Array.from(new Set(group.posts.filter((post) => post.authorUserId !== viewer.id).map((post) => post.authorUserId)));
+  const pairKeys = actionableAuthorIds.map((authorUserId) => userPairKey(viewer.id, authorUserId));
+  const [conversations, chatRequests, photoRequests, photoGrants, blocks] = actionableAuthorIds.length
+    ? await Promise.all([
+        prisma.conversation.findMany({ where: { pairKey: { in: pairKeys } }, select: { id: true, pairKey: true } }),
+        prisma.chatRequest.findMany({ where: { pairKey: { in: pairKeys }, status: "PENDING" }, orderBy: { createdAt: "desc" }, select: { pairKey: true, fromUserId: true, toUserId: true } }),
+        prisma.photoAccessRequest.findMany({ where: { pairKey: { in: pairKeys }, status: "PENDING" }, orderBy: { createdAt: "desc" }, select: { pairKey: true, requesterUserId: true } }),
+        prisma.photoAccessGrant.findMany({ where: { ownerUserId: { in: actionableAuthorIds }, granteeUserId: viewer.id, revokedAt: null }, select: { ownerUserId: true } }),
+        prisma.userBlock.findMany({ where: { OR: [{ blockerUserId: viewer.id, blockedUserId: { in: actionableAuthorIds } }, { blockerUserId: { in: actionableAuthorIds }, blockedUserId: viewer.id }] }, select: { blockerUserId: true, blockedUserId: true } }),
+      ])
+    : [[], [], [], [], []];
+
+  const conversationByPairKey = new Map(conversations.map((conversation) => [conversation.pairKey, conversation]));
+  const chatRequestByPairKey = new Map(chatRequests.map((request) => [request.pairKey, request]));
+  const photoRequestByPairKey = new Map(photoRequests.map((request) => [request.pairKey, request]));
+  const approvedGalleryOwners = new Set(photoGrants.map((grant) => grant.ownerUserId));
+  const blockedUsers = new Set(blocks.map((block) => (block.blockerUserId === viewer.id ? block.blockedUserId : block.blockerUserId)));
 
   return (
     <main className="lux-shell">
@@ -113,7 +151,7 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ gr
 
       {promotedPlacement ? (
         <section className="lux-card relative overflow-hidden" data-testid="group-promoted-event">
-          <div className="absolute inset-y-0 left-0 w-1.5 rounded-full bg-[color:var(--lux-mauve)]" />
+          <div className="absolute inset-y-0 left-0 w-1.5 rounded-full bg-[color:var(--lux-accent)]" />
           <div className="flex flex-col gap-4 pl-2 lg:flex-row lg:items-center lg:justify-between">
             <div className="max-w-3xl">
               <p className="lux-overline">Promoted event</p>
@@ -189,13 +227,13 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ gr
                 <h2 className="mt-3 text-2xl font-semibold tracking-tight text-[color:var(--lux-text)]">Share with members only</h2>
                 <p className="lux-body mt-3">Posts inside groups are shown with your name here.</p>
               </div>
-              <form action={createPostAction} className="mt-5 flex flex-col gap-4">
-                <input name="groupId" type="hidden" value={group.id} />
-                <textarea className="lux-textarea min-h-28" name="contentText" placeholder="Share something relevant with this group" required />
-                <div className="flex justify-end">
-                  <button className="lux-button-primary" type="submit">Publish to group</button>
-                </div>
-              </form>
+              <MediaComposer
+                action={createPostAction}
+                formClassName="mt-5 flex flex-col gap-4"
+                hiddenFields={[{ name: "groupId", value: group.id }]}
+                placeholder="Share something relevant with this group"
+                submitLabel="Publish to group"
+              />
             </section>
           ) : null}
 
@@ -213,10 +251,36 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ gr
                 const isAnonymousToViewer = post.isAnonymous && post.authorUserId !== viewer.id;
                 const isAnonymousAuthorView = post.isAnonymous && post.authorUserId === viewer.id;
                 const authorLabel = isAnonymousToViewer ? "Anonymous member" : post.author.displayName;
+                const pairKey = userPairKey(viewer.id, post.authorUserId);
+                const existingConversation = conversationByPairKey.get(pairKey);
+                const existingChatRequest = chatRequestByPairKey.get(pairKey);
+                const existingPhotoRequest = photoRequestByPairKey.get(pairKey);
+                const isBlocked = blockedUsers.has(post.authorUserId);
+                const hasApprovedPhotoGrant = approvedGalleryOwners.has(post.authorUserId);
+                const chatState = existingConversation
+                  ? "open"
+                  : existingChatRequest?.toUserId === viewer.id
+                    ? "incoming"
+                    : existingChatRequest?.fromUserId === viewer.id
+                      ? "pending"
+                      : isBlocked || !hasMinimalProfileVisibility(post.author.profileVisibility)
+                        ? "blocked"
+                        : post.author.chatRequestPolicy === "NOBODY"
+                          ? "blocked"
+                          : post.author.chatRequestPolicy === "VERIFIED_ONLY" && !viewerIsVerified
+                            ? "blocked"
+                            : "send";
+                const photoState = hasApprovedPhotoGrant
+                  ? "approved"
+                  : existingPhotoRequest?.requesterUserId === viewer.id
+                    ? "pending"
+                    : isBlocked || post.author.photoRequestPolicy === "NOBODY" || !viewerIsVerified
+                      ? "blocked"
+                      : "request";
 
                 return (
                   <article key={post.id} className="lux-card">
-                    <div className="flex items-center justify-between gap-3">
+                    <div className="group flex items-center justify-between gap-3">
                       <div>
                         <div className="flex flex-wrap items-center gap-2.5">
                           <p className="text-base font-semibold tracking-tight text-[color:var(--lux-text)]">{authorLabel}</p>
@@ -224,34 +288,36 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ gr
                             <span className="lux-chip lux-chip-muted normal-case tracking-normal">Shown only to you. Anonymous to everyone else.</span>
                           ) : null}
                         </div>
-                        <p className="mt-3 text-xs uppercase tracking-[0.16em] text-[color:var(--lux-text-muted)]">{formatDateTime(post.createdAt)}</p>
+                        <RelativeTime className="mt-1 block text-[11px] tracking-normal text-[color:var(--lux-text-muted)]" value={post.createdAt.toISOString()} />
                       </div>
+                      {post.authorUserId !== viewer.id && !isAnonymousToViewer ? (
+                        <PostAuthorActions
+                          chatState={chatState}
+                          conversationId={existingConversation?.id}
+                          photoState={photoState}
+                          sourcePath={`/groups/${group.id}`}
+                          targetUserId={post.author.id}
+                        />
+                      ) : null}
                     </div>
                     <p className="mt-5 whitespace-pre-wrap text-[15px] leading-7 text-[color:var(--lux-text-secondary)]">{post.contentText}</p>
-                    <div className="mt-6 rounded-[1.5rem] border border-[color:var(--lux-border-soft)] bg-[color:rgba(255,255,255,0.34)] p-4 dark:bg-[color:rgba(42,36,31,0.5)]">
-                      <p className="lux-overline">Comments</p>
-                      <div className="mt-4 space-y-3">
-                        {post.comments.length === 0 ? (
-                          <p className="text-sm text-[color:var(--lux-text-muted)]">No comments yet.</p>
-                        ) : (
-                          post.comments.map((comment) => (
-                            <div key={comment.id} className="lux-panel">
-                              <div className="flex items-center justify-between gap-3">
-                                <p className="font-medium text-[color:var(--lux-text)]">{comment.author.displayName}</p>
-                                <p className="text-[11px] uppercase tracking-[0.14em] text-[color:var(--lux-text-muted)]">{formatDateTime(comment.createdAt)}</p>
-                              </div>
-                              <p className="mt-2 text-sm leading-6 text-[color:var(--lux-text-secondary)]">{comment.contentText}</p>
-                            </div>
-                          ))
-                        )}
-                      </div>
-                      <form action={createCommentAction} className="mt-4 flex flex-col gap-3">
-                        <input name="postId" type="hidden" value={post.id} />
-                        <textarea className="lux-textarea min-h-20" name="contentText" placeholder="Reply to this post" required />
-                        <div className="flex justify-end">
-                          <button className="lux-button-secondary" type="submit">Add comment</button>
-                        </div>
-                      </form>
+                    <div className="mt-5">
+                      <PostEngagement
+                        commentAction={createCommentAction}
+                        commentCount={post._count.comments}
+                        commentPlaceholder="Reply to this post"
+                        commentSubmitLabel="Add comment"
+                        comments={post.comments.map((comment) => ({
+                          ...comment,
+                          createdAt: comment.createdAt.toISOString(),
+                        }))}
+                        groupHref={`/groups/${group.id}`}
+                        groupId={group.id}
+                        postId={post.id}
+                        reactionCount={post._count.reactions}
+                        reactionType={post.reactions[0]?.reactionType ?? null}
+                        viewerId={viewer.id}
+                      />
                     </div>
                   </article>
                 );
@@ -313,6 +379,9 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ gr
                         {request.applicant.displayName}
                       </Link>
                       <p className="mt-2 text-sm leading-6 text-[color:var(--lux-text-secondary)]">{request.requestMessage ?? "No request note."}</p>
+                      <div className="mt-2 text-xs uppercase tracking-[0.16em] text-[color:var(--lux-text-muted)]">
+                        <RelativeTime value={request.createdAt.toISOString()} />
+                      </div>
                       <div className="mt-4 flex gap-2">
                         <form action={reviewGroupJoinRequestAction}>
                           <input name="joinRequestId" type="hidden" value={request.id} />
