@@ -16,6 +16,7 @@ import {
 
 type MessageAttachmentKind = "IMAGE" | "FILE";
 type MessageStatus = "sending" | "sent" | "failed";
+type ModerationTargetType = "MESSAGE" | "MESSAGE_ATTACHMENT";
 
 type Attachment = {
   id: string;
@@ -24,16 +25,26 @@ type Attachment = {
   mimeType: string;
   byteSize: number;
   storageKey: string;
+  deletedAt: string | null;
 };
 
 type ChatMessage = {
   id: string;
   body: string;
   createdAt: string;
+  deletedAt: string | null;
   senderUserId: string;
   attachments: Attachment[];
   status?: MessageStatus;
 };
+
+const REPORT_REASONS = [
+  { value: "HARASSMENT", label: "Harassment" },
+  { value: "NON_CONSENSUAL_CONTENT", label: "Non-consensual content" },
+  { value: "SPAM", label: "Spam" },
+  { value: "ILLEGAL_CONTENT", label: "Illegal content" },
+  { value: "OTHER", label: "Other" },
+] as const;
 
 function formatBytes(value: number) {
   if (value < 1024) return `${value} B`;
@@ -60,6 +71,7 @@ async function fileToAttachment(file: File): Promise<Attachment> {
     mimeType: file.type || "application/octet-stream",
     byteSize: file.size,
     storageKey,
+    deletedAt: null,
   };
 }
 
@@ -78,6 +90,11 @@ export function ConversationThread({
   const [body, setBody] = useState("");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [composerError, setComposerError] = useState<string | null>(null);
+  const [moderationError, setModerationError] = useState<string | null>(null);
+  const [moderationSuccess, setModerationSuccess] = useState<string | null>(null);
+  const [moderationTarget, setModerationTarget] = useState<{ type: ModerationTargetType; id: string } | null>(null);
+  const [moderationReason, setModerationReason] = useState<(typeof REPORT_REASONS)[number]["value"]>("HARASSMENT");
+  const [moderationDetails, setModerationDetails] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isPending, startTransition] = useTransition();
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -186,6 +203,7 @@ export function ConversationThread({
       id: optimisticId,
       body: trimmedBody,
       createdAt: new Date().toISOString(),
+      deletedAt: null,
       senderUserId: viewerId,
       attachments: submittedAttachments,
       status: "sending",
@@ -222,6 +240,49 @@ export function ConversationThread({
     });
   }
 
+  async function submitModeration(action: "report" | "delete", targetType: ModerationTargetType, targetId: string) {
+    setModerationError(null);
+    setModerationSuccess(null);
+
+    const response = await fetch(`/api/conversations/${conversationId}/moderation`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action,
+        targetType,
+        targetId,
+        reasonCode: moderationReason,
+        details: moderationDetails,
+      }),
+    });
+
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) {
+      setModerationError(payload?.error ?? "This action could not be completed.");
+      return;
+    }
+
+    if (action === "delete" && targetType === "MESSAGE") {
+      setMessages((current) => current.map((message) => (message.id === targetId ? { ...message, deletedAt: new Date().toISOString() } : message)));
+    }
+
+    if (action === "delete" && targetType === "MESSAGE_ATTACHMENT") {
+      setMessages((current) =>
+        current.map((message) => ({
+          ...message,
+          attachments: message.attachments.map((attachment) =>
+            attachment.id === targetId ? { ...attachment, deletedAt: new Date().toISOString() } : attachment,
+          ),
+        })),
+      );
+    }
+
+    setModerationSuccess(payload?.message ?? (action === "report" ? "Report submitted." : "Content removed."));
+    setModerationTarget(null);
+    setModerationDetails("");
+    setModerationReason("HARASSMENT");
+  }
+
   const orderedMessages = useMemo(
     () => [...messages].sort((first, second) => new Date(first.createdAt).getTime() - new Date(second.createdAt).getTime()),
     [messages],
@@ -236,13 +297,14 @@ export function ConversationThread({
         </div>
       </div>
 
-      <div className="mt-5 flex max-h-[72vh] min-h-[48vh] flex-col md:max-h-[74vh]">
+      <div className="mt-5 flex max-h-[72vh] min-h-[48vh] flex-col">
         <div className="flex-1 space-y-4 overflow-y-auto pr-1">
           {orderedMessages.length === 0 ? (
             <div className="lux-empty">No messages yet. Start the conversation below.</div>
           ) : (
             orderedMessages.map((message) => {
               const isMine = message.senderUserId === viewerId;
+              const isRemoved = Boolean(message.deletedAt);
               return (
                 <div key={message.id} className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
                   <div
@@ -252,37 +314,66 @@ export function ConversationThread({
                         : "border border-[color:var(--lux-border)] bg-white text-[color:var(--lux-text)]"
                     }`}
                   >
-                    {message.body ? <p className="whitespace-pre-wrap break-words text-sm leading-7">{message.body}</p> : null}
-                    {message.attachments.length > 0 ? (
+                    {isRemoved ? (
+                      <p className={`text-sm italic ${isMine ? "text-white/80" : "text-[color:var(--lux-text-muted)]"}`}>This content was removed.</p>
+                    ) : message.body ? (
+                      <p className="whitespace-pre-wrap break-words text-sm leading-7">{message.body}</p>
+                    ) : null}
+                    {!isRemoved && message.attachments.length > 0 ? (
                       <div className="space-y-2">
                         {message.attachments.map((attachment) =>
-                          attachment.kind === "IMAGE" ? (
-                            <a className="block overflow-hidden rounded-[0.9rem] border border-white/20 bg-white/10" href={attachment.storageKey} key={attachment.id} rel="noreferrer" target="_blank">
-                              <Image alt={attachment.fileName} className="max-h-64 w-full object-cover" height={512} src={attachment.storageKey} unoptimized width={512} />
-                            </a>
-                          ) : (
-                            <a
-                              className={`flex items-center gap-3 rounded-[0.9rem] border px-3 py-3 text-sm ${
-                                isMine ? "border-white/20 bg-white/10 text-white" : "border-[color:var(--lux-border)] bg-[color:var(--lux-secondary)] text-[color:var(--lux-text)]"
-                              }`}
-                              download={attachment.fileName}
-                              href={attachment.storageKey}
-                              key={attachment.id}
-                            >
-                              <FileText className="h-4 w-4 shrink-0" />
-                              <div className="min-w-0">
-                                <p className="truncate font-medium">{attachment.fileName}</p>
-                                <p className={`text-xs ${isMine ? "text-white/70" : "text-[color:var(--lux-text-muted)]"}`}>{formatBytes(attachment.byteSize)}</p>
+                          attachment.deletedAt ? (
+                            <div key={attachment.id} className={`rounded-[0.9rem] border px-3 py-3 text-sm ${isMine ? "border-white/20 bg-white/10 text-white/80" : "border-[color:var(--lux-border)] bg-[color:var(--lux-secondary)] text-[color:var(--lux-text-muted)]"}`}>
+                              This content was removed.
+                            </div>
+                          ) : attachment.kind === "IMAGE" ? (
+                            <div className="space-y-2" key={attachment.id}>
+                              <a className="block overflow-hidden rounded-[0.9rem] border border-white/20 bg-white/10" href={attachment.storageKey} rel="noreferrer" target="_blank">
+                                <Image alt={attachment.fileName} className="max-h-64 w-full object-cover" height={512} src={attachment.storageKey} unoptimized width={512} />
+                              </a>
+                              <div className="flex flex-wrap items-center justify-end gap-2 text-[11px] uppercase tracking-[0.14em]">
+                                {isMine ? (
+                                  <button className={isMine ? "text-white/80" : "text-[color:var(--lux-text-muted)]"} onClick={() => void submitModeration("delete", "MESSAGE_ATTACHMENT", attachment.id)} type="button">Remove</button>
+                                ) : null}
+                                <button className={isMine ? "text-white/80" : "text-[color:var(--lux-text-muted)]"} onClick={() => setModerationTarget({ type: "MESSAGE_ATTACHMENT", id: attachment.id })} type="button">Report</button>
                               </div>
-                            </a>
+                            </div>
+                          ) : (
+                            <div key={attachment.id} className="space-y-2">
+                              <a
+                                className={`flex items-center gap-3 rounded-[0.9rem] border px-3 py-3 text-sm ${
+                                  isMine ? "border-white/20 bg-white/10 text-white" : "border-[color:var(--lux-border)] bg-[color:var(--lux-secondary)] text-[color:var(--lux-text)]"
+                                }`}
+                                download={attachment.fileName}
+                                href={attachment.storageKey}
+                              >
+                                <FileText className="h-4 w-4 shrink-0" />
+                                <div className="min-w-0">
+                                  <p className="truncate font-medium">{attachment.fileName}</p>
+                                  <p className={`text-xs ${isMine ? "text-white/70" : "text-[color:var(--lux-text-muted)]"}`}>{formatBytes(attachment.byteSize)}</p>
+                                </div>
+                              </a>
+                              <div className="flex flex-wrap items-center justify-end gap-2 text-[11px] uppercase tracking-[0.14em]">
+                                {isMine ? (
+                                  <button className={isMine ? "text-white/80" : "text-[color:var(--lux-text-muted)]"} onClick={() => void submitModeration("delete", "MESSAGE_ATTACHMENT", attachment.id)} type="button">Remove</button>
+                                ) : null}
+                                <button className={isMine ? "text-white/80" : "text-[color:var(--lux-text-muted)]"} onClick={() => setModerationTarget({ type: "MESSAGE_ATTACHMENT", id: attachment.id })} type="button">Report</button>
+                              </div>
+                            </div>
                           ),
                         )}
                       </div>
                     ) : null}
-                    <div className={`flex items-center justify-end gap-2 text-[11px] uppercase tracking-[0.14em] ${isMine ? "text-white/70" : "text-[color:var(--lux-text-muted)]"}`}>
-                      {message.status === "sending" ? <span>Sending</span> : null}
-                      {message.status === "failed" ? <span className="text-rose-200">Failed</span> : null}
-                      <RelativeTime value={message.createdAt} />
+                    <div className={`flex items-center justify-between gap-2 text-[11px] uppercase tracking-[0.14em] ${isMine ? "text-white/70" : "text-[color:var(--lux-text-muted)]"}`}>
+                      <div className="flex items-center gap-2">
+                        {!isRemoved ? <button className={isMine ? "text-white/80" : "text-[color:var(--lux-text-muted)]"} onClick={() => setModerationTarget({ type: "MESSAGE", id: message.id })} type="button">Report</button> : null}
+                        {isMine && !isRemoved ? <button className={isMine ? "text-white/80" : "text-[color:var(--lux-text-muted)]"} onClick={() => void submitModeration("delete", "MESSAGE", message.id)} type="button">Remove</button> : null}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {message.status === "sending" ? <span>Sending</span> : null}
+                        {message.status === "failed" ? <span className="text-rose-200">Failed</span> : null}
+                        <RelativeTime value={message.createdAt} />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -293,6 +384,25 @@ export function ConversationThread({
         </div>
 
         <div className="sticky bottom-0 mt-5 border-t lux-divider bg-[color:var(--lux-card)] pb-[calc(env(safe-area-inset-bottom)+0.25rem)] pt-4">
+          {moderationError ? <div className="mb-3 rounded-[0.9rem] border border-[color:rgba(138,89,100,0.18)] bg-[color:rgba(138,89,100,0.08)] px-3 py-3 text-sm text-[color:var(--lux-danger)]">{moderationError}</div> : null}
+          {moderationSuccess ? <div className="mb-3 rounded-[0.9rem] border border-[color:rgba(71,142,98,0.18)] bg-[rgba(71,142,98,0.08)] px-3 py-3 text-sm text-emerald-700">{moderationSuccess}</div> : null}
+          {moderationTarget ? (
+            <div className="mb-3 rounded-[0.95rem] border border-[color:var(--lux-border)] bg-white px-4 py-4 shadow-[0_8px_20px_rgba(43,43,43,0.035)]">
+              <p className="text-sm font-medium text-[color:var(--lux-text)]">Report content</p>
+              <div className="mt-3 grid gap-3 md:grid-cols-[180px_minmax(0,1fr)_auto]">
+                <select className="rounded-[0.8rem] border border-[color:var(--lux-border)] bg-[color:var(--lux-secondary)] px-3 py-2 text-sm" onChange={(event) => setModerationReason(event.target.value as (typeof REPORT_REASONS)[number]["value"])} value={moderationReason}>
+                  {REPORT_REASONS.map((reason) => (
+                    <option key={reason.value} value={reason.value}>{reason.label}</option>
+                  ))}
+                </select>
+                <input className="rounded-[0.8rem] border border-[color:var(--lux-border)] bg-[color:var(--lux-secondary)] px-3 py-2 text-sm" onChange={(event) => setModerationDetails(event.target.value)} placeholder="Optional details" value={moderationDetails} />
+                <div className="flex gap-2">
+                  <button className="lux-button-secondary" onClick={() => setModerationTarget(null)} type="button">Cancel</button>
+                  <button className="lux-button-primary" onClick={() => void submitModeration("report", moderationTarget.type, moderationTarget.id)} type="button">Submit</button>
+                </div>
+              </div>
+            </div>
+          ) : null}
           {composerError ? (
             <div className="mb-3 flex items-start gap-2 rounded-[0.95rem] border border-[color:rgba(138,89,100,0.18)] bg-[color:rgba(138,89,100,0.08)] px-3 py-3 text-sm text-[color:var(--lux-danger)]">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />

@@ -47,15 +47,93 @@ test("chat attachments reject unsupported files cleanly", async ({ page }) => {
   await expect(page.getByText(/not a supported file type/i)).toBeVisible();
 });
 
-test("approved conversations show the private video call entry point", async ({ page }) => {
+test("video calls require separate approval even for approved chats", async ({ page }) => {
   const seed = loadSeedData();
   const conversationId = seed.conversations.approvedConversation.id;
 
   await loginAs(page, seed.users.owner.email, seed.password);
   await page.goto(`/chats/${conversationId}`);
 
+  await expect(page.getByRole("button", { name: /request video approval/i })).toBeVisible();
+  await expect(page.getByTestId("start-video-call-button")).toHaveCount(0);
+
+  const responseStatus = await page.evaluate(async (activeConversationId) => {
+    const response = await fetch("/api/video/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ conversationId: activeConversationId }),
+    });
+
+    return response.status;
+  }, conversationId);
+
+  expect(responseStatus).toBe(403);
+});
+
+test("video approval can be granted separately and chat revocation removes access", async ({ browser, page }) => {
+  const seed = loadSeedData();
+  const conversationId = seed.conversations.approvedConversation.id;
+
+  await loginAs(page, seed.users.owner.email, seed.password);
+  await page.goto(`/chats/${conversationId}`);
+  await page.getByRole("button", { name: /request video approval/i }).click();
+  await expect(page.getByText(/video request pending/i)).toBeVisible();
+
+  const approverContext = await browser.newContext();
+  const approverPage = await approverContext.newPage();
+  try {
+    await loginAs(approverPage, seed.users.verified.email, seed.password);
+    await approverPage.goto(`/chats/${conversationId}`);
+    await expect(approverPage.getByRole("button", { name: /approve video/i })).toBeVisible();
+    await approverPage.getByRole("button", { name: /approve video/i }).click();
+    await expect(approverPage.getByText(/video approved/i)).toBeVisible();
+  } finally {
+    await approverContext.close();
+  }
+
+  await page.reload();
   await expect(page.getByTestId("start-video-call-button")).toBeVisible();
-  await expect(page.getByTestId("start-video-call-button")).toContainText(/video call/i);
+  await expect(page.getByTestId("start-video-call-button")).toContainText(/start video call/i);
+
+  await page.getByRole("button", { name: /revoke chat/i }).click();
+  await expect(page).toHaveURL(/\/chats\?saved=chat-revoked$/);
+  await expect(page.getByText(/chat access was revoked/i)).toBeVisible();
+
+  const responseStatus = await page.evaluate(async (activeConversationId) => {
+    const response = await fetch("/api/video/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ conversationId: activeConversationId }),
+    });
+
+    return response.status;
+  }, conversationId);
+
+  expect(responseStatus).toBe(403);
+});
+
+test("members can report a message and owners can remove their own message with a placeholder", async ({ browser, page }) => {
+  const seed = loadSeedData();
+  const conversationId = seed.conversations.approvedConversation.id;
+
+  await loginAs(page, seed.users.verified.email, seed.password);
+  await page.goto(`/chats/${conversationId}`);
+  await page.getByRole("button", { name: /^Report$/ }).first().click();
+  await page.getByRole("combobox").selectOption("SPAM");
+  await page.getByPlaceholder(/optional details/i).fill("Seeded message looks suspicious.");
+  await page.getByRole("button", { name: /^Submit$/ }).click();
+  await expect(page.getByText(/report submitted/i)).toBeVisible();
+
+  const ownerContext = await browser.newContext();
+  const ownerPage = await ownerContext.newPage();
+  try {
+    await loginAs(ownerPage, seed.users.owner.email, seed.password);
+    await ownerPage.goto(`/chats/${conversationId}`);
+    await ownerPage.getByRole("button", { name: /^Remove$/ }).first().click();
+    await expect(ownerPage.getByText(/this content was removed/i).first()).toBeVisible();
+  } finally {
+    await ownerContext.close();
+  }
 });
 
 test("non-participants are rejected from private video access", async ({ page }) => {

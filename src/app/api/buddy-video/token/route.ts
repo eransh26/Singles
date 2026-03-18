@@ -3,7 +3,7 @@ import { AccountStatus, ConsentStatus, ConversationKind, UserRole } from "@prism
 import { AccessToken } from "livekit-server-sdk";
 import { getCurrentUser } from "@/lib/auth/guards";
 import { prisma } from "@/lib/db/prisma";
-import { createOrJoinVideoCallRecord, getVideoConversationById, isAuthorizedVideoParticipant } from "@/lib/livekit";
+import { createOrJoinVideoCallRecord, getConversationRoomName, getVideoConversationById, isAuthorizedVideoParticipant } from "@/lib/livekit";
 
 export async function POST(request: Request) {
   const user = await getCurrentUser();
@@ -13,7 +13,7 @@ export async function POST(request: Request) {
   }
 
   if (user.accountStatus !== AccountStatus.ACTIVE || user.role === UserRole.ADMIN || user.role === UserRole.SUPER_ADMIN) {
-    return NextResponse.json({ error: "Not authorized for this video call." }, { status: 403 });
+    return NextResponse.json({ error: "Not authorized for this Buddy video call." }, { status: 403 });
   }
 
   const body = await request.json().catch(() => null);
@@ -24,21 +24,21 @@ export async function POST(request: Request) {
   }
 
   const conversation = await getVideoConversationById(conversationId);
-  if (!conversation || conversation.kind !== ConversationKind.MEMBER_CHAT) {
-    return NextResponse.json({ error: "Conversation not found." }, { status: 404 });
+  if (!conversation || conversation.kind !== ConversationKind.BUDDY_SUPPORT) {
+    return NextResponse.json({ error: "Buddy conversation not found." }, { status: 404 });
   }
 
   if (!isAuthorizedVideoParticipant(conversation, user.id)) {
-    return NextResponse.json({ error: "Not authorized for this video call." }, { status: 403 });
+    return NextResponse.json({ error: "Not authorized for this Buddy video call." }, { status: 403 });
   }
 
-  const videoConsent = await prisma.videoConsent.findUnique({
-    where: { pairKey: conversation.pairKey },
+  const videoConsent = await prisma.buddyVideoConsent.findUnique({
+    where: { conversationId },
     select: { status: true },
   });
 
   if (!videoConsent || videoConsent.status !== ConsentStatus.APPROVED) {
-    return NextResponse.json({ error: "Video calls require separate approval from both members." }, { status: 403 });
+    return NextResponse.json({ error: "Buddy video requires separate approval from both members." }, { status: 403 });
   }
 
   if (!process.env.LIVEKIT_URL || !process.env.LIVEKIT_API_KEY || !process.env.LIVEKIT_API_SECRET) {
@@ -46,7 +46,8 @@ export async function POST(request: Request) {
   }
 
   try {
-    const callRecord = await createOrJoinVideoCallRecord(conversation.id, user.id);
+    const roomName = getConversationRoomName(conversation.id, ConversationKind.BUDDY_SUPPORT);
+    const callRecord = await createOrJoinVideoCallRecord(conversation.id, user.id, roomName);
     const token = new AccessToken(process.env.LIVEKIT_API_KEY, process.env.LIVEKIT_API_SECRET, {
       identity: user.id,
       name: user.displayName,
@@ -72,7 +73,6 @@ export async function POST(request: Request) {
       { status: 200 },
     );
   } catch {
-    return NextResponse.json({ error: "The private room could not be prepared right now." }, { status: 500 });
+    return NextResponse.json({ error: "The Buddy room could not be prepared right now." }, { status: 500 });
   }
 }
-

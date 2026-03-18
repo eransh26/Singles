@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {
   ActivityVisibility,
+  BuddyAvailabilityLevel,
   ChatRequestPolicy,
   PhotoRequestPolicy,
   ProfileVisibility,
@@ -8,17 +9,22 @@ import {
 } from "@prisma/client";
 import {
   reviewPhotoAccessRequestAction,
+  revokePhotoAccessGrantAction,
   submitVerificationRequestAction,
   updatePrivacyAction,
 } from "../actions";
+import { updateBuddyProfileAction } from "../buddy/actions";
 import { requireUser } from "@/lib/auth/guards";
 import { prisma } from "@/lib/db/prisma";
+import { BUDDY_DOMAIN_OPTIONS } from "@/lib/buddy";
 
 const saveMessages: Record<string, string> = {
   privacy: "Privacy preferences saved.",
   verification: "Verification request submitted.",
   photoReview: "Photo access request reviewed.",
   "photo-review": "Photo access request reviewed.",
+  "photo-revoked": "Gallery access revoked.",
+  buddy: "Buddy profile saved.",
 };
 
 function formatDateTime(value: Date) {
@@ -53,7 +59,7 @@ export default async function SettingsPage({
   const viewer = await requireUser();
   const resolvedSearchParams = await searchParams;
 
-  const [user, pendingPhotoRequests, activePhotoGrants] = await Promise.all([
+  const [user, pendingPhotoRequests, activePhotoGrants, buddyProfile] = await Promise.all([
     prisma.user.findUnique({
       where: { id: viewer.id },
       select: {
@@ -94,6 +100,15 @@ export default async function SettingsPage({
         grantee: { select: { id: true, displayName: true } },
       },
       take: 6,
+    }),
+    prisma.buddyProfile.findUnique({
+      where: { userId: viewer.id },
+      select: {
+        isAvailable: true,
+        intro: true,
+        availabilityLevel: true,
+        domains: { select: { domain: true } },
+      },
     }),
   ]);
 
@@ -217,6 +232,52 @@ export default async function SettingsPage({
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+        <section className="lux-card" id="buddy-setup">
+          <div className="border-b lux-divider pb-5">
+            <p className="lux-overline">Buddy</p>
+            <h2 className="mt-3 text-[1.9rem] font-semibold tracking-tight text-[color:var(--lux-text)]">Offer peer support in the domains you know best</h2>
+          </div>
+          <form action={updateBuddyProfileAction} className="mt-5 grid gap-4 text-sm text-[color:var(--lux-text-secondary)]">
+            <label className="lux-panel flex items-center gap-3">
+              <input className="size-4 accent-[color:var(--lux-accent)]" defaultChecked={buddyProfile?.isAvailable ?? false} name="isBuddyAvailable" type="checkbox" />
+              <span>Make me available as a Buddy</span>
+            </label>
+            <label className="grid gap-2">
+              <span className="font-medium text-[color:var(--lux-text)]">Short Buddy intro</span>
+              <textarea className="lux-textarea min-h-[120px]" defaultValue={buddyProfile?.intro ?? ""} maxLength={280} name="buddyIntro" placeholder="A calm introduction to the kind of support you can offer." />
+            </label>
+            <label className="grid gap-2">
+              <span className="font-medium text-[color:var(--lux-text)]">Availability level</span>
+              <select className="lux-select" defaultValue={buddyProfile?.availabilityLevel ?? ""} name="buddyAvailabilityLevel">
+                <option value="">Choose one</option>
+                {Object.values(BuddyAvailabilityLevel).map((value) => (
+                  <option key={value} value={value}>{value}</option>
+                ))}
+              </select>
+            </label>
+            <fieldset className="grid gap-3">
+              <legend className="font-medium text-[color:var(--lux-text)]">Support domains</legend>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {BUDDY_DOMAIN_OPTIONS.map((option) => (
+                  <label className="lux-panel flex items-center gap-3" key={option.value}>
+                    <input
+                      className="size-4 accent-[color:var(--lux-accent)]"
+                      defaultChecked={buddyProfile?.domains.some((domain) => domain.domain === option.value) ?? false}
+                      name="buddyDomains"
+                      type="checkbox"
+                      value={option.value}
+                    />
+                    <span>{option.label}</span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            <div className="flex justify-end">
+              <button className="lux-button-primary" type="submit">Save Buddy profile</button>
+            </div>
+          </form>
+        </section>
+
         <section className="lux-card">
           <div className="border-b lux-divider pb-5">
             <p className="lux-overline">Gallery access</p>
@@ -254,8 +315,10 @@ export default async function SettingsPage({
             )}
           </div>
         </section>
+      </section>
 
-        <section className="lux-card">
+      <section className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+        <section className="lux-card xl:col-start-2">
           <div className="border-b lux-divider pb-5">
             <p className="lux-overline">Approved viewers</p>
             <h2 className="mt-3 text-[1.9rem] font-semibold tracking-tight text-[color:var(--lux-text)]">Members with current gallery access</h2>
@@ -271,6 +334,12 @@ export default async function SettingsPage({
                       {grant.grantee.displayName}
                     </Link>
                     <span className="text-xs uppercase tracking-[0.16em] text-[color:var(--lux-text-muted)]">Granted {formatDateTime(grant.grantedAt)}</span>
+                  </div>
+                  <div className="mt-3 flex justify-end">
+                    <form action={revokePhotoAccessGrantAction}>
+                      <input name="grantId" type="hidden" value={grant.id} />
+                      <button className="lux-button-secondary" type="submit">Revoke access</button>
+                    </form>
                   </div>
                 </div>
               ))

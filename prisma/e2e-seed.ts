@@ -141,9 +141,15 @@ async function main() {
   await prisma.report.deleteMany();
   await prisma.auditLog.deleteMany();
   await prisma.messageAttachment.deleteMany();
+  await prisma.buddyVideoConsent.deleteMany();
   await prisma.videoCallRecord.deleteMany();
+  await prisma.videoConsent.deleteMany();
   await prisma.message.deleteMany();
   await prisma.conversation.deleteMany();
+  await prisma.buddyRequestAssignment.deleteMany();
+  await prisma.buddyRequest.deleteMany();
+  await prisma.buddyProfileDomain.deleteMany();
+  await prisma.buddyProfile.deleteMany();
   await prisma.chatRequest.deleteMany();
   await prisma.comment.deleteMany();
   await prisma.postReaction.deleteMany();
@@ -275,6 +281,72 @@ async function main() {
     }),
   ]);
 
+
+  const [testMale1, testFemale1, testMale2, testFemale2, testUser] = defaultTestUsers;
+
+  await prisma.buddyProfile.createMany({
+    data: [
+      { userId: testMale1.id, isAvailable: true, intro: "Grounded peer support for starting over and emotional overwhelm.", availabilityLevel: "STANDARD" },
+      { userId: testFemale1.id, isAvailable: true, intro: "Soft support for emotional resets and dating after divorce.", availabilityLevel: "LIGHT" },
+      { userId: testMale2.id, isAvailable: true, intro: "Experienced with private lifestyle guidance and relationship support.", availabilityLevel: "HIGH" },
+    ],
+    skipDuplicates: true,
+  });
+
+  await prisma.buddyProfileDomain.createMany({
+    data: [
+      { userId: testMale1.id, domain: "EMOTIONAL_SUPPORT" },
+      { userId: testMale1.id, domain: "STARTING_OVER" },
+      { userId: testFemale1.id, domain: "EMOTIONAL_SUPPORT" },
+      { userId: testFemale1.id, domain: "DATING_AFTER_DIVORCE" },
+      { userId: testMale2.id, domain: "BDSM_GUIDANCE" },
+      { userId: testMale2.id, domain: "RELATIONSHIP_SUPPORT" },
+    ],
+    skipDuplicates: true,
+  });
+
+  const expiringCreatedAt = new Date(Date.now() - 49 * 60 * 60 * 1000);
+  const autoCancelCreatedAt = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000);
+  const autoCancelPromptedAt = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+
+  const expiringBuddyRequest = await prisma.buddyRequest.create({
+    data: {
+      seekerId: testUser.id,
+      domain: "EMOTIONAL_SUPPORT",
+      message: "Looking for some calm peer support while rebuilding life.",
+      preferredMode: "CHAT_ONLY",
+      status: "PENDING",
+      createdAt: expiringCreatedAt,
+      updatedAt: expiringCreatedAt,
+      expiresAt: new Date(Date.now() - 60 * 60 * 1000),
+      assignments: {
+        create: [
+          { buddyId: testMale1.id, status: "PENDING", createdAt: expiringCreatedAt },
+        ],
+      },
+    },
+    select: { id: true },
+  });
+
+  const autoCancelledBuddyRequest = await prisma.buddyRequest.create({
+    data: {
+      seekerId: testUser.id,
+      domain: "RELATIONSHIP_SUPPORT",
+      message: "Need a sounding board after a difficult breakup.",
+      preferredMode: "EITHER",
+      status: "AWAITING_SEEKER_DECISION",
+      createdAt: autoCancelCreatedAt,
+      updatedAt: autoCancelCreatedAt,
+      extensionPromptAt: autoCancelPromptedAt,
+      expiresAt: new Date(autoCancelCreatedAt.getTime() + 48 * 60 * 60 * 1000),
+      assignments: {
+        create: [
+          { buddyId: testMale2.id, status: "DECLINED", createdAt: autoCancelCreatedAt, respondedAt: autoCancelPromptedAt },
+        ],
+      },
+    },
+    select: { id: true },
+  });
   await prisma.userInterest.createMany({
     data: [
       { userId: owner.id, interestId: interests[0].id },
@@ -439,6 +511,9 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
+
+
+
 
 
 

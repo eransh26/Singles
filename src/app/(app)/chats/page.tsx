@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { VerificationStatus } from "@prisma/client";
+import { ConversationKind, VerificationStatus } from "@prisma/client";
 import { reviewChatRequestAction } from "../actions";
 import { requireUser } from "@/lib/auth/guards";
 import { prisma } from "@/lib/db/prisma";
@@ -16,6 +16,8 @@ export default async function ChatsPage({
   const [conversations, incomingRequests, outgoingRequests] = await Promise.all([
     prisma.conversation.findMany({
       where: {
+        status: "ACTIVE",
+        kind: ConversationKind.MEMBER_CHAT,
         OR: [{ userOneId: viewer.id }, { userTwoId: viewer.id }],
       },
       orderBy: { updatedAt: "desc" },
@@ -82,7 +84,13 @@ export default async function ChatsPage({
     }),
   ]);
 
-  const savedMessage = resolvedSearchParams?.saved === "incoming-chat" ? "You already have an incoming request from this member." : null;
+  const savedMessage = resolvedSearchParams?.saved === "incoming-chat"
+    ? "You already have an incoming request from this member."
+    : resolvedSearchParams?.saved === "chat-revoked"
+      ? "Chat access was revoked."
+      : resolvedSearchParams?.saved === "video-request"
+        ? "Video request sent."
+        : null;
 
   return (
     <main className="lux-shell">
@@ -229,3 +237,4 @@ export default async function ChatsPage({
     </main>
   );
 }
+

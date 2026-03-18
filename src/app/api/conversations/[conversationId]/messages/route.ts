@@ -97,13 +97,14 @@ export async function GET(_request: Request, { params }: { params: Promise<{ con
   }
 
   const messages = await prisma.message.findMany({
-    where: { conversationId, deletedAt: null },
+    where: { conversationId },
     orderBy: { createdAt: "asc" },
     take: 100,
     select: {
       id: true,
       body: true,
       createdAt: true,
+      deletedAt: true,
       senderUserId: true,
       attachments: {
         orderBy: { createdAt: "asc" },
@@ -114,6 +115,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ con
           mimeType: true,
           byteSize: true,
           storageKey: true,
+          deletedAt: true,
         },
       },
     },

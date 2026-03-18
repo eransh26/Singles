@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { GroupRole, GroupType, MembershipStatus, PlacementType, PostContextType, PostVisibilityStatus } from "@prisma/client";
+import { ConsentStatus, GroupRole, GroupType, MembershipStatus, PlacementType, PostContextType, PostVisibilityStatus } from "@prisma/client";
 import { createPostAction, joinGroupAction, removeGroupMemberAction, reviewGroupJoinRequestAction, updateGroupAction } from "../../actions";
 import { createCommentAction } from "../../actions";
 import { hasMinimalProfileVisibility, isFullyVerifiedUser, requireUser } from "@/lib/auth/guards";
@@ -112,19 +112,21 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ gr
 
   const actionableAuthorIds = Array.from(new Set(group.posts.filter((post) => post.authorUserId !== viewer.id).map((post) => post.authorUserId)));
   const pairKeys = actionableAuthorIds.map((authorUserId) => userPairKey(viewer.id, authorUserId));
-  const [conversations, chatRequests, photoRequests, photoGrants, blocks] = actionableAuthorIds.length
+  const [conversations, chatRequests, photoRequests, photoGrants, videoConsents, blocks] = actionableAuthorIds.length
     ? await Promise.all([
-        prisma.conversation.findMany({ where: { pairKey: { in: pairKeys } }, select: { id: true, pairKey: true } }),
+        prisma.conversation.findMany({ where: { pairKey: { in: pairKeys } }, select: { id: true, pairKey: true, status: true } }),
         prisma.chatRequest.findMany({ where: { pairKey: { in: pairKeys }, status: "PENDING" }, orderBy: { createdAt: "desc" }, select: { pairKey: true, fromUserId: true, toUserId: true } }),
         prisma.photoAccessRequest.findMany({ where: { pairKey: { in: pairKeys }, status: "PENDING" }, orderBy: { createdAt: "desc" }, select: { pairKey: true, requesterUserId: true } }),
         prisma.photoAccessGrant.findMany({ where: { ownerUserId: { in: actionableAuthorIds }, granteeUserId: viewer.id, revokedAt: null }, select: { ownerUserId: true } }),
+        prisma.videoConsent.findMany({ where: { pairKey: { in: pairKeys } }, select: { pairKey: true, status: true } }),
         prisma.userBlock.findMany({ where: { OR: [{ blockerUserId: viewer.id, blockedUserId: { in: actionableAuthorIds } }, { blockerUserId: { in: actionableAuthorIds }, blockedUserId: viewer.id }] }, select: { blockerUserId: true, blockedUserId: true } }),
       ])
-    : [[], [], [], [], []];
+    : [[], [], [], [], [], []];
 
   const conversationByPairKey = new Map(conversations.map((conversation) => [conversation.pairKey, conversation]));
   const chatRequestByPairKey = new Map(chatRequests.map((request) => [request.pairKey, request]));
   const photoRequestByPairKey = new Map(photoRequests.map((request) => [request.pairKey, request]));
+  const videoConsentByPairKey = new Map(videoConsents.map((consent) => [consent.pairKey, consent]));
   const approvedGalleryOwners = new Set(photoGrants.map((grant) => grant.ownerUserId));
   const blockedUsers = new Set(blocks.map((block) => (block.blockerUserId === viewer.id ? block.blockedUserId : block.blockerUserId)));
 
@@ -255,6 +257,7 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ gr
                 const existingConversation = conversationByPairKey.get(pairKey);
                 const existingChatRequest = chatRequestByPairKey.get(pairKey);
                 const existingPhotoRequest = photoRequestByPairKey.get(pairKey);
+                const existingVideoConsent = videoConsentByPairKey.get(pairKey);
                 const isBlocked = blockedUsers.has(post.authorUserId);
                 const hasApprovedPhotoGrant = approvedGalleryOwners.has(post.authorUserId);
                 const chatState = existingConversation
@@ -277,6 +280,14 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ gr
                     : isBlocked || post.author.photoRequestPolicy === "NOBODY" || !viewerIsVerified
                       ? "blocked"
                       : "request";
+                const videoState =
+                  existingConversation?.status === "ACTIVE" && existingVideoConsent?.status === ConsentStatus.APPROVED
+                    ? "approved"
+                    : existingConversation?.status === "ACTIVE" && existingVideoConsent?.status === ConsentStatus.PENDING
+                      ? "pending"
+                      : existingConversation?.status === "ACTIVE" && !isBlocked
+                        ? "request"
+                        : "blocked";
 
                 return (
                   <article key={post.id} className="lux-card">
@@ -297,6 +308,7 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ gr
                           photoState={photoState}
                           sourcePath={`/groups/${group.id}`}
                           targetUserId={post.author.id}
+                          videoState={videoState}
                         />
                       ) : null}
                     </div>
@@ -419,3 +431,7 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ gr
     </main>
   );
 }
+
+
+
+

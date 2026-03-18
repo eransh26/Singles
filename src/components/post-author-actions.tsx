@@ -2,17 +2,19 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { Ban, Flag, Images, MessageCircleMore, ShieldAlert } from "lucide-react";
-import { blockUserAction, reportUserAction, sendChatRequestAction, sendPhotoAccessRequestAction } from "@/app/(app)/actions";
+import { Ban, Flag, Images, MessageCircleMore, ShieldAlert, Video } from "lucide-react";
+import { blockUserAction, reportUserAction, requestVideoConsentAction, sendChatRequestAction, sendPhotoAccessRequestAction } from "@/app/(app)/actions";
 
 type ChatState = "send" | "open" | "pending" | "incoming" | "blocked";
 type PhotoState = "request" | "approved" | "pending" | "blocked";
+type VideoState = "request" | "approved" | "pending" | "blocked";
 
 type PostAuthorActionsProps = {
   targetUserId: string;
   sourcePath: string;
   chatState: ChatState;
   photoState: PhotoState;
+  videoState: VideoState;
   conversationId?: string | null;
 };
 
@@ -29,7 +31,7 @@ function iconTone(state: "idle" | "pending" | "confirmed" | "blocked") {
   return "border-[color:rgba(109,129,167,0.22)] bg-[rgba(109,129,167,0.08)] text-slate-600";
 }
 
-export function PostAuthorActions({ targetUserId, sourcePath, chatState, photoState, conversationId }: PostAuthorActionsProps) {
+export function PostAuthorActions({ targetUserId, sourcePath, chatState, photoState, videoState, conversationId }: PostAuthorActionsProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -50,6 +52,7 @@ export function PostAuthorActions({ targetUserId, sourcePath, chatState, photoSt
 
   const chatTone = chatState === "open" ? "confirmed" : chatState === "pending" || chatState === "incoming" ? "pending" : chatState === "blocked" ? "blocked" : "idle";
   const photoTone = photoState === "approved" ? "confirmed" : photoState === "pending" ? "pending" : photoState === "blocked" ? "blocked" : "idle";
+  const videoTone = videoState === "approved" ? "confirmed" : videoState === "pending" ? "pending" : videoState === "blocked" ? "blocked" : "idle";
 
   return (
     <div className="relative flex items-center gap-1.5" ref={containerRef}>
@@ -86,6 +89,24 @@ export function PostAuthorActions({ targetUserId, sourcePath, chatState, photoSt
       ) : (
         <span className={`inline-flex h-8 w-8 items-center justify-center rounded-full border ${iconTone(photoTone)}`} title={photoState === "approved" ? "Gallery access approved" : photoState === "pending" ? "Gallery request pending" : "Gallery request unavailable"}>
           <Images className="h-4 w-4" />
+        </span>
+      )}
+
+      {videoState === "approved" && conversationId ? (
+        <Link className={`inline-flex h-8 w-8 items-center justify-center rounded-full border transition ${iconTone(videoTone)}`} href={`/chats/${conversationId}`} title="Video consent approved">
+          <Video className="h-4 w-4" />
+        </Link>
+      ) : videoState === "request" ? (
+        <form action={requestVideoConsentAction}>
+          <input name="targetUserId" type="hidden" value={targetUserId} />
+          <input name="sourcePath" type="hidden" value={sourcePath} />
+          <button className={`inline-flex h-8 w-8 items-center justify-center rounded-full border transition ${iconTone(videoTone)}`} title="Request video approval" type="submit">
+            <Video className="h-4 w-4" />
+          </button>
+        </form>
+      ) : (
+        <span className={`inline-flex h-8 w-8 items-center justify-center rounded-full border ${iconTone(videoTone)}`} title={videoState === "pending" ? "Video request pending" : videoState === "approved" ? "Video approved" : "Video requires active chat approval"}>
+          <Video className="h-4 w-4" />
         </span>
       )}
 

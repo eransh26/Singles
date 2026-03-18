@@ -4,17 +4,26 @@ import path from "node:path";
 
 const seedDataPath = path.join(process.cwd(), "tests", "e2e", ".seed-data.json");
 
+export type SeedUser = { id: string; email: string; displayName: string; image?: string | null };
+
 export type SeedData = {
+  defaultTestUserPassword?: string;
   password: string;
   users: {
-    admin: { id: string; email: string; displayName: string };
-    owner: { id: string; email: string; displayName: string };
-    member: { id: string; email: string; displayName: string };
-    verified: { id: string; email: string; displayName: string };
-    blockedRequester: { id: string; email: string; displayName: string };
-    blockedTarget: { id: string; email: string; displayName: string };
-    verificationApproveUser: { id: string; email: string; displayName: string };
-    verificationRejectUser: { id: string; email: string; displayName: string };
+    admin: SeedUser;
+    owner: SeedUser;
+    member: SeedUser;
+    verified: SeedUser;
+    blockedRequester: SeedUser;
+    blockedTarget: SeedUser;
+    verificationApproveUser: SeedUser;
+    verificationRejectUser: SeedUser;
+    defaultTestUsers?: SeedUser[];
+    testMale1?: SeedUser;
+    testFemale1?: SeedUser;
+    testMale2?: SeedUser;
+    testFemale2?: SeedUser;
+    testUser?: SeedUser;
   };
   groups: {
     closedGroup: { id: string; name: string };
@@ -24,6 +33,13 @@ export type SeedData = {
   };
   reports: {
     postReport: { id: string };
+  };
+  conversations?: {
+    approvedConversation: { id: string };
+  };
+  buddy?: {
+    expiringBuddyRequest?: { id: string };
+    autoCancelledBuddyRequest?: { id: string };
   };
 };
 
@@ -55,8 +71,9 @@ export function ensureE2ESeed() {
     );
     const hasClosedGroup = Boolean(current.groups?.closedGroup?.id);
     const hasReport = Boolean(current.reports?.postReport?.id && current.posts?.reportedPost?.id);
+    const hasApprovedConversation = Boolean(current.conversations?.approvedConversation?.id);
 
-    if (!hasCoreUsers || !hasClosedGroup || !hasReport) {
+    if (!hasCoreUsers || !hasClosedGroup || !hasReport || !hasApprovedConversation) {
       runSeed();
     }
   } catch {
@@ -72,5 +89,3 @@ export function loadSeedData(): SeedData {
   ensureE2ESeed();
   return JSON.parse(readFileSync(seedDataPath, "utf8")) as SeedData;
 }
-
-

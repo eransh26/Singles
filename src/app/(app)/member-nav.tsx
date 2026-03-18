@@ -1,19 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, House, MessagesSquare, UserRound, Users } from "lucide-react";
+import { Bell, House, LifeBuoy, MessagesSquare, UserRound, Users } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 type MemberNavItem = {
   href: string;
   label: string;
-  icon?: "home" | "groups" | "chats" | "notifications" | "profile";
+  icon?: "home" | "groups" | "chats" | "buddy" | "notifications" | "profile";
 };
 
 const ICONS = {
   home: House,
   groups: Users,
   chats: MessagesSquare,
+  buddy: LifeBuoy,
   notifications: Bell,
   profile: UserRound,
 } as const;
@@ -52,4 +53,3 @@ export function MemberNav({ items }: { items: MemberNavItem[] }) {
     </nav>
   );
 }
-

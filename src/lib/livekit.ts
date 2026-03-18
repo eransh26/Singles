@@ -1,10 +1,10 @@
-import { ConversationStatus, Prisma } from "@prisma/client";
+import { ConversationKind, ConversationStatus, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 
 const ACTIVE_CALL_WINDOW_MS = 1000 * 60 * 60 * 2;
 
-export function getConversationRoomName(conversationId: string) {
-  return `private-chat-${conversationId}`;
+export function getConversationRoomName(conversationId: string, kind: ConversationKind = ConversationKind.MEMBER_CHAT) {
+  return kind === ConversationKind.BUDDY_SUPPORT ? `buddy-support-${conversationId}` : `private-chat-${conversationId}`;
 }
 
 export async function getVideoConversationById(conversationId: string) {
@@ -12,6 +12,8 @@ export async function getVideoConversationById(conversationId: string) {
     where: { id: conversationId },
     select: {
       id: true,
+      pairKey: true,
+      kind: true,
       status: true,
       userOneId: true,
       userTwoId: true,
@@ -49,10 +51,7 @@ export function isAuthorizedVideoParticipant(
   conversation: { userOneId: string; userTwoId: string; status: ConversationStatus },
   userId: string,
 ) {
-  return (
-    conversation.status === ConversationStatus.ACTIVE &&
-    (conversation.userOneId === userId || conversation.userTwoId === userId)
-  );
+  return conversation.status === ConversationStatus.ACTIVE && (conversation.userOneId === userId || conversation.userTwoId === userId);
 }
 
 export function isJoinableCallRecord(
@@ -76,9 +75,11 @@ async function expireOpenRecord(recordId: string, tx: Prisma.TransactionClient) 
   });
 }
 
-export async function createOrJoinVideoCallRecord(conversationId: string, startedByUserId: string) {
-  const roomName = getConversationRoomName(conversationId);
-
+export async function createOrJoinVideoCallRecord(
+  conversationId: string,
+  startedByUserId: string,
+  roomName = getConversationRoomName(conversationId),
+) {
   try {
     return await prisma.$transaction(async (tx) => {
       const latestOpenRecord = await tx.videoCallRecord.findFirst({

@@ -2,13 +2,14 @@ import Link from "next/link";
 import {
   ChatRequestPolicy,
   ChatRequestStatus,
+  ConsentStatus,
   MediaVisibilityLevel,
   MembershipStatus,
   PhotoAccessRequestStatus,
   PhotoRequestPolicy,
   VerificationStatus,
 } from "@prisma/client";
-import { sendChatRequestAction, sendPhotoAccessRequestAction } from "../../actions";
+import { requestVideoConsentAction, sendChatRequestAction, sendPhotoAccessRequestAction } from "../../actions";
 import { hasMinimalProfileVisibility, isFullyVerifiedUser, requireUser } from "@/lib/auth/guards";
 import { prisma } from "@/lib/db/prisma";
 import { notFound } from "next/navigation";
@@ -18,6 +19,7 @@ export const dynamic = "force-dynamic";
 const saveMessages: Record<string, string> = {
   "chat-request": "Chat request sent.",
   "photo-request": "Photo access request sent.",
+  "video-request": "Video request sent.",
 };
 
 function userPairKey(firstUserId: string, secondUserId: string) {
@@ -49,7 +51,7 @@ export default async function MemberProfilePage({
   const resolvedSearchParams = await searchParams;
   const pairKey = userPairKey(viewer.id, userId);
 
-  const [user, sharedGroups, existingConversation, existingChatRequest, existingPhotoRequest, photoGrant, existingBlock] = await Promise.all([
+  const [user, sharedGroups, existingConversation, existingChatRequest, existingPhotoRequest, existingVideoConsent, photoGrant, existingBlock] = await Promise.all([
     prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -97,7 +99,7 @@ export default async function MemberProfilePage({
     }),
     prisma.conversation.findUnique({
       where: { pairKey },
-      select: { id: true },
+      select: { id: true, status: true },
     }),
     prisma.chatRequest.findFirst({
       where: { pairKey },
@@ -116,6 +118,15 @@ export default async function MemberProfilePage({
         id: true,
         status: true,
         requesterUserId: true,
+      },
+    }),
+    prisma.videoConsent.findUnique({
+      where: { pairKey },
+      select: {
+        id: true,
+        status: true,
+        requesterUserId: true,
+        targetUserId: true,
       },
     }),
     prisma.photoAccessGrant.findUnique({
@@ -155,6 +166,9 @@ export default async function MemberProfilePage({
   const savedMessage = resolvedSearchParams?.saved ? saveMessages[resolvedSearchParams.saved] : null;
   const hasIncomingChatRequest = existingChatRequest?.status === ChatRequestStatus.PENDING && existingChatRequest.toUserId === viewer.id;
   const hasOutgoingChatRequest = existingChatRequest?.status === ChatRequestStatus.PENDING && existingChatRequest.fromUserId === viewer.id;
+  const hasActiveConversation = existingConversation?.status === "ACTIVE";
+  const hasPendingVideoRequest = existingVideoConsent?.status === ConsentStatus.PENDING;
+  const hasApprovedVideoConsent = existingVideoConsent?.status === ConsentStatus.APPROVED;
   const hasPendingPhotoRequest = existingPhotoRequest?.status === PhotoAccessRequestStatus.PENDING && existingPhotoRequest.requesterUserId === viewer.id;
   const isBlocked = Boolean(existingBlock);
   const chatBlockedByPolicy = user.chatRequestPolicy === ChatRequestPolicy.NOBODY;
@@ -278,7 +292,7 @@ export default async function MemberProfilePage({
                           : "You can request a direct conversation from here."}
                     </p>
                     <div className="mt-4">
-                      {existingConversation ? (
+                      {hasActiveConversation && existingConversation ? (
                         <Link className="inline-flex rounded-full border px-4 py-2 font-medium" href={`/chats/${existingConversation.id}`}>
                           Open conversation
                         </Link>
@@ -328,6 +342,35 @@ export default async function MemberProfilePage({
                           <input name="sourcePath" type="hidden" value={`/users/${user.id}`} />
                           <button className="rounded-full border px-4 py-2 font-medium" type="submit">
                             Request photo access
+                          </button>
+                        </form>
+                      )}
+                    </div>
+                  </div>
+
+
+                  <div className="rounded-2xl border p-4">
+                    <p className="font-medium">Private video approval</p>
+                    <p className="mt-1 text-muted-foreground">
+                      {!hasActiveConversation
+                        ? "Video calls require an active approved chat first."
+                        : "Video calls require separate approval and can be revoked at any time."}
+                    </p>
+                    <div className="mt-4">
+                      {hasApprovedVideoConsent && existingConversation ? (
+                        <Link className="inline-flex rounded-full border px-4 py-2 font-medium text-emerald-700" href={`/chats/${existingConversation.id}`}>
+                          Video approved
+                        </Link>
+                      ) : hasPendingVideoRequest ? (
+                        <span className="inline-flex rounded-full border px-4 py-2 font-medium text-amber-700">Video request pending</span>
+                      ) : isBlocked || !hasActiveConversation ? (
+                        <span className="inline-flex rounded-full border px-4 py-2 font-medium">Video unavailable</span>
+                      ) : (
+                        <form action={requestVideoConsentAction}>
+                          <input name="targetUserId" type="hidden" value={user.id} />
+                          <input name="sourcePath" type="hidden" value={`/users/${user.id}`} />
+                          <button className="rounded-full border px-4 py-2 font-medium" type="submit">
+                            Request video approval
                           </button>
                         </form>
                       )}

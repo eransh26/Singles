@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Search } from "lucide-react";
-import { ChatRequestStatus, MembershipStatus, PhotoAccessRequestStatus, PlacementType, PostContextType, PostVisibilityStatus } from "@prisma/client";
+import { ChatRequestStatus, ConsentStatus, MembershipStatus, PhotoAccessRequestStatus, PlacementType, PostContextType, PostVisibilityStatus } from "@prisma/client";
 import { createCommentAction, createPostAction } from "../actions";
 import { hasMinimalProfileVisibility, isFullyVerifiedUser, requireUser } from "@/lib/auth/guards";
 import { prisma } from "@/lib/db/prisma";
@@ -105,10 +105,10 @@ export default async function HomePage() {
   );
   const pairKeys = actionableAuthorIds.map((authorUserId) => userPairKey(viewer.id, authorUserId));
 
-  const [conversations, chatRequests, photoRequests, photoGrants, blocks] = actionableAuthorIds.length
+  const [conversations, chatRequests, photoRequests, videoConsents, photoGrants, blocks] = actionableAuthorIds.length
     ? await Promise.all([
         prisma.conversation.findMany({
-          where: { pairKey: { in: pairKeys } },
+          where: { pairKey: { in: pairKeys }, status: "ACTIVE" },
           select: { id: true, pairKey: true },
         }),
         prisma.chatRequest.findMany({
@@ -120,6 +120,10 @@ export default async function HomePage() {
           where: { pairKey: { in: pairKeys }, status: PhotoAccessRequestStatus.PENDING },
           orderBy: { createdAt: "desc" },
           select: { id: true, pairKey: true, requesterUserId: true },
+        }),
+        prisma.videoConsent.findMany({
+          where: { pairKey: { in: pairKeys } },
+          select: { pairKey: true, status: true },
         }),
         prisma.photoAccessGrant.findMany({
           where: { ownerUserId: { in: actionableAuthorIds }, granteeUserId: viewer.id, revokedAt: null },
@@ -135,11 +139,12 @@ export default async function HomePage() {
           select: { blockerUserId: true, blockedUserId: true },
         }),
       ])
-    : [[], [], [], [], []];
+    : [[], [], [], [], [], []];
 
   const conversationByPairKey = new Map(conversations.map((conversation) => [conversation.pairKey, conversation]));
   const chatRequestByPairKey = new Map(chatRequests.map((request) => [request.pairKey, request]));
   const photoRequestByPairKey = new Map(photoRequests.map((request) => [request.pairKey, request]));
+  const videoConsentByPairKey = new Map(videoConsents.map((consent) => [consent.pairKey, consent]));
   const approvedGalleryOwners = new Set(photoGrants.map((grant) => grant.ownerUserId));
   const blockedUsers = new Set(
     blocks.map((block) => (block.blockerUserId === viewer.id ? block.blockedUserId : block.blockerUserId)),
@@ -198,6 +203,16 @@ export default async function HomePage() {
                     : isBlocked || post.author.photoRequestPolicy === "NOBODY" || !viewerIsVerified
                       ? "blocked"
                       : "request";
+                const videoConsent = videoConsentByPairKey.get(pairKey);
+                const videoState = existingConversation
+                  ? videoConsent?.status === ConsentStatus.APPROVED
+                    ? "approved"
+                    : videoConsent?.status === ConsentStatus.PENDING
+                      ? "pending"
+                      : isBlocked
+                        ? "blocked"
+                        : "request"
+                  : "blocked";
 
                 return (
                   <article key={post.id} className="lux-card p-4 shadow-[0_10px_24px_rgba(43,43,43,0.04)] md:p-5">
@@ -225,6 +240,7 @@ export default async function HomePage() {
                               photoState={photoState}
                               sourcePath="/home"
                               targetUserId={post.author.id}
+                              videoState={videoState}
                             />
                           ) : null}
                           {canOpenAuthorProfile ? (
@@ -343,3 +359,4 @@ export default async function HomePage() {
     </main>
   );
 }
+

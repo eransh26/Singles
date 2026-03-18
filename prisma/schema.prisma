@@ -128,6 +128,56 @@ enum ChatRequestStatus {
   EXPIRED
 }
 
+enum ConsentStatus {
+  PENDING
+  APPROVED
+  DECLINED
+  REVOKED
+  CANCELED
+}
+
+enum ConversationKind {
+  MEMBER_CHAT
+  BUDDY_SUPPORT
+}
+
+enum BuddyDomain {
+  DIVORCE_SUPPORT
+  EMOTIONAL_SUPPORT
+  STARTING_OVER
+  DATING_AFTER_DIVORCE
+  BDSM_GUIDANCE
+  RELATIONSHIP_SUPPORT
+  SOMEONE_TO_TALK_TO
+}
+
+enum BuddySupportMode {
+  CHAT_ONLY
+  VIDEO_OK
+  EITHER
+}
+
+enum BuddyAvailabilityLevel {
+  LIGHT
+  STANDARD
+  HIGH
+}
+
+enum BuddyRequestStatus {
+  PENDING
+  ASSIGNED
+  AWAITING_SEEKER_DECISION
+  CANCELLED
+  CLOSED
+}
+
+enum BuddyRequestAssignmentStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  NOT_RELEVANT
+}
+
 enum ConversationStatus {
   ACTIVE
   CLOSED
@@ -150,12 +200,22 @@ enum PhotoAccessRequestStatus {
 enum NotificationType {
   CHAT_REQUEST_INCOMING
   CHAT_REQUEST_ACCEPTED
+  VIDEO_REQUEST_INCOMING
+  VIDEO_REQUEST_APPROVED
   PHOTO_ACCESS_REQUEST_INCOMING
   PHOTO_ACCESS_APPROVED
   GROUP_JOIN_APPROVED
   COMMENT_RECEIVED
   REPORT_UPDATE
   SYSTEM
+  BUDDY_REQUEST_SUBMITTED
+  BUDDY_REQUEST_INCOMING
+  BUDDY_REQUEST_ASSIGNED
+  BUDDY_REQUEST_NO_MATCH
+  BUDDY_REQUEST_CANCELLED
+  BUDDY_REQUEST_NO_LONGER_RELEVANT
+  BUDDY_VIDEO_REQUEST_INCOMING
+  BUDDY_VIDEO_REQUEST_APPROVED
 }
 
 enum ReportTargetType {
@@ -163,6 +223,7 @@ enum ReportTargetType {
   POST
   COMMENT
   MESSAGE
+  MESSAGE_ATTACHMENT
   GROUP
 }
 
@@ -212,6 +273,13 @@ model User {
 
   settings               UserSettings?
   media                  UserProfileMedia[]
+  buddyProfile           BuddyProfile?
+  buddyRequestsSought    BuddyRequest[] @relation("BuddyRequestSeeker")
+  buddyRequestsAssigned  BuddyRequest[] @relation("BuddyRequestAssignedBuddy")
+  buddyAssignments       BuddyRequestAssignment[] @relation("BuddyRequestAssignmentBuddy")
+  buddyVideoConsentsRequested BuddyVideoConsent[] @relation("BuddyVideoConsentRequester")
+  buddyVideoConsentsReceived  BuddyVideoConsent[] @relation("BuddyVideoConsentTarget")
+  buddyVideoConsentsApproved  BuddyVideoConsent[] @relation("BuddyVideoConsentApprover")
   interests              UserInterest[]
   verificationRequests   VerificationRequest[] @relation("VerificationRequestSubject")
   verificationReviewed   VerificationRequest[] @relation("VerificationRequestReviewer")
@@ -231,6 +299,9 @@ model User {
   conversationsTwo       Conversation[] @relation("ConversationUserTwo")
   messages               Message[]
   startedVideoCalls      VideoCallRecord[] @relation("VideoCallStartedBy")
+  videoConsentsRequested VideoConsent[] @relation("VideoConsentRequester")
+  videoConsentsReceived  VideoConsent[] @relation("VideoConsentTarget")
+  videoConsentsApproved  VideoConsent[] @relation("VideoConsentApprover")
 
   blocksInitiated        UserBlock[] @relation("UserBlockBlocker")
   blocksReceived         UserBlock[] @relation("UserBlockBlocked")
@@ -505,18 +576,22 @@ model Conversation {
   userOneId                 String
   userTwoId                 String
   pairKey                   String @unique
+  kind                      ConversationKind @default(MEMBER_CHAT)
   status                    ConversationStatus @default(ACTIVE)
-  createdFromChatRequestId  String @unique
+  createdFromChatRequestId  String? @unique
+  buddyRequestId            String? @unique
   createdAt                 DateTime @default(now())
   updatedAt                 DateTime @updatedAt
 
   userOne                   User @relation("ConversationUserOne", fields: [userOneId], references: [id], onDelete: Cascade)
   userTwo                   User @relation("ConversationUserTwo", fields: [userTwoId], references: [id], onDelete: Cascade)
-  createdFromChatRequest    ChatRequest @relation(fields: [createdFromChatRequestId], references: [id], onDelete: Restrict)
+  createdFromChatRequest    ChatRequest? @relation(fields: [createdFromChatRequestId], references: [id], onDelete: Restrict)
+  buddyRequest              BuddyRequest? @relation("BuddyRequestConversation", fields: [buddyRequestId], references: [id], onDelete: SetNull)
   messages                  Message[]
   videoCallRecords          VideoCallRecord[]
+  buddyVideoConsent         BuddyVideoConsent?
 
-  @@index([status, updatedAt])
+  @@index([kind, status, updatedAt])
 }
 
 model Message {
@@ -544,8 +619,10 @@ model MessageAttachment {
   byteSize   Int
   storageKey String
   createdAt  DateTime @default(now())
+  deletedAt  DateTime?
 
   message    Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  reports    Report[] @relation("ReportTargetMessageAttachment")
 
   @@index([messageId, createdAt])
 }
@@ -565,6 +642,108 @@ model VideoCallRecord {
 
   @@index([conversationId, startedAt])
   @@index([roomName, endedAt])
+}
+
+model VideoConsent {
+  id               String @id @default(cuid())
+  pairKey          String @unique
+  requesterUserId  String
+  targetUserId     String
+  approvedByUserId String?
+  status           ConsentStatus @default(PENDING)
+  createdAt        DateTime @default(now())
+  respondedAt      DateTime?
+  updatedAt        DateTime @updatedAt
+
+  requester        User @relation("VideoConsentRequester", fields: [requesterUserId], references: [id], onDelete: Cascade)
+  target           User @relation("VideoConsentTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
+  approvedBy       User? @relation("VideoConsentApprover", fields: [approvedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([targetUserId, status, createdAt])
+  @@index([requesterUserId, status, createdAt])
+}
+
+model BuddyProfile {
+  userId            String @id
+  isAvailable       Boolean @default(false)
+  intro             String?
+  availabilityLevel BuddyAvailabilityLevel?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user              User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  domains           BuddyProfileDomain[]
+}
+
+model BuddyProfileDomain {
+  id                String @id @default(cuid())
+  userId            String
+  domain            BuddyDomain
+  createdAt         DateTime @default(now())
+
+  profile           BuddyProfile @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@unique([userId, domain])
+  @@index([domain])
+}
+
+model BuddyRequest {
+  id                String @id @default(cuid())
+  seekerId          String
+  domain            BuddyDomain
+  message           String?
+  preferredMode     BuddySupportMode
+  status            BuddyRequestStatus @default(PENDING)
+  assignedBuddyId   String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  extensionPromptAt DateTime?
+  expiresAt         DateTime
+  extendedAt        DateTime?
+  closedAt          DateTime?
+
+  seeker            User @relation("BuddyRequestSeeker", fields: [seekerId], references: [id], onDelete: Cascade)
+  assignedBuddy     User? @relation("BuddyRequestAssignedBuddy", fields: [assignedBuddyId], references: [id], onDelete: SetNull)
+  assignments       BuddyRequestAssignment[]
+  conversation      Conversation? @relation("BuddyRequestConversation")
+
+  @@index([seekerId, status, createdAt])
+  @@index([status, domain, createdAt])
+}
+
+model BuddyRequestAssignment {
+  id                String @id @default(cuid())
+  buddyRequestId    String
+  buddyId           String
+  status            BuddyRequestAssignmentStatus @default(PENDING)
+  createdAt         DateTime @default(now())
+  respondedAt       DateTime?
+
+  buddyRequest      BuddyRequest @relation(fields: [buddyRequestId], references: [id], onDelete: Cascade)
+  buddy             User @relation("BuddyRequestAssignmentBuddy", fields: [buddyId], references: [id], onDelete: Cascade)
+
+  @@unique([buddyRequestId, buddyId])
+  @@index([buddyId, status, createdAt])
+}
+
+model BuddyVideoConsent {
+  id                String @id @default(cuid())
+  conversationId    String @unique
+  requesterUserId   String
+  targetUserId      String
+  approvedByUserId  String?
+  status            ConsentStatus @default(PENDING)
+  createdAt         DateTime @default(now())
+  respondedAt       DateTime?
+  updatedAt         DateTime @updatedAt
+
+  conversation      Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  requester         User @relation("BuddyVideoConsentRequester", fields: [requesterUserId], references: [id], onDelete: Cascade)
+  target            User @relation("BuddyVideoConsentTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
+  approvedBy        User? @relation("BuddyVideoConsentApprover", fields: [approvedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([targetUserId, status, createdAt])
+  @@index([requesterUserId, status, createdAt])
 }
 
 model PhotoAccessRequest {
@@ -656,8 +835,9 @@ model Report {
   targetUserId     String?
   targetPostId     String?
   targetCommentId  String?
-  targetMessageId  String?
-  targetGroupId    String?
+  targetMessageId           String?
+  targetMessageAttachmentId String?
+  targetGroupId             String?
   reasonCode       String
   details          String?
   status           ReportStatus @default(OPEN)
@@ -671,8 +851,9 @@ model Report {
   targetUser       User? @relation("ReportTargetUser", fields: [targetUserId], references: [id], onDelete: SetNull)
   targetPost       Post? @relation("ReportTargetPost", fields: [targetPostId], references: [id], onDelete: SetNull)
   targetComment    Comment? @relation("ReportTargetComment", fields: [targetCommentId], references: [id], onDelete: SetNull)
-  targetMessage    Message? @relation("ReportTargetMessage", fields: [targetMessageId], references: [id], onDelete: SetNull)
-  targetGroup      Group? @relation("ReportTargetGroup", fields: [targetGroupId], references: [id], onDelete: SetNull)
+  targetMessage           Message?           @relation("ReportTargetMessage", fields: [targetMessageId], references: [id], onDelete: SetNull)
+  targetMessageAttachment MessageAttachment? @relation("ReportTargetMessageAttachment", fields: [targetMessageAttachmentId], references: [id], onDelete: SetNull)
+  targetGroup             Group?             @relation("ReportTargetGroup", fields: [targetGroupId], references: [id], onDelete: SetNull)
 
   @@index([status, createdAt])
   @@index([targetType, createdAt])
@@ -731,6 +912,16 @@ model VerificationToken {
 
   @@unique([identifier, token])
 }
+
+
+
+
+
+
+
+
+
+
 
 
 

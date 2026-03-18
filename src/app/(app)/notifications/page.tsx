@@ -28,6 +28,18 @@ function notificationCopy(type: NotificationType, payload: unknown) {
         body: `${payloadField(payload, "byDisplayName") ?? "A member"} accepted your chat request.`,
         href: "/chats",
       };
+    case NotificationType.VIDEO_REQUEST_INCOMING:
+      return {
+        title: "New video request",
+        body: `${payloadField(payload, "requesterDisplayName") ?? "A member"} requested separate approval for video calls.`,
+        href: "/chats",
+      };
+    case NotificationType.VIDEO_REQUEST_APPROVED:
+      return {
+        title: "Video request approved",
+        body: `${payloadField(payload, "approverDisplayName") ?? "A member"} approved video calls for your private chat.`,
+        href: "/chats",
+      };
     case NotificationType.PHOTO_ACCESS_REQUEST_INCOMING:
       return {
         title: "New photo access request",
@@ -136,4 +148,5 @@ export default async function NotificationsPage() {
     </main>
   );
 }
+
 

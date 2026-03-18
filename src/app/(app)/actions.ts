@@ -7,6 +7,7 @@ import {
   ActivityVisibility,
   ChatRequestPolicy,
   ChatRequestStatus,
+  ConsentStatus,
   ConversationStatus,
   GroupJoinRequestStatus,
   GroupRole,
@@ -26,6 +27,8 @@ import {
 } from "@prisma/client";
 import { hasMinimalProfileVisibility, isFullyVerifiedUser, requireActiveUser, requireUser } from "@/lib/auth/guards";
 import { prisma } from "@/lib/db/prisma";
+import { invalidatePairInteractionsByBlock, revokeChatConversationByPair, revokeVideoConsentForPair, userPairKey } from "@/lib/interaction-consent";
+import { invalidateBuddyByBlock } from "@/lib/buddy";
 
 function textValue(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -42,10 +45,6 @@ function slugify(value: string) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 50);
-}
-
-function userPairKey(firstUserId: string, secondUserId: string) {
-  return [firstUserId, secondUserId].sort().join(":");
 }
 
 function withSavedParam(path: string, saved: string) {
@@ -156,23 +155,31 @@ export async function blockUserAction(formData: FormData) {
     throw new Error("Choose another member to block.");
   }
 
-  await prisma.userBlock.upsert({
-    where: {
-      blockerUserId_blockedUserId: {
+  const pairKey = userPairKey(user.id, blockedUserId);
+
+  await prisma.$transaction(async (tx) => {
+    await tx.userBlock.upsert({
+      where: {
+        blockerUserId_blockedUserId: {
+          blockerUserId: user.id,
+          blockedUserId,
+        },
+      },
+      update: { reason },
+      create: {
         blockerUserId: user.id,
         blockedUserId,
+        reason,
       },
-    },
-    update: { reason },
-    create: {
-      blockerUserId: user.id,
-      blockedUserId,
-      reason,
-    },
+    });
+
+    await invalidatePairInteractionsByBlock(tx, pairKey, user.id, blockedUserId);
+    await invalidateBuddyByBlock(tx, user.id, blockedUserId);
   });
 
   revalidatePath("/home");
   revalidatePath("/chats");
+  revalidatePath("/notifications");
   revalidatePath(`/users/${blockedUserId}`);
   if (sourcePath !== "/home") {
     revalidatePath(sourcePath);
@@ -723,7 +730,7 @@ export async function sendChatRequestAction(formData: FormData) {
     }),
     prisma.conversation.findUnique({
       where: { pairKey },
-      select: { id: true },
+      select: { id: true, status: true },
     }),
     prisma.chatRequest.findFirst({
       where: {
@@ -760,8 +767,12 @@ export async function sendChatRequestAction(formData: FormData) {
     redirect(destination);
   }
 
-  if (existingConversation) {
+  if (existingConversation?.status === ConversationStatus.ACTIVE) {
     redirect(`/chats/${existingConversation.id}`);
+  }
+
+  if (existingConversation?.status === ConversationStatus.BLOCKED) {
+    throw new Error("Chat requests are not available for this member.");
   }
 
   await prisma.chatRequest.create({
@@ -809,7 +820,7 @@ export async function reviewChatRequestAction(formData: FormData) {
   if (decision === "accept") {
     const existingConversation = await prisma.conversation.findUnique({
       where: { pairKey },
-      select: { id: true },
+      select: { id: true, status: true },
     });
 
     let conversationId = existingConversation?.id ?? null;
@@ -836,6 +847,11 @@ export async function reviewChatRequestAction(formData: FormData) {
       });
 
       conversationId = conversation.id;
+    } else if (existingConversation.status !== ConversationStatus.ACTIVE) {
+      await prisma.conversation.update({
+        where: { id: existingConversation.id },
+        data: { status: ConversationStatus.ACTIVE },
+      });
     }
 
     await createNotification(request.fromUserId, NotificationType.CHAT_REQUEST_ACCEPTED, {
@@ -864,6 +880,200 @@ export async function reviewChatRequestAction(formData: FormData) {
   revalidatePath("/chats");
   revalidatePath("/notifications");
   revalidatePath(`/users/${request.fromUserId}`);
+}
+
+export async function requestVideoConsentAction(formData: FormData) {
+  const user = await requireActiveUser();
+  const targetUserId = textValue(formData, "targetUserId");
+  const sourcePath = optionalTextValue(formData, "sourcePath") ?? "/chats";
+
+  if (!targetUserId || targetUserId === user.id) {
+    throw new Error("Choose another member to request video access from.");
+  }
+
+  const pairKey = userPairKey(user.id, targetUserId);
+
+  const [conversation, existingBlock, existingVideoConsent] = await Promise.all([
+    prisma.conversation.findUnique({
+      where: { pairKey },
+      select: { id: true, status: true },
+    }),
+    prisma.userBlock.findFirst({
+      where: {
+        OR: [
+          { blockerUserId: user.id, blockedUserId: targetUserId },
+          { blockerUserId: targetUserId, blockedUserId: user.id },
+        ],
+      },
+      select: { id: true },
+    }),
+    prisma.videoConsent.findUnique({
+      where: { pairKey },
+      select: { id: true, status: true, targetUserId: true, requesterUserId: true },
+    }),
+  ]);
+
+  if (!conversation || conversation.status !== ConversationStatus.ACTIVE) {
+    throw new Error("Video requests require an active approved chat first.");
+  }
+
+  if (existingBlock) {
+    throw new Error("Video requests are not available for this member.");
+  }
+
+  if (existingVideoConsent?.status === ConsentStatus.APPROVED) {
+    redirect(`/chats/${conversation.id}`);
+  }
+
+  if (existingVideoConsent?.status === ConsentStatus.PENDING) {
+    redirect(withSavedParam(sourcePath, "video-request"));
+  }
+
+  await prisma.videoConsent.upsert({
+    where: { pairKey },
+    update: {
+      requesterUserId: user.id,
+      targetUserId,
+      approvedByUserId: null,
+      status: ConsentStatus.PENDING,
+      respondedAt: null,
+    },
+    create: {
+      pairKey,
+      requesterUserId: user.id,
+      targetUserId,
+      status: ConsentStatus.PENDING,
+    },
+  });
+
+  await createNotification(targetUserId, NotificationType.VIDEO_REQUEST_INCOMING, {
+    requesterUserId: user.id,
+    requesterDisplayName: user.displayName,
+  });
+
+  revalidatePath("/chats");
+  revalidatePath(`/users/${targetUserId}`);
+  revalidatePath("/notifications");
+  redirect(withSavedParam(sourcePath, "video-request"));
+}
+
+export async function reviewVideoConsentAction(formData: FormData) {
+  const user = await requireActiveUser();
+  const consentId = textValue(formData, "consentId");
+  const decision = textValue(formData, "decision");
+
+  const consent = await prisma.videoConsent.findUnique({
+    where: { id: consentId },
+    select: {
+      id: true,
+      pairKey: true,
+      requesterUserId: true,
+      targetUserId: true,
+      status: true,
+    },
+  });
+
+  if (!consent || consent.targetUserId !== user.id || consent.status !== ConsentStatus.PENDING) {
+    throw new Error("Video request not found.");
+  }
+
+  const conversation = await prisma.conversation.findUnique({
+    where: { pairKey: consent.pairKey },
+    select: { id: true, status: true },
+  });
+
+  if (!conversation || conversation.status !== ConversationStatus.ACTIVE) {
+    throw new Error("Video approval requires an active approved chat.");
+  }
+
+  const nextStatus = decision === "approve" ? ConsentStatus.APPROVED : ConsentStatus.DECLINED;
+  await prisma.videoConsent.update({
+    where: { id: consent.id },
+    data: {
+      status: nextStatus,
+      approvedByUserId: decision === "approve" ? user.id : null,
+      respondedAt: new Date(),
+    },
+  });
+
+  if (nextStatus === ConsentStatus.APPROVED) {
+    await createNotification(consent.requesterUserId, NotificationType.VIDEO_REQUEST_APPROVED, {
+      approverUserId: user.id,
+      approverDisplayName: user.displayName,
+    });
+  }
+
+  revalidatePath("/chats");
+  revalidatePath(`/chats/${conversation.id}`);
+  revalidatePath("/notifications");
+}
+
+export async function revokeChatConsentAction(formData: FormData) {
+  const user = await requireActiveUser();
+  const conversationId = textValue(formData, "conversationId");
+
+  const conversation = await prisma.conversation.findUnique({
+    where: { id: conversationId },
+    select: {
+      id: true,
+      pairKey: true,
+      userOneId: true,
+      userTwoId: true,
+      status: true,
+    },
+  });
+
+  if (!conversation) {
+    throw new Error("Conversation not found.");
+  }
+
+  const isParticipant = conversation.userOneId === user.id || conversation.userTwoId === user.id;
+  if (!isParticipant || conversation.status !== ConversationStatus.ACTIVE) {
+    throw new Error("This chat cannot be revoked.");
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await revokeChatConversationByPair(tx, conversation.pairKey, ConversationStatus.CLOSED, user.id);
+  });
+
+  revalidatePath("/chats");
+  redirect(withSavedParam("/chats", "chat-revoked"));
+}
+
+export async function revokeVideoConsentAction(formData: FormData) {
+  const user = await requireActiveUser();
+  const pairKey = textValue(formData, "pairKey");
+  const conversationId = optionalTextValue(formData, "conversationId");
+
+  const conversation = await prisma.conversation.findUnique({
+    where: { pairKey },
+    select: { id: true, userOneId: true, userTwoId: true },
+  });
+
+  if (!conversation) {
+    throw new Error("Conversation not found.");
+  }
+
+  const isParticipant = conversation.userOneId === user.id || conversation.userTwoId === user.id;
+  if (!isParticipant) {
+    throw new Error("This video consent cannot be changed.");
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await revokeVideoConsentForPair(tx, pairKey, user.id);
+    await tx.videoCallRecord.updateMany({
+      where: { conversationId: conversation.id, endedAt: null },
+      data: {
+        endedAt: new Date(),
+        activeConversationKey: null,
+      },
+    });
+  });
+
+  revalidatePath("/chats");
+  if (conversationId) {
+    revalidatePath(`/chats/${conversationId}`);
+  }
 }
 
 export async function sendPhotoAccessRequestAction(formData: FormData) {
@@ -1021,6 +1231,29 @@ export async function reviewPhotoAccessRequestAction(formData: FormData) {
   redirect("/settings?saved=photo-review");
 }
 
+export async function revokePhotoAccessGrantAction(formData: FormData) {
+  const user = await requireActiveUser();
+  const grantId = textValue(formData, "grantId");
+
+  const grant = await prisma.photoAccessGrant.findUnique({
+    where: { id: grantId },
+    select: { id: true, ownerUserId: true, granteeUserId: true },
+  });
+
+  if (!grant || grant.ownerUserId !== user.id) {
+    throw new Error("Photo access grant not found.");
+  }
+
+  await prisma.photoAccessGrant.update({
+    where: { id: grant.id },
+    data: { revokedAt: new Date() },
+  });
+
+  revalidatePath("/settings");
+  revalidatePath(`/users/${grant.granteeUserId}`);
+  redirect("/settings?saved=photo-revoked");
+}
+
 export async function sendMessageAction(formData: FormData) {
   const user = await requireUser();
   const conversationId = textValue(formData, "conversationId");
@@ -1096,6 +1329,8 @@ export async function markAllNotificationsReadAction() {
 
   revalidatePath("/notifications");
 }
+
+
 
 
 
