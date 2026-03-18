@@ -87,7 +87,8 @@ export default async function ConversationPage({ params, searchParams }: { param
   const otherUser = conversation.userOne.id === viewer.id ? conversation.userTwo : conversation.userOne;
   const activeCallRecord = conversation.videoCallRecords[0] ?? null;
   const callMode = isJoinableCallRecord(activeCallRecord) ? "join" : "start";
-  const videoConsent = await prisma.videoConsent.findUnique({
+  const [videoConsent, notificationSettings] = await Promise.all([
+    prisma.videoConsent.findUnique({
     where: { pairKey: conversation.pairKey },
     select: {
       id: true,
@@ -95,7 +96,12 @@ export default async function ConversationPage({ params, searchParams }: { param
       requesterUserId: true,
       targetUserId: true,
     },
-  });
+    }),
+    prisma.userSettings.findUnique({
+      where: { userId: viewer.id },
+      select: { webPushEnabled: true, pushPromptDismissedAt: true },
+    }),
+  ]);
 
   const saveMessage = resolvedSearchParams?.saved === "video-request" ? "Video request sent." : resolvedSearchParams?.saved === "chat-revoked" ? "Chat access was revoked." : null;
 
@@ -184,6 +190,8 @@ export default async function ConversationPage({ params, searchParams }: { param
         }))}
         otherUserName={otherUser.displayName}
         viewerId={viewer.id}
+        enablePushPrompt={!(notificationSettings?.webPushEnabled ?? false) && !notificationSettings?.pushPromptDismissedAt}
+        pushPromptVariant="messages"
       />
     </main>
   );

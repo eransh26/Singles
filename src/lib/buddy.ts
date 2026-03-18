@@ -10,6 +10,7 @@ import {
   Prisma,
 } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
+import { createNotificationRecord, deliverNotifications } from "@/lib/notifications";
 
 export const BUDDY_REQUEST_WINDOW_HOURS = 48;
 export const BUDDY_AUTO_CANCEL_DAYS = 5;
@@ -36,16 +37,6 @@ export function getBuddyRequestDeadline(base = new Date()) {
 
 export function getBuddyAutoCancelDeadline(base = new Date()) {
   return new Date(base.getTime() + BUDDY_AUTO_CANCEL_DAYS * 24 * 60 * 60 * 1000);
-}
-
-async function createNotification(tx: Prisma.TransactionClient, userId: string, type: NotificationType, payloadJson: Prisma.InputJsonValue) {
-  await tx.notification.create({
-    data: {
-      userId,
-      type,
-      payloadJson,
-    },
-  });
 }
 
 export async function closeBuddyConversationById(
@@ -152,10 +143,11 @@ export async function refreshBuddyRequestState(tx: Prisma.TransactionClient, req
   });
 
   if (!request) {
-    return null;
+    return { status: null, notificationIds: [] as string[] };
   }
 
   const now = new Date();
+  const notificationIds: string[] = [];
   const autoCancelAt = getBuddyAutoCancelDeadline(request.createdAt);
   const allAssignmentsResolved = request.assignments.length > 0 && request.assignments.every((assignment) => assignment.status !== BuddyRequestAssignmentStatus.PENDING);
 
@@ -164,11 +156,12 @@ export async function refreshBuddyRequestState(tx: Prisma.TransactionClient, req
       where: { id: request.id },
       data: { status: BuddyRequestStatus.CANCELLED, closedAt: now },
     });
-    await createNotification(tx, request.seekerId, NotificationType.BUDDY_REQUEST_CANCELLED, {
+    const notification = await createNotificationRecord(tx, request.seekerId, NotificationType.BUDDY_REQUEST_CANCELLED, {
       buddyRequestId: request.id,
       reason: "expired",
     });
-    return BuddyRequestStatus.CANCELLED;
+    notificationIds.push(notification.id);
+    return { status: BuddyRequestStatus.CANCELLED, notificationIds };
   }
 
   if (request.status === BuddyRequestStatus.PENDING && (now >= request.expiresAt || allAssignmentsResolved)) {
@@ -179,30 +172,35 @@ export async function refreshBuddyRequestState(tx: Prisma.TransactionClient, req
         extensionPromptAt: now,
       },
     });
-    await createNotification(tx, request.seekerId, NotificationType.BUDDY_REQUEST_NO_MATCH, {
+    const notification = await createNotificationRecord(tx, request.seekerId, NotificationType.BUDDY_REQUEST_DECISION_NEEDED, {
       buddyRequestId: request.id,
     });
-    return BuddyRequestStatus.AWAITING_SEEKER_DECISION;
+    notificationIds.push(notification.id);
+    return { status: BuddyRequestStatus.AWAITING_SEEKER_DECISION, notificationIds };
   }
 
-  return request.status;
+  return { status: request.status, notificationIds };
 }
 
 export async function refreshBuddyStateForUser(userId: string) {
   const requestIds = await prisma.buddyRequest.findMany({
     where: {
-      OR: [
-        { seekerId: userId },
-        { assignments: { some: { buddyId: userId } } },
-      ],
+      OR: [{ seekerId: userId }, { assignments: { some: { buddyId: userId } } }],
       status: { in: [BuddyRequestStatus.PENDING, BuddyRequestStatus.AWAITING_SEEKER_DECISION] },
     },
     select: { id: true },
   });
 
+  const notificationIds: string[] = [];
+
   await prisma.$transaction(async (tx) => {
     for (const request of requestIds) {
-      await refreshBuddyRequestState(tx, request.id);
+      const refreshed = await refreshBuddyRequestState(tx, request.id);
+      notificationIds.push(...refreshed.notificationIds);
     }
   });
+
+  if (notificationIds.length > 0) {
+    await deliverNotifications(notificationIds);
+  }
 }

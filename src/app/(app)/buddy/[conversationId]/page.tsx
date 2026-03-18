@@ -125,6 +125,13 @@ export default async function BuddyConversationPage({
   }
 
   const otherUser = conversation.userOne.id === viewer.id ? conversation.userTwo : conversation.userOne;
+  const [notificationSettings] = await Promise.all([
+    prisma.userSettings.findUnique({
+      where: { userId: viewer.id },
+      select: { webPushEnabled: true, pushPromptDismissedAt: true },
+    }),
+  ]);
+
   const activeCallRecord = conversation.videoCallRecords[0] ?? null;
   const callMode = isJoinableCallRecord(activeCallRecord) ? "join" : "start";
   const videoConsent = conversation.buddyVideoConsent;
@@ -228,6 +235,8 @@ export default async function BuddyConversationPage({
         }))}
         otherUserName={otherUser.displayName}
         viewerId={viewer.id}
+        enablePushPrompt={!(notificationSettings?.webPushEnabled ?? false) && !notificationSettings?.pushPromptDismissedAt}
+        pushPromptVariant="buddy"
       />
     </main>
   );

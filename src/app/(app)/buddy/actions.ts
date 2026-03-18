@@ -27,6 +27,7 @@ import {
   refreshBuddyRequestState,
   refreshBuddyStateForUser,
 } from "@/lib/buddy";
+import { createNotificationRecord, deliverNotifications } from "@/lib/notifications";
 
 function textValue(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -58,13 +59,7 @@ function buddyPairKey(requestId: string) {
 }
 
 async function createNotification(tx: Prisma.TransactionClient, userId: string, type: NotificationType, payloadJson: Prisma.InputJsonValue) {
-  await tx.notification.create({
-    data: {
-      userId,
-      type,
-      payloadJson,
-    },
-  });
+  return createNotificationRecord(tx, userId, type, payloadJson);
 }
 
 async function getEligibleBuddyIds(tx: Prisma.TransactionClient, seekerId: string, domain: BuddyDomain) {
@@ -195,6 +190,8 @@ export async function createBuddyRequestAction(formData: FormData) {
     redirect(withSavedParam("/buddy", "request-already-open"));
   }
 
+  const notificationIds: string[] = [];
+
   await prisma.$transaction(async (tx) => {
     const eligibleBuddyIds = await getEligibleBuddyIds(tx, user.id, domainValue);
     const buddyRequest = await tx.buddyRequest.create({
@@ -220,20 +217,23 @@ export async function createBuddyRequestAction(formData: FormData) {
       });
 
       for (const buddyId of eligibleBuddyIds) {
-        await createNotification(tx, buddyId, NotificationType.BUDDY_REQUEST_INCOMING, {
+        const notification = await createNotification(tx, buddyId, NotificationType.BUDDY_REQUEST_INCOMING, {
           buddyRequestId: buddyRequest.id,
           seekerDisplayName: user.displayName,
           domain: domainValue,
         });
+        notificationIds.push(notification.id);
       }
     }
 
-    await createNotification(tx, user.id, NotificationType.BUDDY_REQUEST_SUBMITTED, {
+    const submittedNotification = await createNotification(tx, user.id, NotificationType.BUDDY_REQUEST_SUBMITTED, {
       buddyRequestId: buddyRequest.id,
       domain: domainValue,
     });
+    notificationIds.push(submittedNotification.id);
   });
 
+  await deliverNotifications(notificationIds);
   revalidateBuddyPaths();
   redirect("/buddy?saved=request-submitted");
 }
@@ -268,6 +268,7 @@ export async function reviewBuddyAssignmentAction(formData: FormData) {
   }
 
   if (decision === "decline") {
+    const declineNotificationIds: string[] = [];
     await prisma.$transaction(async (tx) => {
       await tx.buddyRequestAssignment.update({
         where: { id: assignment.id },
@@ -277,14 +278,17 @@ export async function reviewBuddyAssignmentAction(formData: FormData) {
         },
       });
 
-      await refreshBuddyRequestState(tx, assignment.buddyRequest.id);
+      const refreshed = await refreshBuddyRequestState(tx, assignment.buddyRequest.id);
+      declineNotificationIds.push(...refreshed.notificationIds);
     });
 
+    await deliverNotifications(declineNotificationIds);
     revalidateBuddyPaths();
     redirect("/buddy?saved=request-declined");
   }
 
   let conversationId: string | null = null;
+  const acceptNotificationIds: string[] = [];
 
   await prisma.$transaction(async (tx) => {
     const freshAssignment = await tx.buddyRequestAssignment.findUnique({
@@ -385,20 +389,23 @@ export async function reviewBuddyAssignmentAction(formData: FormData) {
 
     conversationId = conversation.id;
 
-    await createNotification(tx, seekerId, NotificationType.BUDDY_REQUEST_ASSIGNED, {
+    const assignedNotification = await createNotification(tx, seekerId, NotificationType.BUDDY_REQUEST_ASSIGNED, {
       buddyRequestId: freshAssignment.buddyRequest.id,
       buddyId: user.id,
       buddyDisplayName: user.displayName,
       conversationId: conversation.id,
     });
+    acceptNotificationIds.push(assignedNotification.id);
 
     for (const staleAssignment of staleAssignments) {
-      await createNotification(tx, staleAssignment.buddyId, NotificationType.BUDDY_REQUEST_NO_LONGER_RELEVANT, {
+      const staleNotification = await createNotification(tx, staleAssignment.buddyId, NotificationType.BUDDY_REQUEST_NO_LONGER_RELEVANT, {
         buddyRequestId: freshAssignment.buddyRequest.id,
       });
+      acceptNotificationIds.push(staleNotification.id);
     }
   });
 
+  await deliverNotifications(acceptNotificationIds);
   revalidateBuddyPaths(conversationId);
   redirect(`/buddy/${conversationId}?saved=assigned`);
 }
@@ -406,6 +413,7 @@ export async function reviewBuddyAssignmentAction(formData: FormData) {
 export async function extendBuddyRequestAction(formData: FormData) {
   const user = await requireActiveUser();
   const buddyRequestId = textValue(formData, "buddyRequestId");
+  const notificationIds: string[] = [];
 
   await prisma.$transaction(async (tx) => {
     const request = await tx.buddyRequest.findUnique({
@@ -453,15 +461,17 @@ export async function extendBuddyRequestAction(formData: FormData) {
       });
 
       for (const buddyId of newBuddyIds) {
-        await createNotification(tx, buddyId, NotificationType.BUDDY_REQUEST_INCOMING, {
+        const notification = await createNotification(tx, buddyId, NotificationType.BUDDY_REQUEST_INCOMING, {
           buddyRequestId: request.id,
           seekerDisplayName: user.displayName,
           domain: request.domain,
         });
+        notificationIds.push(notification.id);
       }
     }
   });
 
+  await deliverNotifications(notificationIds);
   revalidateBuddyPaths();
   redirect("/buddy?saved=request-extended");
 }
@@ -548,6 +558,8 @@ export async function requestBuddyVideoConsentAction(formData: FormData) {
     redirect(withSavedParam(`/buddy/${conversationId}`, "video-request"));
   }
 
+  const notificationIds: string[] = [];
+
   await prisma.$transaction(async (tx) => {
     await tx.buddyVideoConsent.upsert({
       where: { conversationId },
@@ -566,13 +578,15 @@ export async function requestBuddyVideoConsentAction(formData: FormData) {
       },
     });
 
-    await createNotification(tx, targetUserId, NotificationType.BUDDY_VIDEO_REQUEST_INCOMING, {
+    const notification = await createNotification(tx, targetUserId, NotificationType.BUDDY_VIDEO_REQUEST_INCOMING, {
       conversationId,
       requesterUserId: user.id,
       requesterDisplayName: user.displayName,
     });
+    notificationIds.push(notification.id);
   });
 
+  await deliverNotifications(notificationIds);
   revalidateBuddyPaths(conversationId);
   redirect(withSavedParam(`/buddy/${conversationId}`, "video-request"));
 }
@@ -612,6 +626,7 @@ export async function reviewBuddyVideoConsentAction(formData: FormData) {
   }
 
   const nextStatus = decision === "approve" ? ConsentStatus.APPROVED : ConsentStatus.DECLINED;
+  const approvalNotificationIds: string[] = [];
 
   await prisma.$transaction(async (tx) => {
     await tx.buddyVideoConsent.update({
@@ -624,14 +639,16 @@ export async function reviewBuddyVideoConsentAction(formData: FormData) {
     });
 
     if (nextStatus === ConsentStatus.APPROVED) {
-      await createNotification(tx, consent.requesterUserId, NotificationType.BUDDY_VIDEO_REQUEST_APPROVED, {
+      const notification = await createNotification(tx, consent.requesterUserId, NotificationType.BUDDY_VIDEO_REQUEST_APPROVED, {
         conversationId: consent.conversationId,
         approverUserId: user.id,
         approverDisplayName: user.displayName,
       });
+      approvalNotificationIds.push(notification.id);
     }
   });
 
+  await deliverNotifications(approvalNotificationIds);
   revalidateBuddyPaths(consent.conversationId);
   redirect(withSavedParam(`/buddy/${consent.conversationId}`, nextStatus === ConsentStatus.APPROVED ? "video-approved" : "video-declined"));
 }

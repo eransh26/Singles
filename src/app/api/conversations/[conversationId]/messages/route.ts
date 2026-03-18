@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { AccountStatus, ConversationStatus, UserRole } from "@prisma/client";
+import { AccountStatus, ConversationStatus, NotificationType, UserRole } from "@prisma/client";
 import { getCurrentUser } from "@/lib/auth/guards";
 import { prisma } from "@/lib/db/prisma";
+import { createNotificationWithDelivery } from "@/lib/notifications";
 import {
   getChatAttachmentValidationMessage,
   MAX_CHAT_ATTACHMENTS,
@@ -28,6 +29,7 @@ async function getAuthorizedConversation(conversationId: string, userId: string)
     },
     select: {
       id: true,
+      kind: true,
       userOneId: true,
       userTwoId: true,
     },
@@ -237,6 +239,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ con
       });
 
       return createdMessage;
+    });
+
+    const recipientUserId = conversation.userOneId === auth.user.id ? conversation.userTwoId : conversation.userOneId;
+    await createNotificationWithDelivery(recipientUserId, NotificationType.CHAT_MESSAGE_RECEIVED, {
+      conversationId,
+      conversationKind: conversation.kind,
+      senderUserId: auth.user.id,
+      senderDisplayName: auth.user.displayName,
     });
 
     return NextResponse.json(

@@ -1,23 +1,28 @@
 import Image from "next/image";
 import Link from "next/link";
 import { requireMemberUser } from "@/lib/auth/guards";
+import { getUnreadNotificationCounts } from "@/lib/notifications";
 import { MemberNav } from "./member-nav";
 import { MemberHeaderActions } from "./member-header-actions";
 import { MemberHeaderFrame } from "./member-header-frame";
-
-const navigation = [
-  { href: "/home", label: "Home", icon: "home" as const },
-  { href: "/groups", label: "Groups", icon: "groups" as const },
-  { href: "/chats", label: "Chats", icon: "chats" as const },
-  { href: "/notifications", label: "Notifications", icon: "notifications" as const },
-  { href: "/me", label: "Profile", icon: "profile" as const },
-];
+import { NotificationActivityClient } from "@/components/notification-activity-client";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  await requireMemberUser();
+  const viewer = await requireMemberUser();
+  const counts = await getUnreadNotificationCounts(viewer.id);
+
+  const navigation = [
+    { href: "/home", label: "Home", icon: "home" as const },
+    { href: "/groups", label: "Groups", icon: "groups" as const },
+    { href: "/chats", label: "Chats", icon: "chats" as const, badgeCount: counts.chats },
+    { href: "/buddy", label: "Buddy", icon: "buddy" as const, badgeCount: counts.buddy },
+    { href: "/notifications", label: "Notifications", icon: "notifications" as const, badgeCount: counts.total },
+    { href: "/me", label: "Profile", icon: "profile" as const },
+  ];
 
   return (
     <div className="min-h-screen bg-background text-foreground pt-[4.9rem] md:pt-[5rem]">
+      <NotificationActivityClient />
       <MemberHeaderFrame>
         <header className="fixed inset-x-0 top-0 z-40 border-b border-[color:var(--lux-border)] bg-[rgba(250,247,248,0.97)] text-[color:var(--lux-text)] shadow-[0_6px_18px_rgba(43,43,43,0.04)] backdrop-blur-xl">
           <div className="mx-auto max-w-6xl px-4 md:px-6">
@@ -54,4 +59,3 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     </div>
   );
 }
-

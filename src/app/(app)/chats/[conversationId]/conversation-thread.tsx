@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { AlertCircle, Camera, FileText, ImagePlus, Paperclip, Send, X } from "lucide-react";
 import { EmojiPicker } from "@/components/emoji-picker";
 import { RelativeTime } from "@/components/relative-time";
+import { ContextualPushPrompt } from "@/components/contextual-push-prompt";
 import {
   getChatAttachmentValidationMessage,
   isAllowedChatAttachmentMimeType,
@@ -80,11 +81,15 @@ export function ConversationThread({
   initialMessages,
   otherUserName,
   viewerId,
+  enablePushPrompt = false,
+  pushPromptVariant = "messages",
 }: {
   conversationId: string;
   initialMessages: ChatMessage[];
   otherUserName: string;
   viewerId: string;
+  enablePushPrompt?: boolean;
+  pushPromptVariant?: "messages" | "buddy";
 }) {
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [body, setBody] = useState("");
@@ -96,6 +101,7 @@ export function ConversationThread({
   const [moderationReason, setModerationReason] = useState<(typeof REPORT_REASONS)[number]["value"]>("HARASSMENT");
   const [moderationDetails, setModerationDetails] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showPushPrompt, setShowPushPrompt] = useState(false);
   const [isPending, startTransition] = useTransition();
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -228,6 +234,9 @@ export function ConversationThread({
 
         const payload = (await response.json()) as { message: ChatMessage };
         setMessages((current) => current.map((message) => (message.id === optimisticId ? { ...payload.message, status: "sent" } : message)));
+        if (enablePushPrompt) {
+          setShowPushPrompt(true);
+        }
       } catch (error) {
         const message = error instanceof Error ? error.message : "Message could not be sent.";
         setComposerError(message);
@@ -384,6 +393,12 @@ export function ConversationThread({
         </div>
 
         <div className="sticky bottom-0 mt-5 border-t lux-divider bg-[color:var(--lux-card)] pb-[calc(env(safe-area-inset-bottom)+0.25rem)] pt-4">
+          {showPushPrompt ? (
+            <ContextualPushPrompt
+              body={pushPromptVariant === "buddy" ? "Want instant alerts for Buddy updates and replies?" : "Want instant alerts for messages and requests?"}
+              title="Enable instant alerts"
+            />
+          ) : null}
           {moderationError ? <div className="mb-3 rounded-[0.9rem] border border-[color:rgba(138,89,100,0.18)] bg-[color:rgba(138,89,100,0.08)] px-3 py-3 text-sm text-[color:var(--lux-danger)]">{moderationError}</div> : null}
           {moderationSuccess ? <div className="mb-3 rounded-[0.9rem] border border-[color:rgba(71,142,98,0.18)] bg-[rgba(71,142,98,0.08)] px-3 py-3 text-sm text-emerald-700">{moderationSuccess}</div> : null}
           {moderationTarget ? (

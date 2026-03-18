@@ -29,6 +29,7 @@ import { hasMinimalProfileVisibility, isFullyVerifiedUser, requireActiveUser, re
 import { prisma } from "@/lib/db/prisma";
 import { invalidatePairInteractionsByBlock, revokeChatConversationByPair, revokeVideoConsentForPair, userPairKey } from "@/lib/interaction-consent";
 import { invalidateBuddyByBlock } from "@/lib/buddy";
+import { createNotificationRecord, deliverNotification } from "@/lib/notifications";
 
 function textValue(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -92,14 +93,12 @@ async function requireGroupManager(groupId: string, userId: string) {
   return group;
 }
 
-async function createNotification(userId: string, type: NotificationType, payloadJson: Prisma.InputJsonValue) {
-  await prisma.notification.create({
-    data: {
-      userId,
-      type,
-      payloadJson,
-    },
-  });
+async function createNotification(userId: string, type: NotificationType, payloadJson: Prisma.InputJsonValue, options?: { deliver?: boolean }) {
+  const notification = await createNotificationRecord(prisma, userId, type, payloadJson);
+  if (options?.deliver) {
+    await deliverNotification(notification.id);
+  }
+  return notification;
 }
 
 export async function togglePostReactionAction(formData: FormData) {
@@ -787,7 +786,7 @@ export async function sendChatRequestAction(formData: FormData) {
   await createNotification(targetUserId, NotificationType.CHAT_REQUEST_INCOMING, {
     fromUserId: user.id,
     fromDisplayName: user.displayName,
-  });
+  }, { deliver: true });
 
   revalidatePath(`/users/${targetUserId}`);
   revalidatePath("/chats");
@@ -1000,7 +999,8 @@ export async function reviewVideoConsentAction(formData: FormData) {
     await createNotification(consent.requesterUserId, NotificationType.VIDEO_REQUEST_APPROVED, {
       approverUserId: user.id,
       approverDisplayName: user.displayName,
-    });
+      conversationId: conversation.id,
+    }, { deliver: true });
   }
 
   revalidatePath("/chats");
@@ -1343,3 +1343,20 @@ export async function markAllNotificationsReadAction() {
 
 
 
+
+export async function updateNotificationPreferencesAction(formData: FormData) {
+  const user = await requireUser();
+  const emailActivityEnabled = formData.get("emailActivityEnabled") === "on";
+  const silentModeEnabled = formData.get("silentModeEnabled") === "on";
+  const hideLockScreenTextEnabled = formData.get("hideLockScreenTextEnabled") === "on";
+
+  await prisma.userSettings.upsert({
+    where: { userId: user.id },
+    update: { emailActivityEnabled, silentModeEnabled, hideLockScreenTextEnabled },
+    create: { userId: user.id, emailActivityEnabled, silentModeEnabled, hideLockScreenTextEnabled },
+  });
+
+  revalidatePath("/settings");
+  revalidatePath("/notifications");
+  redirect("/settings?saved=notifications");
+}

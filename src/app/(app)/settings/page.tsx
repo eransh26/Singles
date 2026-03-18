@@ -11,12 +11,15 @@ import {
   reviewPhotoAccessRequestAction,
   revokePhotoAccessGrantAction,
   submitVerificationRequestAction,
+  updateNotificationPreferencesAction,
   updatePrivacyAction,
 } from "../actions";
 import { updateBuddyProfileAction } from "../buddy/actions";
 import { requireUser } from "@/lib/auth/guards";
 import { prisma } from "@/lib/db/prisma";
 import { BUDDY_DOMAIN_OPTIONS } from "@/lib/buddy";
+import { getWebPushPublicKey } from "@/lib/notifications";
+import { PushNotificationSettings } from "@/components/push-notification-settings";
 
 const saveMessages: Record<string, string> = {
   privacy: "Privacy preferences saved.",
@@ -25,6 +28,7 @@ const saveMessages: Record<string, string> = {
   "photo-review": "Photo access request reviewed.",
   "photo-revoked": "Gallery access revoked.",
   buddy: "Buddy profile saved.",
+  notifications: "Notification preferences saved.",
 };
 
 function formatDateTime(value: Date) {
@@ -58,8 +62,9 @@ export default async function SettingsPage({
 }) {
   const viewer = await requireUser();
   const resolvedSearchParams = await searchParams;
+  const pushPublicKey = getWebPushPublicKey();
 
-  const [user, pendingPhotoRequests, activePhotoGrants, buddyProfile] = await Promise.all([
+  const [user, pendingPhotoRequests, activePhotoGrants, buddyProfile, pushSubscriptionCount, settings] = await Promise.all([
     prisma.user.findUnique({
       where: { id: viewer.id },
       select: {
@@ -109,6 +114,11 @@ export default async function SettingsPage({
         availabilityLevel: true,
         domains: { select: { domain: true } },
       },
+    }),
+    prisma.webPushSubscription.count({ where: { userId: viewer.id } }),
+    prisma.userSettings.findUnique({
+      where: { userId: viewer.id },
+      select: { webPushEnabled: true, emailActivityEnabled: true, silentModeEnabled: true, hideLockScreenTextEnabled: true },
     }),
   ]);
 
@@ -313,6 +323,42 @@ export default async function SettingsPage({
                 </div>
               ))
             )}
+          </div>
+        </section>
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]" id="notifications">
+        <section className="lux-card">
+          <div className="border-b lux-divider pb-5">
+            <p className="lux-overline">Notifications</p>
+            <h2 className="mt-3 text-[1.9rem] font-semibold tracking-tight text-[color:var(--lux-text)]">Instant alerts and fallback channels</h2>
+          </div>
+          <div className="mt-5 space-y-4">
+            <PushNotificationSettings
+              deviceCount={pushSubscriptionCount}
+              isEnabled={Boolean(settings?.webPushEnabled && pushSubscriptionCount > 0)}
+              publicKey={pushPublicKey}
+            />
+            <form action={updateNotificationPreferencesAction} className="grid gap-4 text-sm text-[color:var(--lux-text-secondary)]">
+              <label className="lux-panel flex items-center gap-3">
+                <input className="size-4 accent-[color:var(--lux-accent)]" defaultChecked={settings?.emailActivityEnabled ?? true} name="emailActivityEnabled" type="checkbox" />
+                <span>Allow important email fallback later for missed activity</span>
+              </label>
+              <label className="lux-panel flex items-center gap-3">
+                <input className="size-4 accent-[color:var(--lux-accent)]" defaultChecked={settings?.silentModeEnabled ?? false} name="silentModeEnabled" type="checkbox" />
+                <span>Silent mode for instant alerts</span>
+              </label>
+              <p className="-mt-2 pl-7 text-xs leading-6 text-[color:var(--lux-text-muted)]">Use lower-urgency push delivery where the browser supports it.</p>
+              <label className="lux-panel flex items-center gap-3">
+                <input className="size-4 accent-[color:var(--lux-accent)]" defaultChecked={settings?.hideLockScreenTextEnabled ?? false} name="hideLockScreenTextEnabled" type="checkbox" />
+                <span>Hide details on lock screen</span>
+              </label>
+              <p className="-mt-2 pl-7 text-xs leading-6 text-[color:var(--lux-text-muted)]">Keep push copy generic so previews stay discreet on shared or locked devices.</p>
+              <p className="text-sm leading-6 text-[color:var(--lux-text-secondary)]">Email fallback is prepared for important missed activity only. Marketing emails remain separate.</p>
+              <div className="flex justify-end">
+                <button className="lux-button-primary" type="submit">Save notification preferences</button>
+              </div>
+            </form>
           </div>
         </section>
       </section>

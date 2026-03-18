@@ -200,6 +200,7 @@ enum PhotoAccessRequestStatus {
 enum NotificationType {
   CHAT_REQUEST_INCOMING
   CHAT_REQUEST_ACCEPTED
+  CHAT_MESSAGE_RECEIVED
   VIDEO_REQUEST_INCOMING
   VIDEO_REQUEST_APPROVED
   PHOTO_ACCESS_REQUEST_INCOMING
@@ -211,11 +212,25 @@ enum NotificationType {
   BUDDY_REQUEST_SUBMITTED
   BUDDY_REQUEST_INCOMING
   BUDDY_REQUEST_ASSIGNED
+  BUDDY_REQUEST_DECISION_NEEDED
   BUDDY_REQUEST_NO_MATCH
   BUDDY_REQUEST_CANCELLED
   BUDDY_REQUEST_NO_LONGER_RELEVANT
   BUDDY_VIDEO_REQUEST_INCOMING
   BUDDY_VIDEO_REQUEST_APPROVED
+}
+
+enum NotificationEmailStatus {
+  PENDING
+  SKIPPED
+  SENT
+  FAILED
+}
+
+enum ActivityContextType {
+  APP
+  CHAT_CONVERSATION
+  BUDDY_CONVERSATION
 }
 
 enum ReportTargetType {
@@ -312,6 +327,9 @@ model User {
   photoGrantsReceived    PhotoAccessGrant[] @relation("PhotoGrantGrantee")
 
   notifications          Notification[]
+  webPushSubscriptions  WebPushSubscription[]
+  emailFallbacks        NotificationEmailFallback[]
+  activityState         UserActivityState?
   reportsFiled           Report[] @relation("ReportFiledBy")
   reportsResolved        Report[] @relation("ReportResolvedBy")
   reportsAgainstUser     Report[] @relation("ReportTargetUser")
@@ -324,12 +342,32 @@ model User {
 }
 
 model UserSettings {
-  userId          String @id
-  themePreference ThemePreference @default(LIGHT)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  userId                    String @id
+  themePreference           ThemePreference @default(LIGHT)
+  webPushEnabled            Boolean @default(false)
+  emailActivityEnabled      Boolean @default(true)
+  silentModeEnabled         Boolean @default(false)
+  hideLockScreenTextEnabled Boolean @default(false)
+  pushPromptDismissedAt     DateTime?
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
 
   user            User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model UserActivityState {
+  userId           String @id
+  lastActiveAt     DateTime @default(now())
+  contextType      ActivityContextType @default(APP)
+  contextId        String?
+  isVisible        Boolean @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user             User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([lastActiveAt])
+  @@index([contextType, contextId])
 }
 
 model Interest {
@@ -815,17 +853,56 @@ model EventPromotionPlacement {
 }
 
 model Notification {
-  id          String @id @default(cuid())
+  id               String @id @default(cuid())
+  userId           String
+  type             NotificationType
+  payloadJson      Json
+  isRead           Boolean @default(false)
+  createdAt        DateTime @default(now())
+  readAt           DateTime?
+  pushDeliveredAt  DateTime?
+  pushSuppressedAt DateTime?
+
+  user           User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emailFallback  NotificationEmailFallback?
+
+  @@index([userId, isRead, createdAt])
+  @@index([userId, type, createdAt])
+}
+
+model WebPushSubscription {
+  id          String   @id @default(cuid())
   userId      String
-  type        NotificationType
-  payloadJson Json
-  isRead      Boolean @default(false)
+  endpoint    String   @unique
+  p256dh      String
+  auth        String
+  deviceLabel String?
   createdAt   DateTime @default(now())
-  readAt      DateTime?
+  updatedAt   DateTime @updatedAt
 
   user        User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId, isRead, createdAt])
+  @@index([userId, createdAt])
+}
+
+model NotificationEmailFallback {
+  id             String                  @id @default(cuid())
+  userId         String
+  notificationId String                  @unique
+  templateKey    String
+  status         NotificationEmailStatus @default(PENDING)
+  payloadJson    Json
+  availableAt    DateTime                @default(now())
+  onlyIfUnread   Boolean                 @default(true)
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+  processedAt    DateTime?
+  errorMessage   String?
+
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  notification  Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status, availableAt])
 }
 
 model Report {

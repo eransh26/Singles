@@ -8,6 +8,7 @@ type MemberNavItem = {
   href: string;
   label: string;
   icon?: "home" | "groups" | "chats" | "buddy" | "notifications" | "profile";
+  badgeCount?: number;
 };
 
 const ICONS = {
@@ -27,6 +28,7 @@ export function MemberNav({ items }: { items: MemberNavItem[] }) {
       {items.map((item) => {
         const isActive = item.href === "/home" ? pathname === "/home" : pathname.startsWith(item.href);
         const Icon = item.icon ? ICONS[item.icon] : null;
+        const badgeCount = item.badgeCount ?? 0;
 
         return (
           <Link
@@ -40,8 +42,13 @@ export function MemberNav({ items }: { items: MemberNavItem[] }) {
             href={item.href}
             title={item.label}
           >
-            {Icon ? <Icon className="h-5 w-5" /> : null}
-            {item.icon ? <span className="sr-only">{item.label}</span> : item.label}
+            {Icon ? <Icon className="h-[22px] w-[22px]" /> : null}
+            {Icon ? <span className="sr-only">{item.label}</span> : item.label}
+            {badgeCount > 0 ? (
+              <span className="absolute -right-3 -top-1 inline-flex min-w-[1.15rem] items-center justify-center rounded-full bg-[color:var(--lux-accent-deep)] px-1.5 py-0.5 text-[10px] font-semibold tracking-normal text-white">
+                {badgeCount > 9 ? "9+" : badgeCount}
+              </span>
+            ) : null}
             <span
               className={`absolute inset-x-0 -bottom-[0.2rem] h-px rounded-full transition ${
                 isActive ? "bg-[color:var(--lux-accent)] opacity-100" : "bg-[color:var(--lux-accent)] opacity-0"

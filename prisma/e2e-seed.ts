@@ -137,6 +137,8 @@ async function main() {
   const passwordHash = await bcrypt.hash(PASSWORD, 10);
   const testUserPasswordHash = await bcrypt.hash(TEST_USER_PASSWORD, 10);
 
+  await prisma.notificationEmailFallback.deleteMany();
+  await prisma.webPushSubscription.deleteMany();
   await prisma.notification.deleteMany();
   await prisma.report.deleteMany();
   await prisma.auditLog.deleteMany();
