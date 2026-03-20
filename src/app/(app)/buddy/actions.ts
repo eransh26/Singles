@@ -5,7 +5,6 @@ import { redirect } from "next/navigation";
 import {
   AccountStatus,
   BuddyAvailabilityLevel,
-  BuddyDomain,
   BuddyRequestAssignmentStatus,
   BuddyRequestStatus,
   BuddySupportMode,
@@ -19,9 +18,10 @@ import {
 import { requireActiveUser } from "@/lib/auth/guards";
 import { prisma } from "@/lib/db/prisma";
 import {
-  BUDDY_DOMAIN_OPTIONS,
-  BUDDY_SUPPORT_MODE_OPTIONS,
+  BUDDY_MAX_TEXT_LENGTH,
   closeBuddyConversationById,
+  ensureBuddyDomainsSeeded,
+  getBuddyRequestCooldownDeadline,
   getBuddyRequestDeadline,
   invalidateBuddyByBlock,
   refreshBuddyRequestState,
@@ -42,12 +42,11 @@ function withSavedParam(path: string, saved: string) {
   return path.includes("?") ? `${path}&saved=${saved}` : `${path}?saved=${saved}`;
 }
 
-function isBuddyDomain(value: string): value is BuddyDomain {
-  return BUDDY_DOMAIN_OPTIONS.some((option) => option.value === value);
-}
-
-function isBuddySupportMode(value: string): value is BuddySupportMode {
-  return BUDDY_SUPPORT_MODE_OPTIONS.some((option) => option.value === value);
+async function getBuddyDomainById(domainId: string) {
+  return prisma.buddyDomainRecord.findUnique({
+    where: { id: domainId },
+    select: { id: true, name: true, slug: true, isActive: true },
+  });
 }
 
 function isBuddyAvailabilityLevel(value: string): value is BuddyAvailabilityLevel {
@@ -62,10 +61,11 @@ async function createNotification(tx: Prisma.TransactionClient, userId: string, 
   return createNotificationRecord(tx, userId, type, payloadJson);
 }
 
-async function getEligibleBuddyIds(tx: Prisma.TransactionClient, seekerId: string, domain: BuddyDomain) {
+async function getEligibleBuddyIds(tx: Prisma.TransactionClient, seekerId: string, domainId: string) {
   const candidateProfiles = await tx.buddyProfileDomain.findMany({
     where: {
-      domain,
+      domainId,
+      domain: { isActive: true },
       profile: {
         isAvailable: true,
         user: {
@@ -105,6 +105,8 @@ function revalidateBuddyPaths(conversationId?: string | null) {
   revalidatePath("/home");
   revalidatePath("/settings");
   revalidatePath("/notifications");
+  revalidatePath("/admin");
+  revalidatePath("/admin/buddy");
   if (conversationId) {
     revalidatePath(`/buddy/${conversationId}`);
     revalidatePath(`/buddy/video/${conversationId}`);
@@ -119,39 +121,41 @@ export async function updateBuddyProfileAction(formData: FormData) {
   const availabilityLevel = availabilityLevelValue && isBuddyAvailabilityLevel(availabilityLevelValue)
     ? availabilityLevelValue
     : null;
-  const domains = formData
-    .getAll("buddyDomains")
-    .map((value) => String(value))
-    .filter(isBuddyDomain);
 
-  if (intro && intro.length > 280) {
-    throw new Error("Buddy intro must be 280 characters or fewer.");
+  if (intro && intro.length > BUDDY_MAX_TEXT_LENGTH) {
+    throw new Error(`Buddy intro must be ${BUDDY_MAX_TEXT_LENGTH} characters or fewer.`);
   }
 
-  await prisma.$transaction(async (tx) => {
-    await tx.buddyProfile.upsert({
-      where: { userId: user.id },
-      update: {
-        isAvailable,
-        intro,
-        availabilityLevel,
-      },
-      create: {
-        userId: user.id,
-        isAvailable,
-        intro,
-        availabilityLevel,
-      },
-    });
+  const approvedDomainCount = await prisma.buddyProfileDomain.count({ where: { userId: user.id } });
 
-    await tx.buddyProfileDomain.deleteMany({ where: { userId: user.id } });
-
-    if (domains.length > 0) {
-      await tx.buddyProfileDomain.createMany({
-        data: domains.map((domain) => ({ userId: user.id, domain })),
-        skipDuplicates: true,
-      });
+  if (isAvailable) {
+    if (approvedDomainCount === 0) {
+      throw new Error("You need at least one approved Buddy domain before making yourself available.");
     }
+    if (!user.emailVerified || !user.phoneVerifiedAt) {
+      throw new Error("Complete email and phone verification before becoming available as a Buddy.");
+    }
+    if (!availabilityLevel) {
+      throw new Error("Choose an availability level before making yourself available as a Buddy.");
+    }
+    if (!intro) {
+      throw new Error("Add a short Buddy introduction before making yourself available.");
+    }
+  }
+
+  await prisma.buddyProfile.upsert({
+    where: { userId: user.id },
+    update: {
+      isAvailable,
+      intro,
+      availabilityLevel,
+    },
+    create: {
+      userId: user.id,
+      isAvailable,
+      intro,
+      availabilityLevel,
+    },
   });
 
   revalidatePath("/settings");
@@ -161,45 +165,60 @@ export async function updateBuddyProfileAction(formData: FormData) {
 
 export async function createBuddyRequestAction(formData: FormData) {
   const user = await requireActiveUser();
-  const domainValue = textValue(formData, "domain");
-  const preferredModeValue = textValue(formData, "preferredMode");
+  await ensureBuddyDomainsSeeded();
+  const domainId = textValue(formData, "domainId");
   const message = optionalTextValue(formData, "message");
+  const domain = await getBuddyDomainById(domainId);
 
-  if (!isBuddyDomain(domainValue)) {
+  if (!domain || !domain.isActive) {
     throw new Error("Choose a support domain.");
   }
 
-  if (!isBuddySupportMode(preferredModeValue)) {
-    throw new Error("Choose a support preference.");
+  if (message && message.length > BUDDY_MAX_TEXT_LENGTH) {
+    throw new Error(`Buddy request messages must stay under ${BUDDY_MAX_TEXT_LENGTH} characters.`);
   }
 
-  if (message && message.length > 500) {
-    throw new Error("Buddy request messages must stay under 500 characters.");
-  }
-
-  const existingOpenRequest = await prisma.buddyRequest.findFirst({
-    where: {
-      seekerId: user.id,
-      domain: domainValue,
-      status: { in: [BuddyRequestStatus.PENDING, BuddyRequestStatus.AWAITING_SEEKER_DECISION, BuddyRequestStatus.ASSIGNED] },
-    },
-    select: { id: true },
-  });
+  const [existingOpenRequest, recentCancelledRequest] = await Promise.all([
+    prisma.buddyRequest.findFirst({
+      where: {
+        seekerId: user.id,
+        status: { in: [BuddyRequestStatus.PENDING, BuddyRequestStatus.AWAITING_SEEKER_DECISION, BuddyRequestStatus.ASSIGNED] },
+      },
+      orderBy: { createdAt: "desc" },
+      select: { id: true },
+    }),
+    prisma.buddyRequest.findFirst({
+      where: {
+        seekerId: user.id,
+        status: BuddyRequestStatus.CANCELLED,
+        closedAt: { not: null },
+      },
+      orderBy: { closedAt: "desc" },
+      select: { closedAt: true },
+    }),
+  ]);
 
   if (existingOpenRequest) {
     redirect(withSavedParam("/buddy", "request-already-open"));
   }
 
+  if (recentCancelledRequest?.closedAt) {
+    const cooldownUntil = getBuddyRequestCooldownDeadline(recentCancelledRequest.closedAt);
+    if (cooldownUntil > new Date()) {
+      redirect(`/buddy?saved=request-cooldown&cooldownUntil=${encodeURIComponent(cooldownUntil.toISOString())}`);
+    }
+  }
+
   const notificationIds: string[] = [];
 
   await prisma.$transaction(async (tx) => {
-    const eligibleBuddyIds = await getEligibleBuddyIds(tx, user.id, domainValue);
+    const eligibleBuddyIds = await getEligibleBuddyIds(tx, user.id, domainId);
     const buddyRequest = await tx.buddyRequest.create({
       data: {
         seekerId: user.id,
-        domain: domainValue,
+        domainId,
         message,
-        preferredMode: preferredModeValue,
+        preferredMode: BuddySupportMode.CHAT_ONLY,
         status: BuddyRequestStatus.PENDING,
         expiresAt: getBuddyRequestDeadline(),
       },
@@ -220,7 +239,7 @@ export async function createBuddyRequestAction(formData: FormData) {
         const notification = await createNotification(tx, buddyId, NotificationType.BUDDY_REQUEST_INCOMING, {
           buddyRequestId: buddyRequest.id,
           seekerDisplayName: user.displayName,
-          domain: domainValue,
+          domainId,
         });
         notificationIds.push(notification.id);
       }
@@ -228,7 +247,7 @@ export async function createBuddyRequestAction(formData: FormData) {
 
     const submittedNotification = await createNotification(tx, user.id, NotificationType.BUDDY_REQUEST_SUBMITTED, {
       buddyRequestId: buddyRequest.id,
-      domain: domainValue,
+      domainId,
     });
     notificationIds.push(submittedNotification.id);
   });
@@ -303,7 +322,8 @@ export async function reviewBuddyAssignmentAction(formData: FormData) {
             seekerId: true,
             assignedBuddyId: true,
             status: true,
-            domain: true,
+            domainId: true,
+            domain: { select: { name: true } },
             preferredMode: true,
           },
         },
@@ -421,7 +441,8 @@ export async function extendBuddyRequestAction(formData: FormData) {
       select: {
         id: true,
         seekerId: true,
-        domain: true,
+        domainId: true,
+        domain: { select: { name: true } },
         status: true,
         assignments: { select: { buddyId: true } },
       },
@@ -447,7 +468,7 @@ export async function extendBuddyRequestAction(formData: FormData) {
     });
 
     const existingBuddyIds = new Set(request.assignments.map((assignment) => assignment.buddyId));
-    const eligibleBuddyIds = await getEligibleBuddyIds(tx, user.id, request.domain);
+    const eligibleBuddyIds = await getEligibleBuddyIds(tx, user.id, request.domainId);
     const newBuddyIds = eligibleBuddyIds.filter((buddyId) => !existingBuddyIds.has(buddyId));
 
     if (newBuddyIds.length > 0) {
@@ -464,7 +485,7 @@ export async function extendBuddyRequestAction(formData: FormData) {
         const notification = await createNotification(tx, buddyId, NotificationType.BUDDY_REQUEST_INCOMING, {
           buddyRequestId: request.id,
           seekerDisplayName: user.displayName,
-          domain: request.domain,
+          domainName: request.domain.name,
         });
         notificationIds.push(notification.id);
       }

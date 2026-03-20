@@ -15,6 +15,7 @@ export function HomeComposer({ action }: HomeComposerProps) {
       placeholder="What would you like to share?"
       submitLabel="Post"
       textareaClassName="min-h-[52px]"
+      allowSensitive
     />
   );
 }

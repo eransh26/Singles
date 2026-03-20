@@ -18,6 +18,7 @@ type MediaComposerProps = {
   compact?: boolean;
   textareaClassName?: string;
   formClassName?: string;
+  allowSensitive?: boolean;
 };
 
 function isMobileCapturePreferred() {
@@ -37,6 +38,7 @@ export function MediaComposer({
   compact = false,
   textareaClassName = "",
   formClassName = "",
+  allowSensitive = false,
 }: MediaComposerProps) {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
@@ -244,11 +246,21 @@ export function MediaComposer({
             <EmojiPicker onSelect={appendEmoji} />
           </div>
 
-          {allowAnonymous ? (
-            <label className="inline-flex items-center justify-center gap-2 rounded-full border border-[color:var(--lux-border)] px-3 py-2 text-xs uppercase tracking-[0.14em] text-[color:var(--lux-text-secondary)]">
-              <input className="size-4 accent-[color:var(--lux-accent)]" name="isAnonymous" type="checkbox" />
-              Anonymous
-            </label>
+          {allowAnonymous || allowSensitive ? (
+            <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+              {allowAnonymous ? (
+                <label className="inline-flex items-center justify-center gap-2 rounded-full border border-[color:var(--lux-border)] px-3 py-2 text-xs uppercase tracking-[0.14em] text-[color:var(--lux-text-secondary)]">
+                  <input className="size-4 accent-[color:var(--lux-accent)]" name="isAnonymous" type="checkbox" />
+                  Anonymous
+                </label>
+              ) : null}
+              {allowSensitive ? (
+                <label className="inline-flex items-center justify-center gap-2 rounded-full border border-[color:var(--lux-border)] px-3 py-2 text-xs uppercase tracking-[0.14em] text-[color:var(--lux-text-secondary)]">
+                  <input className="size-4 accent-[color:var(--lux-accent)]" name="isSensitive" type="checkbox" />
+                  Sensitive image
+                </label>
+              ) : null}
+            </div>
           ) : (
             <span className="hidden sm:block" />
           )}

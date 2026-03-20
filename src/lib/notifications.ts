@@ -1,5 +1,5 @@
 import webpush from "web-push";
-import { ActivityContextType, ConversationKind, NotificationType, Prisma, type Notification } from "@prisma/client";
+import { ActivityContextType, BuddyRequestAssignmentStatus, BuddyRequestStatus, ConversationKind, NotificationType, Prisma, type Notification } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import {
   getConversationTargetFromPayload,
@@ -323,19 +323,35 @@ export async function deliverNotification(notificationId: string) {
 }
 
 export async function getUnreadNotificationCounts(userId: string) {
-  const notifications = await prisma.notification.findMany({
-    where: { userId, isRead: false },
-    select: { type: true, payloadJson: true },
-  });
+  const [notifications, pendingBuddyAssignments, activeBuddyRequests] = await Promise.all([
+    prisma.notification.findMany({
+      where: { userId, isRead: false },
+      select: { type: true, payloadJson: true },
+    }),
+    prisma.buddyRequestAssignment.count({
+      where: {
+        buddyId: userId,
+        status: BuddyRequestAssignmentStatus.PENDING,
+        buddyRequest: { status: { in: [BuddyRequestStatus.PENDING, BuddyRequestStatus.AWAITING_SEEKER_DECISION] } },
+      },
+    }),
+    prisma.buddyRequest.count({
+      where: {
+        seekerId: userId,
+        status: { in: [BuddyRequestStatus.PENDING, BuddyRequestStatus.AWAITING_SEEKER_DECISION, BuddyRequestStatus.ASSIGNED] },
+      },
+    }),
+  ]);
 
-  const counts = { total: notifications.length, chats: 0, buddy: 0 } as const;
-  const mutable = { ...counts };
+  const mutable = { total: notifications.length, chats: 0, buddy: 0 };
 
   for (const notification of notifications) {
     const area = getNotificationArea(notification.type, notification.payloadJson);
     if (area === "CHATS") mutable.chats += 1;
     if (area === "BUDDY") mutable.buddy += 1;
   }
+
+  mutable.buddy = Math.max(mutable.buddy, pendingBuddyAssignments + activeBuddyRequests);
 
   return mutable;
 }

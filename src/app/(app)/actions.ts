@@ -20,6 +20,7 @@ import {
   PhotoAccessRequestStatus,
   PhotoRequestPolicy,
   PostContextType,
+  PostSensitivityStatus,
   ProfileVisibility,
   ReportTargetType,
   ReactionType,
@@ -50,6 +51,78 @@ function slugify(value: string) {
 
 function withSavedParam(path: string, saved: string) {
   return path.includes("?") ? `${path}&saved=${saved}` : `${path}?saved=${saved}`;
+}
+
+const PROFILE_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+const POST_MEDIA_MAX_BYTES = 5 * 1024 * 1024;
+const POST_MEDIA_ALLOWED_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+
+async function fileToDataUrl(file: File) {
+  const bytes = Buffer.from(await file.arrayBuffer());
+  return `data:${file.type};base64,${bytes.toString("base64")}`;
+}
+
+async function parsePostMediaFromForm(formData: FormData) {
+  const possibleFiles = [formData.get("imageAttachment"), formData.get("cameraAttachment")].filter((value): value is File => value instanceof File && value.size > 0);
+  const file = possibleFiles[0] ?? null;
+  if (!file) {
+    return null;
+  }
+
+  if (!POST_MEDIA_ALLOWED_MIME_TYPES.has(file.type)) {
+    throw new Error("Post images must be JPG, PNG, WEBP, or GIF.");
+  }
+
+  if (file.size > POST_MEDIA_MAX_BYTES) {
+    throw new Error("Post images must be 5 MB or smaller.");
+  }
+
+  return {
+    storageKey: await fileToDataUrl(file),
+  };
+}
+
+const PROFILE_IMAGE_ALLOWED_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+
+function validateProfileImageValue(image: string | null) {
+  if (!image) {
+    return null;
+  }
+
+  if (image.startsWith("/avatars/")) {
+    return image;
+  }
+
+  if (image.startsWith("data:")) {
+    const match = image.match(/^data:([^;]+);base64,(.+)$/);
+    if (!match) {
+      throw new Error("Profile image upload could not be processed.");
+    }
+
+    const mimeType = match[1].toLowerCase();
+    if (!PROFILE_IMAGE_ALLOWED_MIME_TYPES.has(mimeType)) {
+      throw new Error("Profile image must be a JPG, PNG, WEBP, or GIF.");
+    }
+
+    const base64Payload = match[2];
+    const sizeInBytes = Math.floor((base64Payload.length * 3) / 4);
+    if (sizeInBytes > PROFILE_IMAGE_MAX_BYTES) {
+      throw new Error("Profile image must be 5 MB or smaller.");
+    }
+
+    return image;
+  }
+
+  try {
+    const parsed = new URL(image);
+    if (!["http:", "https:"].includes(parsed.protocol)) {
+      throw new Error("Profile image must use http or https.");
+    }
+  } catch {
+    throw new Error("Profile image must be a valid URL or uploaded image.");
+  }
+
+  return image;
 }
 
 async function uniqueGroupSlug(name: string) {
@@ -178,11 +251,20 @@ export async function blockUserAction(formData: FormData) {
 
   revalidatePath("/home");
   revalidatePath("/chats");
+  revalidatePath("/buddy");
   revalidatePath("/notifications");
   revalidatePath(`/users/${blockedUserId}`);
   if (sourcePath !== "/home") {
     revalidatePath(sourcePath);
   }
+
+  const redirectPath = sourcePath.startsWith("/chats/")
+    ? "/chats?saved=user-blocked"
+    : sourcePath.startsWith("/buddy/")
+      ? "/buddy?saved=buddy-blocked"
+      : withSavedParam(sourcePath, "user-blocked");
+
+  redirect(redirectPath);
 }
 
 export async function reportUserAction(formData: FormData) {
@@ -221,7 +303,7 @@ export async function updateProfileAction(formData: FormData) {
 
   const bio = optionalTextValue(formData, "bio");
   const region = optionalTextValue(formData, "region");
-  const image = optionalTextValue(formData, "image");
+  const image = validateProfileImageValue(optionalTextValue(formData, "image"));
   if (bio && bio.length > 3000) {
     throw new Error("Bio must be 3000 characters or fewer.");
   }
@@ -367,6 +449,8 @@ export async function createPostAction(formData: FormData) {
   }
 
   const groupId = textValue(formData, "groupId");
+  const isSensitive = formData.get("isSensitive") === "on";
+  const uploadedMedia = await parsePostMediaFromForm(formData);
   let contextType: PostContextType = PostContextType.GLOBAL_FEED;
   let isAnonymous = formData.get("isAnonymous") === "on";
 
@@ -409,6 +493,14 @@ export async function createPostAction(formData: FormData) {
       groupId: groupId || null,
       contentText,
       isAnonymous,
+      sensitivityStatus: isSensitive ? PostSensitivityStatus.SELF_MARKED_SENSITIVE : PostSensitivityStatus.NORMAL,
+      media: uploadedMedia
+        ? {
+            create: {
+              storageKey: uploadedMedia.storageKey,
+            },
+          }
+        : undefined,
     },
   });
 
@@ -1294,40 +1386,48 @@ export async function sendMessageAction(formData: FormData) {
   revalidatePath(`/chats/${conversationId}`);
 }
 
-export async function markNotificationReadAction(formData: FormData) {
-  const user = await requireUser();
-  const notificationId = textValue(formData, "notificationId");
+async function updateNotificationsReadState(userId: string, notificationIds: string[] | null, isRead: boolean) {
+  const where = notificationIds && notificationIds.length > 0
+    ? { userId, id: { in: notificationIds } }
+    : { userId };
 
   await prisma.notification.updateMany({
-    where: {
-      id: notificationId,
-      userId: user.id,
-      isRead: false,
-    },
+    where,
     data: {
-      isRead: true,
-      readAt: new Date(),
+      isRead,
+      readAt: isRead ? new Date() : null,
     },
   });
 
   revalidatePath("/notifications");
 }
 
+export async function markNotificationReadAction(formData: FormData) {
+  const user = await requireUser();
+  const notificationId = textValue(formData, "notificationId");
+  await updateNotificationsReadState(user.id, [notificationId], true);
+}
+
+export async function updateSelectedNotificationsReadStateAction(formData: FormData) {
+  const user = await requireUser();
+  const notificationIds = formData.getAll("notificationIds").map((value) => String(value)).filter(Boolean);
+  const nextState = textValue(formData, "nextState");
+
+  if (notificationIds.length === 0) {
+    redirect("/notifications?saved=select-notifications");
+  }
+
+  await updateNotificationsReadState(user.id, notificationIds, nextState === "read");
+}
+
 export async function markAllNotificationsReadAction() {
   const user = await requireUser();
+  await updateNotificationsReadState(user.id, null, true);
+}
 
-  await prisma.notification.updateMany({
-    where: {
-      userId: user.id,
-      isRead: false,
-    },
-    data: {
-      isRead: true,
-      readAt: new Date(),
-    },
-  });
-
-  revalidatePath("/notifications");
+export async function markAllNotificationsUnreadAction() {
+  const user = await requireUser();
+  await updateNotificationsReadState(user.id, null, false);
 }
 
 

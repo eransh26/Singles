@@ -38,6 +38,39 @@ test.afterAll(async () => {
   await prisma.$disconnect();
 });
 
+test("notifications support multi-select read and unread state changes", async ({ browser, page }) => {
+  const seed = loadSeedData();
+
+  await loginAs(page, seed.users.owner.email, seed.password);
+  await page.goto(`/users/${seed.users.member.id}`);
+  await page.getByRole("button", { name: /send chat request/i }).click();
+  await expect(page.getByText(/chat request sent/i)).toBeVisible();
+
+  const recipientContext = await browser.newContext();
+  const recipientPage = await recipientContext.newPage();
+  try {
+    await loginAs(recipientPage, seed.users.member.email, seed.password);
+    await recipientPage.goto("/notifications");
+
+    const checkboxes = recipientPage.locator('input[name="notificationIds"]');
+    await checkboxes.first().check();
+    await recipientPage.getByRole("button", { name: /mark selected read/i }).click();
+    await expect(recipientPage.getByText(/unread 0/i)).toBeVisible();
+
+    await checkboxes.first().check();
+    await recipientPage.getByRole("button", { name: /mark selected unread/i }).click();
+    await expect(recipientPage.getByText(/unread 1/i)).toBeVisible();
+
+    await recipientPage.getByRole("button", { name: /mark all read/i }).click();
+    await expect(recipientPage.getByText(/unread 0/i)).toBeVisible();
+
+    await recipientPage.getByRole("button", { name: /mark all unread/i }).click();
+    await expect(recipientPage.getByText(/unread 1/i)).toBeVisible();
+  } finally {
+    await recipientContext.close();
+  }
+});
+
 test("chat requests create an unread notification that can be marked read", async ({ browser, page }) => {
   const seed = loadSeedData();
 
@@ -56,7 +89,8 @@ test("chat requests create an unread notification that can be marked read", asyn
     await expect(recipientPage.getByText(/new chat request/i)).toBeVisible();
     await expect(recipientPage.getByText(/unread 1/i)).toBeVisible();
 
-    await recipientPage.getByRole("button", { name: /mark read/i }).first().click();
+    await recipientPage.locator('input[name="notificationIds"]').first().check();
+    await recipientPage.getByRole("button", { name: /mark selected read/i }).click();
     await expect(recipientPage.getByText(/unread 0/i)).toBeVisible();
   } finally {
     await recipientContext.close();

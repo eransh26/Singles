@@ -13,6 +13,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { href: "/admin/operators", label: "Admin Users", badge: counts.adminUserCount },
     { href: "/admin/verifications", label: "Verifications", badge: counts.pendingVerificationCount },
     { href: "/admin/reports", label: "Reports", badge: counts.openReportCount },
+    { href: "/admin/buddy", label: "Buddy", badge: counts.buddyPendingCount },
     { href: "/admin/events", label: "Events", badge: counts.activeEventCount },
     { href: "/admin/audit-logs", label: "Audit Logs", badge: counts.auditLogCount },
   ];

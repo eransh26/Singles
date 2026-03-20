@@ -40,6 +40,7 @@ export type SeedData = {
   buddy?: {
     expiringBuddyRequest?: { id: string };
     autoCancelledBuddyRequest?: { id: string };
+    domains?: Record<string, { id: string; name: string }>;
   };
 };
 

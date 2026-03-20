@@ -47,15 +47,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </div>
         </header>
       </MemberHeaderFrame>
-      {children}
-      <div className="pointer-events-none fixed inset-x-0 bottom-4 z-30">
-        <div className="mx-auto flex max-w-6xl justify-end px-4 md:px-6">
-          <div className="pointer-events-auto flex items-center gap-4 rounded-full bg-[rgba(255,255,255,0.92)] px-4 py-2 text-xs uppercase tracking-[0.14em] text-[color:var(--lux-text-muted)] shadow-[0_12px_28px_rgba(43,43,43,0.06)] backdrop-blur-md">
-            <Link className="hover:text-[color:var(--lux-accent-deep)]" href="/privacy">Privacy</Link>
-            <Link className="hover:text-[color:var(--lux-accent-deep)]" href="/terms">Terms</Link>
-          </div>
+      <div className="flex-1">{children}</div>
+      <footer className="mx-auto flex w-full max-w-6xl justify-end px-4 pb-6 pt-2 md:px-6 md:pb-8">
+        <div className="flex items-center gap-4 text-xs uppercase tracking-[0.14em] text-[color:var(--lux-text-muted)]">
+          <Link className="hover:text-[color:var(--lux-accent-deep)]" href="/privacy">Privacy</Link>
+          <Link className="hover:text-[color:var(--lux-accent-deep)]" href="/terms">Terms</Link>
         </div>
-      </div>
+      </footer>
     </div>
   );
 }

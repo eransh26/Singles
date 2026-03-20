@@ -65,6 +65,17 @@ const PASSWORD = "12345678a";
 const TEST_USER_PASSWORD = "Test1234!";
 const VERIFIED_AT = new Date("2026-01-15T10:00:00.000Z");
 
+const DEFAULT_BUDDY_DOMAINS = [
+  { slug: "divorce-support", name: "Divorce support" },
+  { slug: "emotional-support", name: "Emotional support" },
+  { slug: "starting-over", name: "Starting over / rebuilding life" },
+  { slug: "dating-after-divorce", name: "Dating after divorce" },
+  { slug: "bdsm-guidance", name: "BDSM lifestyle guidance" },
+  { slug: "relationship-support", name: "Relationship support" },
+  { slug: "someone-to-talk-to", name: "Someone to talk to" },
+] as const;
+
+
 async function upsertInterest(name: string, slug: string) {
   return prisma.interest.upsert({
     where: { slug },
@@ -78,6 +89,7 @@ async function createUser(options: {
   email: string;
   displayName: string;
   passwordHash: string;
+  phone?: string;
   role?: UserRole;
   verifiedPrerequisites?: boolean;
   verificationStatus?: VerificationStatus;
@@ -96,6 +108,7 @@ async function createUser(options: {
       displayName: options.displayName,
       role: options.role ?? UserRole.USER,
       accountStatus: AccountStatus.ACTIVE,
+      phone: options.phone ?? null,
       profileVisibility: options.profileVisibility ?? ProfileVisibility.MEMBERS_ONLY,
       chatRequestPolicy: options.chatRequestPolicy ?? ChatRequestPolicy.EVERYONE,
       photoRequestPolicy: options.photoRequestPolicy ?? PhotoRequestPolicy.VERIFIED_ONLY,
@@ -112,6 +125,7 @@ async function createUser(options: {
       displayName: options.displayName,
       role: options.role ?? UserRole.USER,
       accountStatus: AccountStatus.ACTIVE,
+      phone: options.phone ?? null,
       profileVisibility: options.profileVisibility ?? ProfileVisibility.MEMBERS_ONLY,
       chatRequestPolicy: options.chatRequestPolicy ?? ChatRequestPolicy.EVERYONE,
       photoRequestPolicy: options.photoRequestPolicy ?? PhotoRequestPolicy.VERIFIED_ONLY,
@@ -148,10 +162,15 @@ async function main() {
   await prisma.videoConsent.deleteMany();
   await prisma.message.deleteMany();
   await prisma.conversation.deleteMany();
+  await prisma.buddyApplicationRecommendation.deleteMany();
+  await prisma.buddyApplicationDomain.deleteMany();
+  await prisma.buddyApplication.deleteMany();
+  await prisma.buddyReapplicationOverride.deleteMany();
   await prisma.buddyRequestAssignment.deleteMany();
   await prisma.buddyRequest.deleteMany();
   await prisma.buddyProfileDomain.deleteMany();
   await prisma.buddyProfile.deleteMany();
+  await prisma.buddyDomainRecord.deleteMany();
   await prisma.chatRequest.deleteMany();
   await prisma.comment.deleteMany();
   await prisma.postReaction.deleteMany();
@@ -184,10 +203,20 @@ async function main() {
     upsertInterest("Culture", "culture"),
   ]);
 
+  const buddyDomains = new Map<string, { id: string; name: string }>();
+  for (const [index, domain] of DEFAULT_BUDDY_DOMAINS.entries()) {
+    const created = await prisma.buddyDomainRecord.create({
+      data: { slug: domain.slug, name: domain.name, isActive: true, sortOrder: index },
+      select: { id: true, name: true },
+    });
+    buddyDomains.set(domain.slug, created);
+  }
+
   const admin = await createUser({
     email: "admin@example.com",
     displayName: "Admin Avery",
     passwordHash,
+    phone: "+15550000001",
     role: UserRole.ADMIN,
     verifiedPrerequisites: true,
   });
@@ -196,6 +225,7 @@ async function main() {
     email: "owner@example.com",
     displayName: "Owner One",
     passwordHash,
+    phone: "+15550000002",
     verifiedPrerequisites: true,
     profileVisibility: ProfileVisibility.MEMBERS_ONLY,
     chatRequestPolicy: ChatRequestPolicy.EVERYONE,
@@ -206,12 +236,14 @@ async function main() {
     email: "member@example.com",
     displayName: "Member Uno",
     passwordHash,
+    phone: "+15550000003",
   });
 
   const verified = await createUser({
     email: "verified@example.com",
     displayName: "Verified Vera",
     passwordHash,
+    phone: "+15550000004",
     verifiedPrerequisites: true,
   });
 
@@ -219,6 +251,7 @@ async function main() {
     email: "blocked@example.com",
     displayName: "Blocked Blake",
     passwordHash,
+    phone: "+15550000005",
     verifiedPrerequisites: true,
   });
 
@@ -226,6 +259,7 @@ async function main() {
     email: "blocked-target@example.com",
     displayName: "Blocked Target",
     passwordHash,
+    phone: "+15550000006",
     verifiedPrerequisites: true,
   });
 
@@ -233,6 +267,7 @@ async function main() {
     email: "verification-approve@example.com",
     displayName: "Verification Ready",
     passwordHash,
+    phone: "+15550000007",
     verifiedPrerequisites: true,
     verificationStatus: VerificationStatus.PENDING,
   });
@@ -241,6 +276,7 @@ async function main() {
     email: "verification-reject@example.com",
     displayName: "Verification Reject",
     passwordHash,
+    phone: "+15550000008",
     verifiedPrerequisites: true,
     verificationStatus: VerificationStatus.PENDING,
   });
@@ -250,6 +286,8 @@ async function main() {
       email: "test.male1@evyta.dev",
       displayName: "Eitan Vale",
       passwordHash: testUserPasswordHash,
+      phone: "+15550001001",
+      verifiedPrerequisites: true,
       image: "/avatars/avatar-male-1.svg",
       bio: "Default seeded male profile for local testing.",
     }),
@@ -257,6 +295,8 @@ async function main() {
       email: "test.female1@evyta.dev",
       displayName: "Lia Morel",
       passwordHash: testUserPasswordHash,
+      phone: "+15550001002",
+      verifiedPrerequisites: true,
       image: "/avatars/avatar-female-1.svg",
       bio: "Default seeded female profile for local testing.",
     }),
@@ -264,6 +304,8 @@ async function main() {
       email: "test.male2@evyta.dev",
       displayName: "Noam Darel",
       passwordHash: testUserPasswordHash,
+      phone: "+15550001003",
+      verifiedPrerequisites: true,
       image: "/avatars/avatar-male-2.svg",
       bio: "Default seeded male profile for local testing.",
     }),
@@ -271,6 +313,8 @@ async function main() {
       email: "test.female2@evyta.dev",
       displayName: "Maya Sol",
       passwordHash: testUserPasswordHash,
+      phone: "+15550001004",
+      verifiedPrerequisites: true,
       image: "/avatars/avatar-female-2.svg",
       bio: "Default seeded female profile for local testing.",
     }),
@@ -278,6 +322,8 @@ async function main() {
       email: "test.user@evyta.dev",
       displayName: "Ari Quinn",
       passwordHash: testUserPasswordHash,
+      phone: "+15550001005",
+      verifiedPrerequisites: true,
       image: "/avatars/avatar-neutral-1.svg",
       bio: "Default seeded neutral profile for local testing.",
     }),
@@ -285,6 +331,37 @@ async function main() {
 
 
   const [testMale1, testFemale1, testMale2, testFemale2, testUser] = defaultTestUsers;
+
+  async function createApprovedMemberConversation(firstUserId: string, secondUserId: string, message: string) {
+    const pairKey = [firstUserId, secondUserId].sort().join(":");
+    const request = await prisma.chatRequest.create({
+      data: {
+        fromUserId: firstUserId,
+        toUserId: secondUserId,
+        pairKey,
+        status: "ACCEPTED",
+        respondedAt: new Date("2026-02-10T10:00:00.000Z"),
+      },
+      select: { id: true },
+    });
+
+    return prisma.conversation.create({
+      data: {
+        userOneId: [firstUserId, secondUserId].sort()[0],
+        userTwoId: [firstUserId, secondUserId].sort()[1],
+        pairKey,
+        status: "ACTIVE",
+        createdFromChatRequestId: request.id,
+        messages: {
+          create: {
+            senderUserId: firstUserId,
+            body: message,
+          },
+        },
+      },
+      select: { id: true },
+    });
+  }
 
   await prisma.buddyProfile.createMany({
     data: [
@@ -297,14 +374,112 @@ async function main() {
 
   await prisma.buddyProfileDomain.createMany({
     data: [
-      { userId: testMale1.id, domain: "EMOTIONAL_SUPPORT" },
-      { userId: testMale1.id, domain: "STARTING_OVER" },
-      { userId: testFemale1.id, domain: "EMOTIONAL_SUPPORT" },
-      { userId: testFemale1.id, domain: "DATING_AFTER_DIVORCE" },
-      { userId: testMale2.id, domain: "BDSM_GUIDANCE" },
-      { userId: testMale2.id, domain: "RELATIONSHIP_SUPPORT" },
+      { userId: testMale1.id, domainId: buddyDomains.get("emotional-support")!.id },
+      { userId: testMale1.id, domainId: buddyDomains.get("starting-over")!.id },
+      { userId: testFemale1.id, domainId: buddyDomains.get("emotional-support")!.id },
+      { userId: testFemale1.id, domainId: buddyDomains.get("dating-after-divorce")!.id },
+      { userId: testMale2.id, domainId: buddyDomains.get("bdsm-guidance")!.id },
+      { userId: testMale2.id, domainId: buddyDomains.get("relationship-support")!.id },
     ],
     skipDuplicates: true,
+  });
+
+  await Promise.all([
+    createApprovedMemberConversation(verified.id, testMale1.id, "Happy to vouch for thoughtful support."),
+    createApprovedMemberConversation(verified.id, testFemale1.id, "We already have a trusted private chat."),
+    createApprovedMemberConversation(verified.id, testFemale2.id, "A third trusted contact for replacement recommendations."),
+    createApprovedMemberConversation(testFemale2.id, testMale1.id, "Connected and ready for Buddy application tests."),
+    createApprovedMemberConversation(testFemale2.id, testFemale1.id, "Another trusted contact for recommendations."),
+  ]);
+
+  const rejectedAttemptTimes = [3, 2, 1].map((daysAgo) => new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000));
+  for (const createdAt of rejectedAttemptTimes) {
+    const rejectedApplication = await prisma.buddyApplication.create({
+      data: {
+        applicantUserId: testUser.id,
+        intro: "Previous Buddy application attempt for relationship support.",
+        availabilityLevel: "LIGHT",
+        status: "COMPLETED",
+        createdAt,
+        updatedAt: createdAt,
+        completedAt: createdAt,
+      },
+      select: { id: true },
+    });
+
+    await prisma.buddyApplicationDomain.create({
+      data: {
+        applicationId: rejectedApplication.id,
+        domainId: buddyDomains.get("relationship-support")!.id,
+        status: "REJECTED",
+        createdAt,
+        updatedAt: createdAt,
+        adminReviewedAt: createdAt,
+        rejectedAt: createdAt,
+        rejectedByAdminId: admin.id,
+      },
+    });
+  }
+
+  const adminReviewApplicationCreatedAt = new Date(Date.now() - 12 * 60 * 60 * 1000);
+  const adminReviewApplication = await prisma.buddyApplication.create({
+    data: {
+      applicantUserId: owner.id,
+      intro: "Ready for Buddy review across a couple of seeded domains.",
+      availabilityLevel: "STANDARD",
+      status: "ACTIVE",
+      createdAt: adminReviewApplicationCreatedAt,
+      updatedAt: adminReviewApplicationCreatedAt,
+      domains: {
+        create: [
+          {
+            domainId: buddyDomains.get("emotional-support")!.id,
+            status: "PENDING_ADMIN_REVIEW",
+            createdAt: adminReviewApplicationCreatedAt,
+            updatedAt: adminReviewApplicationCreatedAt,
+            recommendations: {
+              create: [
+                {
+                  recommenderUserId: testMale1.id,
+                  status: "APPROVED",
+                  note: "Thoughtful and discreet in private conversations.",
+                  submittedAt: adminReviewApplicationCreatedAt,
+                },
+                {
+                  recommenderUserId: testFemale1.id,
+                  status: "APPROVED",
+                  note: "Reliable support energy for sensitive situations.",
+                  submittedAt: adminReviewApplicationCreatedAt,
+                },
+              ],
+            },
+          },
+          {
+            domainId: buddyDomains.get("dating-after-divorce")!.id,
+            status: "PENDING_ADMIN_REVIEW",
+            createdAt: adminReviewApplicationCreatedAt,
+            updatedAt: adminReviewApplicationCreatedAt,
+            recommendations: {
+              create: [
+                {
+                  recommenderUserId: testFemale1.id,
+                  status: "APPROVED",
+                  note: "Strong recommendation for this domain.",
+                  submittedAt: adminReviewApplicationCreatedAt,
+                },
+                {
+                  recommenderUserId: testFemale2.id,
+                  status: "APPROVED",
+                  note: "Handled support conversations with maturity.",
+                  submittedAt: adminReviewApplicationCreatedAt,
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+    select: { id: true },
   });
 
   const expiringCreatedAt = new Date(Date.now() - 49 * 60 * 60 * 1000);
@@ -314,7 +489,7 @@ async function main() {
   const expiringBuddyRequest = await prisma.buddyRequest.create({
     data: {
       seekerId: testUser.id,
-      domain: "EMOTIONAL_SUPPORT",
+      domainId: buddyDomains.get("emotional-support")!.id,
       message: "Looking for some calm peer support while rebuilding life.",
       preferredMode: "CHAT_ONLY",
       status: "PENDING",
@@ -333,7 +508,7 @@ async function main() {
   const autoCancelledBuddyRequest = await prisma.buddyRequest.create({
     data: {
       seekerId: testUser.id,
-      domain: "RELATIONSHIP_SUPPORT",
+      domainId: buddyDomains.get("relationship-support")!.id,
       message: "Need a sounding board after a difficult breakup.",
       preferredMode: "EITHER",
       status: "AWAITING_SEEKER_DECISION",
@@ -495,6 +670,11 @@ async function main() {
     },
     conversations: {
       approvedConversation,
+    },
+    buddy: {
+      expiringBuddyRequest,
+      autoCancelledBuddyRequest,
+      domains: Object.fromEntries(buddyDomains.entries()),
     },
   };
 

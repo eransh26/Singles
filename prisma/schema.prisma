@@ -114,6 +114,12 @@ enum ReactionType {
   CELEBRATE
 }
 
+enum PostSensitivityStatus {
+  NORMAL
+  SELF_MARKED_SENSITIVE
+  SYSTEM_SENSITIVE
+}
+
 enum ModerationStatus {
   CLEAN
   UNDER_REVIEW
@@ -141,16 +147,6 @@ enum ConversationKind {
   BUDDY_SUPPORT
 }
 
-enum BuddyDomain {
-  DIVORCE_SUPPORT
-  EMOTIONAL_SUPPORT
-  STARTING_OVER
-  DATING_AFTER_DIVORCE
-  BDSM_GUIDANCE
-  RELATIONSHIP_SUPPORT
-  SOMEONE_TO_TALK_TO
-}
-
 enum BuddySupportMode {
   CHAT_ONLY
   VIDEO_OK
@@ -161,6 +157,27 @@ enum BuddyAvailabilityLevel {
   LIGHT
   STANDARD
   HIGH
+}
+
+enum BuddyApplicationStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum BuddyApplicationDomainStatus {
+  PENDING_RECOMMENDATIONS
+  REPLACEMENT_NEEDED
+  PENDING_ADMIN_REVIEW
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum BuddyRecommendationStatus {
+  PENDING
+  APPROVED
+  DECLINED
 }
 
 enum BuddyRequestStatus {
@@ -289,6 +306,12 @@ model User {
   settings               UserSettings?
   media                  UserProfileMedia[]
   buddyProfile           BuddyProfile?
+  buddyApplications      BuddyApplication[] @relation("BuddyApplicationApplicant")
+  buddyApplicationRecommendations BuddyApplicationRecommendation[] @relation("BuddyRecommendationRecommender")
+  buddyReapplicationOverrides     BuddyReapplicationOverride[] @relation("BuddyReapplicationSubject")
+  buddyReapplicationOverridesGranted BuddyReapplicationOverride[] @relation("BuddyReapplicationAdmin")
+  buddyApplicationsApproved       BuddyApplicationDomain[] @relation("BuddyApplicationDomainApprovedBy")
+  buddyApplicationsRejected       BuddyApplicationDomain[] @relation("BuddyApplicationDomainRejectedBy")
   buddyRequestsSought    BuddyRequest[] @relation("BuddyRequestSeeker")
   buddyRequestsAssigned  BuddyRequest[] @relation("BuddyRequestAssignedBuddy")
   buddyAssignments       BuddyRequestAssignment[] @relation("BuddyRequestAssignmentBuddy")
@@ -535,6 +558,7 @@ model Post {
   groupId          String?
   contentText      String
   isAnonymous      Boolean @default(false)
+  sensitivityStatus PostSensitivityStatus @default(NORMAL)
   visibilityStatus PostVisibilityStatus @default(VISIBLE)
   moderationStatus ModerationStatus @default(CLEAN)
   createdAt        DateTime @default(now())
@@ -701,6 +725,24 @@ model VideoConsent {
   @@index([requesterUserId, status, createdAt])
 }
 
+model BuddyDomainRecord {
+  id          String @id @default(cuid())
+  slug        String @unique
+  name        String @unique
+  description String?
+  isActive    Boolean @default(true)
+  sortOrder   Int @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  buddyProfiles           BuddyProfileDomain[]
+  buddyRequests           BuddyRequest[]
+  buddyApplicationDomains BuddyApplicationDomain[]
+  reapplicationOverrides  BuddyReapplicationOverride[]
+
+  @@index([isActive, sortOrder])
+}
+
 model BuddyProfile {
   userId            String @id
   isAvailable       Boolean @default(false)
@@ -716,19 +758,96 @@ model BuddyProfile {
 model BuddyProfileDomain {
   id                String @id @default(cuid())
   userId            String
-  domain            BuddyDomain
+  domainId          String
   createdAt         DateTime @default(now())
+  approvedApplicationDomainId String? @unique
 
   profile           BuddyProfile @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  domain            BuddyDomainRecord @relation(fields: [domainId], references: [id], onDelete: Restrict)
+  approvedApplicationDomain BuddyApplicationDomain? @relation(fields: [approvedApplicationDomainId], references: [id], onDelete: SetNull)
 
-  @@unique([userId, domain])
-  @@index([domain])
+  @@unique([userId, domainId])
+  @@index([domainId])
+}
+
+model BuddyApplication {
+  id                String @id @default(cuid())
+  applicantUserId   String
+  intro             String
+  availabilityLevel BuddyAvailabilityLevel
+  status            BuddyApplicationStatus @default(ACTIVE)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  cancelledAt       DateTime?
+  completedAt       DateTime?
+
+  applicant         User @relation("BuddyApplicationApplicant", fields: [applicantUserId], references: [id], onDelete: Cascade)
+  domains           BuddyApplicationDomain[]
+
+  @@index([applicantUserId, status, createdAt])
+}
+
+model BuddyApplicationDomain {
+  id                String @id @default(cuid())
+  applicationId     String
+  domainId          String
+  status            BuddyApplicationDomainStatus @default(PENDING_RECOMMENDATIONS)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  adminReviewedAt   DateTime?
+  approvedAt        DateTime?
+  rejectedAt        DateTime?
+  approvedByAdminId String?
+  rejectedByAdminId String?
+
+  application       BuddyApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  domain            BuddyDomainRecord @relation(fields: [domainId], references: [id], onDelete: Restrict)
+  recommendations   BuddyApplicationRecommendation[]
+  approvedByAdmin   User? @relation("BuddyApplicationDomainApprovedBy", fields: [approvedByAdminId], references: [id], onDelete: SetNull)
+  rejectedByAdmin   User? @relation("BuddyApplicationDomainRejectedBy", fields: [rejectedByAdminId], references: [id], onDelete: SetNull)
+  approvedBuddyProfileDomain BuddyProfileDomain?
+
+  @@index([status, createdAt])
+  @@unique([applicationId, domainId])
+}
+
+model BuddyApplicationRecommendation {
+  id                String @id @default(cuid())
+  applicationDomainId String
+  recommenderUserId String
+  status            BuddyRecommendationStatus @default(PENDING)
+  note              String?
+  createdAt         DateTime @default(now())
+  submittedAt       DateTime?
+  replacedAt        DateTime?
+
+  applicationDomain BuddyApplicationDomain @relation(fields: [applicationDomainId], references: [id], onDelete: Cascade)
+  recommender       User @relation("BuddyRecommendationRecommender", fields: [recommenderUserId], references: [id], onDelete: Cascade)
+
+  @@index([recommenderUserId, status, createdAt])
+  @@index([applicationDomainId, replacedAt])
+}
+
+model BuddyReapplicationOverride {
+  id                String @id @default(cuid())
+  userId            String
+  domainId          String
+  grantedByAdminId  String
+  isActive          Boolean @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user              User @relation("BuddyReapplicationSubject", fields: [userId], references: [id], onDelete: Cascade)
+  domain            BuddyDomainRecord @relation(fields: [domainId], references: [id], onDelete: Cascade)
+  grantedByAdmin    User @relation("BuddyReapplicationAdmin", fields: [grantedByAdminId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, domainId])
 }
 
 model BuddyRequest {
   id                String @id @default(cuid())
   seekerId          String
-  domain            BuddyDomain
+  domainId          String
   message           String?
   preferredMode     BuddySupportMode
   status            BuddyRequestStatus @default(PENDING)
@@ -742,11 +861,12 @@ model BuddyRequest {
 
   seeker            User @relation("BuddyRequestSeeker", fields: [seekerId], references: [id], onDelete: Cascade)
   assignedBuddy     User? @relation("BuddyRequestAssignedBuddy", fields: [assignedBuddyId], references: [id], onDelete: SetNull)
+  domain            BuddyDomainRecord @relation(fields: [domainId], references: [id], onDelete: Restrict)
   assignments       BuddyRequestAssignment[]
   conversation      Conversation? @relation("BuddyRequestConversation")
 
   @@index([seekerId, status, createdAt])
-  @@index([status, domain, createdAt])
+  @@index([status, domainId, createdAt])
 }
 
 model BuddyRequestAssignment {

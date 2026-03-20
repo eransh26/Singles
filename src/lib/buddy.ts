@@ -1,29 +1,37 @@
 import {
+  AccountStatus,
+  BuddyApplicationDomainStatus,
+  BuddyApplicationStatus,
   BuddyRequestAssignmentStatus,
   BuddyRequestStatus,
   BuddySupportMode,
-  BuddyDomain,
+  BuddyRecommendationStatus,
   ConsentStatus,
   ConversationKind,
   ConversationStatus,
   NotificationType,
   Prisma,
+  UserRole,
 } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { createNotificationRecord, deliverNotifications } from "@/lib/notifications";
 
 export const BUDDY_REQUEST_WINDOW_HOURS = 48;
 export const BUDDY_AUTO_CANCEL_DAYS = 5;
+export const BUDDY_REQUEST_COOLDOWN_HOURS = 24;
+export const BUDDY_MAX_TEXT_LENGTH = 3000;
+export const BUDDY_RECOMMENDATION_MAX_NOTE_LENGTH = 500;
+export const MAX_BUDDY_DOMAIN_REJECTIONS = 3;
 
-export const BUDDY_DOMAIN_OPTIONS: Array<{ value: BuddyDomain; label: string }> = [
-  { value: BuddyDomain.DIVORCE_SUPPORT, label: "Divorce support" },
-  { value: BuddyDomain.EMOTIONAL_SUPPORT, label: "Emotional support" },
-  { value: BuddyDomain.STARTING_OVER, label: "Starting over / rebuilding life" },
-  { value: BuddyDomain.DATING_AFTER_DIVORCE, label: "Dating after divorce" },
-  { value: BuddyDomain.BDSM_GUIDANCE, label: "BDSM lifestyle guidance" },
-  { value: BuddyDomain.RELATIONSHIP_SUPPORT, label: "Relationship support" },
-  { value: BuddyDomain.SOMEONE_TO_TALK_TO, label: "Someone to talk to" },
-];
+export const DEFAULT_BUDDY_DOMAINS = [
+  { slug: "divorce-support", name: "Divorce support" },
+  { slug: "emotional-support", name: "Emotional support" },
+  { slug: "starting-over", name: "Starting over / rebuilding life" },
+  { slug: "dating-after-divorce", name: "Dating after divorce" },
+  { slug: "bdsm-guidance", name: "BDSM lifestyle guidance" },
+  { slug: "relationship-support", name: "Relationship support" },
+  { slug: "someone-to-talk-to", name: "Someone to talk to" },
+] as const;
 
 export const BUDDY_SUPPORT_MODE_OPTIONS: Array<{ value: BuddySupportMode; label: string }> = [
   { value: BuddySupportMode.CHAT_ONLY, label: "Chat only" },
@@ -31,12 +39,321 @@ export const BUDDY_SUPPORT_MODE_OPTIONS: Array<{ value: BuddySupportMode; label:
   { value: BuddySupportMode.EITHER, label: "Either" },
 ];
 
+export function isBuddyVerifiedUser(user: { emailVerified: Date | null; phoneVerifiedAt: Date | null }) {
+  return Boolean(user.emailVerified && user.phoneVerifiedAt);
+}
+
 export function getBuddyRequestDeadline(base = new Date()) {
   return new Date(base.getTime() + BUDDY_REQUEST_WINDOW_HOURS * 60 * 60 * 1000);
 }
 
 export function getBuddyAutoCancelDeadline(base = new Date()) {
   return new Date(base.getTime() + BUDDY_AUTO_CANCEL_DAYS * 24 * 60 * 60 * 1000);
+}
+
+export function getBuddyRequestCooldownDeadline(base = new Date()) {
+  return new Date(base.getTime() + BUDDY_REQUEST_COOLDOWN_HOURS * 60 * 60 * 1000);
+}
+
+export async function ensureBuddyDomainsSeeded(tx: Prisma.TransactionClient | Prisma.DefaultPrismaClient = prisma) {
+  await Promise.all(
+    DEFAULT_BUDDY_DOMAINS.map((domain, index) =>
+      tx.buddyDomainRecord.upsert({
+        where: { slug: domain.slug },
+        update: { name: domain.name, sortOrder: index },
+        create: { slug: domain.slug, name: domain.name, isActive: true, sortOrder: index },
+      }),
+    ),
+  );
+}
+
+export async function listBuddyDomains(includeInactive = false) {
+  await ensureBuddyDomainsSeeded();
+  return prisma.buddyDomainRecord.findMany({
+    where: includeInactive ? undefined : { isActive: true },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    select: { id: true, slug: true, name: true, description: true, isActive: true },
+  });
+}
+
+export async function getBuddyDomainOptions(includeInactive = false) {
+  const domains = await listBuddyDomains(includeInactive);
+  return domains.map((domain) => ({ value: domain.id, label: domain.name, slug: domain.slug, isActive: domain.isActive }));
+}
+
+export async function getEligibleBuddyRecommenders(
+  tx: Prisma.TransactionClient,
+  applicantUserId: string,
+) {
+  const conversations = await tx.conversation.findMany({
+    where: {
+      kind: ConversationKind.MEMBER_CHAT,
+      status: ConversationStatus.ACTIVE,
+      OR: [{ userOneId: applicantUserId }, { userTwoId: applicantUserId }],
+    },
+    select: { userOneId: true, userTwoId: true },
+  });
+
+  const connectedUserIds = Array.from(
+    new Set(
+      conversations.map((conversation) =>
+        conversation.userOneId === applicantUserId ? conversation.userTwoId : conversation.userOneId,
+      ),
+    ),
+  );
+
+  if (connectedUserIds.length === 0) {
+    return [] as Array<{ id: string; displayName: string }>;
+  }
+
+  const blockedPairs = await tx.userBlock.findMany({
+    where: {
+      OR: [
+        { blockerUserId: applicantUserId, blockedUserId: { in: connectedUserIds } },
+        { blockerUserId: { in: connectedUserIds }, blockedUserId: applicantUserId },
+      ],
+    },
+    select: { blockerUserId: true, blockedUserId: true },
+  });
+
+  const blockedUserIds = new Set(
+    blockedPairs.map((entry) => (entry.blockerUserId === applicantUserId ? entry.blockedUserId : entry.blockerUserId)),
+  );
+
+  return tx.user.findMany({
+    where: {
+      id: { in: connectedUserIds.filter((id) => !blockedUserIds.has(id)) },
+      accountStatus: AccountStatus.ACTIVE,
+      role: UserRole.USER,
+      emailVerified: { not: null },
+      phoneVerifiedAt: { not: null },
+    },
+    orderBy: { displayName: "asc" },
+    select: { id: true, displayName: true },
+  });
+}
+
+export async function countBuddyDomainRejectedAttempts(
+  tx: Prisma.TransactionClient,
+  applicantUserId: string,
+  domainId: string,
+) {
+  return tx.buddyApplicationDomain.count({
+    where: {
+      domainId,
+      status: BuddyApplicationDomainStatus.REJECTED,
+      application: { applicantUserId },
+    },
+  });
+}
+
+export async function hasBuddyReapplicationOverride(
+  tx: Prisma.TransactionClient,
+  applicantUserId: string,
+  domainId: string,
+) {
+  const override = await tx.buddyReapplicationOverride.findUnique({
+    where: { userId_domainId: { userId: applicantUserId, domainId } },
+    select: { isActive: true },
+  });
+  return Boolean(override?.isActive);
+}
+
+export async function syncBuddyApplicationDomainStatus(
+  tx: Prisma.TransactionClient,
+  applicationDomainId: string,
+) {
+  const applicationDomain = await tx.buddyApplicationDomain.findUnique({
+    where: { id: applicationDomainId },
+    select: {
+      id: true,
+      status: true,
+      applicationId: true,
+      recommendations: {
+        where: { replacedAt: null },
+        select: { id: true, status: true },
+      },
+    },
+  });
+
+  if (!applicationDomain) {
+    return null;
+  }
+
+  if (
+    applicationDomain.status === BuddyApplicationDomainStatus.APPROVED ||
+    applicationDomain.status === BuddyApplicationDomainStatus.REJECTED ||
+    applicationDomain.status === BuddyApplicationDomainStatus.CANCELLED
+  ) {
+    await syncBuddyApplicationStatus(tx, applicationDomain.applicationId);
+    return applicationDomain.status;
+  }
+
+  const activeRecommendations = applicationDomain.recommendations;
+  const approvedCount = activeRecommendations.filter((recommendation) => recommendation.status === BuddyRecommendationStatus.APPROVED).length;
+  const hasDecline = activeRecommendations.some((recommendation) => recommendation.status === BuddyRecommendationStatus.DECLINED);
+
+  const nextStatus = approvedCount >= 2
+    ? BuddyApplicationDomainStatus.PENDING_ADMIN_REVIEW
+    : hasDecline
+      ? BuddyApplicationDomainStatus.REPLACEMENT_NEEDED
+      : BuddyApplicationDomainStatus.PENDING_RECOMMENDATIONS;
+
+  if (nextStatus !== applicationDomain.status) {
+    await tx.buddyApplicationDomain.update({
+      where: { id: applicationDomain.id },
+      data: { status: nextStatus },
+    });
+  }
+
+  await syncBuddyApplicationStatus(tx, applicationDomain.applicationId);
+  return nextStatus;
+}
+
+export async function syncBuddyApplicationStatus(
+  tx: Prisma.TransactionClient,
+  applicationId: string,
+) {
+  const application = await tx.buddyApplication.findUnique({
+    where: { id: applicationId },
+    select: {
+      id: true,
+      status: true,
+      domains: { select: { status: true } },
+    },
+  });
+
+  if (!application) {
+    return null;
+  }
+
+  if (application.status === BuddyApplicationStatus.CANCELLED) {
+    return application.status;
+  }
+
+  const domainStatuses = application.domains.map((domain) => domain.status);
+  const allTerminal = domainStatuses.length > 0 && domainStatuses.every((status) =>
+    status === BuddyApplicationDomainStatus.APPROVED ||
+    status === BuddyApplicationDomainStatus.REJECTED ||
+    status === BuddyApplicationDomainStatus.CANCELLED,
+  );
+
+  const nextStatus = allTerminal ? BuddyApplicationStatus.COMPLETED : BuddyApplicationStatus.ACTIVE;
+
+  if (nextStatus !== application.status) {
+    await tx.buddyApplication.update({
+      where: { id: application.id },
+      data: {
+        status: nextStatus,
+        completedAt: nextStatus === BuddyApplicationStatus.COMPLETED ? new Date() : null,
+      },
+    });
+  }
+
+  return nextStatus;
+}
+
+export async function approveBuddyApplicationDomain(
+  tx: Prisma.TransactionClient,
+  applicationDomainId: string,
+  adminUserId: string,
+) {
+  const applicationDomain = await tx.buddyApplicationDomain.findUnique({
+    where: { id: applicationDomainId },
+    select: {
+      id: true,
+      domainId: true,
+      status: true,
+      application: {
+        select: {
+          id: true,
+          applicantUserId: true,
+          intro: true,
+          availabilityLevel: true,
+        },
+      },
+    },
+  });
+
+  if (!applicationDomain) {
+    throw new Error("Buddy application domain not found.");
+  }
+
+  if (applicationDomain.status !== BuddyApplicationDomainStatus.PENDING_ADMIN_REVIEW) {
+    throw new Error("This Buddy domain is not ready for admin review.");
+  }
+
+  await tx.buddyProfile.upsert({
+    where: { userId: applicationDomain.application.applicantUserId },
+    update: {
+      intro: applicationDomain.application.intro,
+      availabilityLevel: applicationDomain.application.availabilityLevel,
+    },
+    create: {
+      userId: applicationDomain.application.applicantUserId,
+      intro: applicationDomain.application.intro,
+      availabilityLevel: applicationDomain.application.availabilityLevel,
+      isAvailable: false,
+    },
+  });
+
+  await tx.buddyApplicationDomain.update({
+    where: { id: applicationDomain.id },
+    data: {
+      status: BuddyApplicationDomainStatus.APPROVED,
+      approvedAt: new Date(),
+      adminReviewedAt: new Date(),
+      approvedByAdminId: adminUserId,
+      rejectedAt: null,
+      rejectedByAdminId: null,
+    },
+  });
+
+  await tx.buddyProfileDomain.upsert({
+    where: {
+      userId_domainId: {
+        userId: applicationDomain.application.applicantUserId,
+        domainId: applicationDomain.domainId,
+      },
+    },
+    update: {
+      approvedApplicationDomainId: applicationDomain.id,
+    },
+    create: {
+      userId: applicationDomain.application.applicantUserId,
+      domainId: applicationDomain.domainId,
+      approvedApplicationDomainId: applicationDomain.id,
+    },
+  });
+
+  await syncBuddyApplicationStatus(tx, applicationDomain.application.id);
+}
+
+export async function rejectBuddyApplicationDomain(
+  tx: Prisma.TransactionClient,
+  applicationDomainId: string,
+  adminUserId: string,
+) {
+  const applicationDomain = await tx.buddyApplicationDomain.findUnique({
+    where: { id: applicationDomainId },
+    select: { id: true, applicationId: true },
+  });
+
+  if (!applicationDomain) {
+    throw new Error("Buddy application domain not found.");
+  }
+
+  await tx.buddyApplicationDomain.update({
+    where: { id: applicationDomain.id },
+    data: {
+      status: BuddyApplicationDomainStatus.REJECTED,
+      rejectedAt: new Date(),
+      adminReviewedAt: new Date(),
+      rejectedByAdminId: adminUserId,
+    },
+  });
+
+  await syncBuddyApplicationStatus(tx, applicationDomain.applicationId);
 }
 
 export async function closeBuddyConversationById(
@@ -135,7 +452,6 @@ export async function refreshBuddyRequestState(tx: Prisma.TransactionClient, req
       status: true,
       createdAt: true,
       expiresAt: true,
-      extensionPromptAt: true,
       assignments: {
         select: { id: true, status: true },
       },

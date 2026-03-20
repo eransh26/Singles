@@ -1,9 +1,8 @@
 import Link from "next/link";
-import { ConsentStatus, ConversationKind, VerificationStatus } from "@prisma/client";
+import { ConsentStatus, ConversationKind, NotificationType, VerificationStatus } from "@prisma/client";
 import { notFound } from "next/navigation";
 import { requireActiveUser } from "@/lib/auth/guards";
 import { prisma } from "@/lib/db/prisma";
-import { BUDDY_DOMAIN_OPTIONS } from "@/lib/buddy";
 import { isJoinableCallRecord } from "@/lib/livekit";
 import { blockUserAction, reportUserAction } from "../../actions";
 import {
@@ -22,10 +21,6 @@ const savedMessages: Record<string, string> = {
   "video-declined": "Buddy video declined.",
   "video-revoked": "Buddy video revoked.",
 };
-
-function domainLabel(value: string) {
-  return BUDDY_DOMAIN_OPTIONS.find((option) => option.value === value)?.label ?? value;
-}
 
 export default async function BuddyConversationPage({
   params,
@@ -65,8 +60,7 @@ export default async function BuddyConversationPage({
       buddyRequest: {
         select: {
           id: true,
-          domain: true,
-          preferredMode: true,
+          domain: { select: { name: true } },
           message: true,
         },
       },
@@ -125,6 +119,32 @@ export default async function BuddyConversationPage({
   }
 
   const otherUser = conversation.userOne.id === viewer.id ? conversation.userTwo : conversation.userOne;
+  await prisma.notification.updateMany({
+    where: {
+      userId: viewer.id,
+      isRead: false,
+      OR: [
+        {
+          type: {
+            in: [
+              NotificationType.BUDDY_REQUEST_ASSIGNED,
+              NotificationType.BUDDY_VIDEO_REQUEST_INCOMING,
+              NotificationType.BUDDY_VIDEO_REQUEST_APPROVED,
+            ],
+          },
+        },
+        {
+          type: NotificationType.CHAT_MESSAGE_RECEIVED,
+          payloadJson: {
+            path: ["conversationId"],
+            equals: conversation.id,
+          },
+        },
+      ],
+    },
+    data: { isRead: true, readAt: new Date() },
+  });
+
   const [notificationSettings] = await Promise.all([
     prisma.userSettings.findUnique({
       where: { userId: viewer.id },
@@ -149,7 +169,7 @@ export default async function BuddyConversationPage({
               {otherUser.verificationStatus === VerificationStatus.APPROVED && otherUser.verifiedBadgeVisible ? (
                 <span className="lux-chip lux-chip-accent">Verified</span>
               ) : null}
-              <span className="lux-chip">{domainLabel(conversation.buddyRequest?.domain ?? "")}</span>
+              <span className="lux-chip">{conversation.buddyRequest?.domain.name ?? "Buddy"}</span>
             </div>
             <p className="lux-body mt-4">A private support space, separate from member flirting and social chat.</p>
           </div>
@@ -161,7 +181,6 @@ export default async function BuddyConversationPage({
         </div>
         <div className="mt-5 rounded-[1rem] border border-[color:var(--lux-border)] bg-white/80 p-4 text-sm text-[color:var(--lux-text-secondary)]">
           <p className="font-medium text-[color:var(--lux-text)]">Video calls require separate approval and can be revoked at any time.</p>
-          <p className="mt-2">Preferred support mode: {conversation.buddyRequest?.preferredMode ?? "CHAT_ONLY"}</p>
           {conversation.buddyRequest?.message ? <p className="mt-2 leading-6">Original request: {conversation.buddyRequest.message}</p> : null}
           <div className="mt-3 flex flex-wrap items-center gap-2">
             {!videoConsent ? (

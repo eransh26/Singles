@@ -8,6 +8,9 @@ export const savedMessages: Record<string, string> = {
   user: "User management update saved.",
   verification: "Verification review saved.",
   "admin-created": "Admin user created.",
+  "buddy-domain": "Buddy domain saved.",
+  "buddy-application-review": "Buddy application review saved.",
+  "buddy-override": "Buddy re-application override granted.",
 };
 
 export const adminErrorMessages: Record<string, string> = {
@@ -168,13 +171,14 @@ export async function getAdminDashboardData() {
 }
 
 export async function getAdminSidebarCounts() {
-  const [memberUserCount, adminUserCount, pendingVerificationCount, openReportCount, activeEventCount, auditLogCount] = await Promise.all([
+  const [memberUserCount, adminUserCount, pendingVerificationCount, openReportCount, activeEventCount, auditLogCount, buddyPendingCount] = await Promise.all([
     prisma.user.count({ where: { role: UserRole.USER } }),
     prisma.user.count({ where: { role: { in: [UserRole.ADMIN, UserRole.SUPER_ADMIN] } } }),
     prisma.verificationRequest.count({ where: { status: VerificationStatus.PENDING } }),
     prisma.report.count({ where: { status: { in: ["OPEN", "IN_REVIEW"] } } }),
     prisma.eventPromotion.count({ where: { status: EventPromotionStatus.ACTIVE } }),
     prisma.auditLog.count(),
+    prisma.buddyApplicationDomain.count({ where: { status: { in: ["PENDING_RECOMMENDATIONS", "REPLACEMENT_NEEDED", "PENDING_ADMIN_REVIEW"] } } }),
   ]);
 
   return {
@@ -184,6 +188,7 @@ export async function getAdminSidebarCounts() {
     openReportCount,
     activeEventCount,
     auditLogCount,
+    buddyPendingCount,
   };
 }
 

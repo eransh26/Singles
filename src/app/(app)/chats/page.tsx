@@ -90,7 +90,9 @@ export default async function ChatsPage({
       ? "Chat access was revoked."
       : resolvedSearchParams?.saved === "video-request"
         ? "Video request sent."
-        : null;
+        : resolvedSearchParams?.saved === "user-blocked"
+          ? "Member blocked. Existing chat access was closed immediately."
+          : null;
 
   return (
     <main className="lux-shell">

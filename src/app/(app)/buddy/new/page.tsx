@@ -1,10 +1,44 @@
-import Link from "next/link";
+import { BuddyRequestStatus } from "@prisma/client";
+import { redirect } from "next/navigation";
 import { createBuddyRequestAction } from "../actions";
 import { requireActiveUser } from "@/lib/auth/guards";
-import { BUDDY_DOMAIN_OPTIONS, BUDDY_SUPPORT_MODE_OPTIONS } from "@/lib/buddy";
+import { prisma } from "@/lib/db/prisma";
+import { getBuddyDomainOptions, getBuddyRequestCooldownDeadline } from "@/lib/buddy";
+import { BuddyRequestForm } from "@/components/buddy-request-form";
 
 export default async function NewBuddyRequestPage() {
-  await requireActiveUser();
+  const viewer = await requireActiveUser();
+
+  const [existingOpenRequest, recentCancelledRequest, domainOptions] = await Promise.all([
+    prisma.buddyRequest.findFirst({
+      where: {
+        seekerId: viewer.id,
+        status: { in: [BuddyRequestStatus.PENDING, BuddyRequestStatus.AWAITING_SEEKER_DECISION, BuddyRequestStatus.ASSIGNED] },
+      },
+      select: { id: true },
+    }),
+    prisma.buddyRequest.findFirst({
+      where: {
+        seekerId: viewer.id,
+        status: BuddyRequestStatus.CANCELLED,
+        closedAt: { not: null },
+      },
+      orderBy: { closedAt: "desc" },
+      select: { closedAt: true },
+    }),
+    getBuddyDomainOptions(),
+  ]);
+
+  if (existingOpenRequest) {
+    redirect("/buddy?saved=request-already-open");
+  }
+
+  if (recentCancelledRequest?.closedAt) {
+    const cooldownUntil = getBuddyRequestCooldownDeadline(recentCancelledRequest.closedAt);
+    if (cooldownUntil > new Date()) {
+      redirect(`/buddy?saved=request-cooldown&cooldownUntil=${encodeURIComponent(cooldownUntil.toISOString())}`);
+    }
+  }
 
   return (
     <main className="lux-shell max-w-4xl">
@@ -23,39 +57,7 @@ export default async function NewBuddyRequestPage() {
           <p className="lux-overline">Buddy request</p>
           <h2 className="mt-3 text-2xl font-semibold tracking-tight text-[color:var(--lux-text)]">Peer support, not therapy or legal advice</h2>
         </div>
-        <form action={createBuddyRequestAction} className="mt-5 grid gap-4 text-sm text-[color:var(--lux-text-secondary)]">
-          <label className="grid gap-2">
-            <span className="font-medium text-[color:var(--lux-text)]">Support domain</span>
-            <select className="lux-select" defaultValue={BUDDY_DOMAIN_OPTIONS[0]?.value} name="domain">
-              {BUDDY_DOMAIN_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
-            </select>
-          </label>
-
-          <label className="grid gap-2">
-            <span className="font-medium text-[color:var(--lux-text)]">Short message (optional)</span>
-            <textarea className="lux-textarea min-h-[120px]" maxLength={500} name="message" placeholder="Share a little context so the Buddy knows what kind of support would help." />
-          </label>
-
-          <label className="grid gap-2">
-            <span className="font-medium text-[color:var(--lux-text)]">Preferred support mode</span>
-            <select className="lux-select" defaultValue={BUDDY_SUPPORT_MODE_OPTIONS[0]?.value} name="preferredMode">
-              {BUDDY_SUPPORT_MODE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
-            </select>
-          </label>
-
-          <div className="rounded-[1rem] border border-[color:var(--lux-border)] bg-[color:var(--lux-secondary)] px-4 py-4 text-sm leading-6 text-[color:var(--lux-text-secondary)]">
-            Video remains a separate consent step later. Choosing <strong className="text-[color:var(--lux-text)]">VIDEO_OK</strong> or <strong className="text-[color:var(--lux-text)]">EITHER</strong> only signals preference.
-          </div>
-
-          <div className="flex flex-wrap justify-end gap-2 pt-2">
-            <Link className="lux-button-secondary" href="/buddy">Cancel</Link>
-            <button className="lux-button-primary" type="submit">Submit Buddy request</button>
-          </div>
-        </form>
+        <BuddyRequestForm action={createBuddyRequestAction} domainOptions={domainOptions} />
       </section>
     </main>
   );

@@ -1,49 +1,92 @@
 import Link from "next/link";
-import { BuddyRequestAssignmentStatus, BuddyRequestStatus, ConsentStatus, ConversationKind, ConversationStatus } from "@prisma/client";
+import { BuddyRequestAssignmentStatus, BuddyRequestStatus, ConversationKind, ConversationStatus, NotificationType } from "@prisma/client";
 import {
   cancelBuddyRequestAction,
   extendBuddyRequestAction,
   reviewBuddyAssignmentAction,
 } from "./actions";
+import { submitBuddyRecommendationAction } from "./application-actions";
 import { requireActiveUser } from "@/lib/auth/guards";
 import { prisma } from "@/lib/db/prisma";
-import { BUDDY_DOMAIN_OPTIONS, refreshBuddyStateForUser } from "@/lib/buddy";
+import { refreshBuddyStateForUser } from "@/lib/buddy";
 import { RelativeTime } from "@/components/relative-time";
 
 const savedMessages: Record<string, string> = {
   buddy: "Buddy availability updated.",
   "request-submitted": "Your Buddy request was shared with available Buddies.",
-  "request-already-open": "You already have an open Buddy request in this domain.",
+  "request-already-open": "You already have an active Buddy request. Open it here instead of creating a new one.",
   "request-extended": "Your Buddy request was extended and shared again.",
   "request-cancelled": "Buddy request cancelled.",
   "request-declined": "Buddy request declined.",
   "request-unavailable": "That Buddy request is no longer available.",
+  "buddy-recommendation-submitted": "Your Buddy recommendation was submitted.",
   assigned: "Buddy connection created.",
   "connection-ended": "Buddy connection ended.",
   "buddy-blocked": "Buddy access was blocked.",
 };
 
-function domainLabel(value: string) {
-  return BUDDY_DOMAIN_OPTIONS.find((option) => option.value === value)?.label ?? value;
+function formatCooldownMessage(cooldownUntil?: string) {
+  if (!cooldownUntil) {
+    return "You can send another Buddy request 24 hours after your last cancellation.";
+  }
+
+  const date = new Date(cooldownUntil);
+  if (Number.isNaN(date.getTime())) {
+    return "You can send another Buddy request 24 hours after your last cancellation.";
+  }
+
+  return `You can send another Buddy request after ${date.toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}.`;
 }
 
 export default async function BuddyPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ saved?: string }>;
+  searchParams?: Promise<{ saved?: string; cooldownUntil?: string }>;
 }) {
   const viewer = await requireActiveUser();
   await refreshBuddyStateForUser(viewer.id);
   const resolvedSearchParams = await searchParams;
 
-  const [buddyProfile, seekerRequests, assignmentCards, conversations] = await Promise.all([
+  await prisma.notification.updateMany({
+    where: {
+      userId: viewer.id,
+      isRead: false,
+      OR: [
+        {
+          type: {
+            in: [
+              NotificationType.BUDDY_REQUEST_SUBMITTED,
+              NotificationType.BUDDY_REQUEST_INCOMING,
+              NotificationType.BUDDY_REQUEST_ASSIGNED,
+              NotificationType.BUDDY_REQUEST_DECISION_NEEDED,
+              NotificationType.BUDDY_REQUEST_NO_MATCH,
+              NotificationType.BUDDY_REQUEST_CANCELLED,
+              NotificationType.BUDDY_REQUEST_NO_LONGER_RELEVANT,
+              NotificationType.BUDDY_VIDEO_REQUEST_INCOMING,
+              NotificationType.BUDDY_VIDEO_REQUEST_APPROVED,
+            ],
+          },
+        },
+        {
+          type: NotificationType.CHAT_MESSAGE_RECEIVED,
+          payloadJson: {
+            path: ["conversationKind"],
+            equals: ConversationKind.BUDDY_SUPPORT,
+          },
+        },
+      ],
+    },
+    data: { isRead: true, readAt: new Date() },
+  });
+
+  const [buddyProfile, seekerRequests, assignmentCards, conversations, recommendationRequests] = await Promise.all([
     prisma.buddyProfile.findUnique({
       where: { userId: viewer.id },
       select: {
         isAvailable: true,
         intro: true,
         availabilityLevel: true,
-        domains: { select: { domain: true } },
+        domains: { select: { domain: { select: { id: true, name: true } } } },
       },
     }),
     prisma.buddyRequest.findMany({
@@ -51,9 +94,8 @@ export default async function BuddyPage({
       orderBy: { createdAt: "desc" },
       select: {
         id: true,
-        domain: true,
+        domain: { select: { id: true, name: true } },
         message: true,
-        preferredMode: true,
         status: true,
         createdAt: true,
         assignedBuddy: { select: { id: true, displayName: true } },
@@ -75,9 +117,8 @@ export default async function BuddyPage({
         buddyRequest: {
           select: {
             id: true,
-            domain: true,
+            domain: { select: { id: true, name: true } },
             message: true,
-            preferredMode: true,
             seeker: { select: { displayName: true } },
           },
         },
@@ -96,14 +137,34 @@ export default async function BuddyPage({
         userOneId: true,
         userOne: { select: { id: true, displayName: true } },
         userTwo: { select: { id: true, displayName: true } },
-        buddyRequest: { select: { domain: true, preferredMode: true } },
-        buddyVideoConsent: { select: { status: true } },
+        buddyRequest: { select: { domain: { select: { id: true, name: true } } } },
         messages: { orderBy: { createdAt: "desc" }, take: 1, select: { body: true, createdAt: true } },
+      },
+    }),
+    prisma.buddyApplicationRecommendation.findMany({
+      where: { recommenderUserId: viewer.id, status: "PENDING", replacedAt: null },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        createdAt: true,
+        applicationDomain: {
+          select: {
+            id: true,
+            domain: { select: { name: true } },
+            application: { select: { applicant: { select: { displayName: true } } } },
+          },
+        },
       },
     }),
   ]);
 
-  const savedMessage = resolvedSearchParams?.saved ? savedMessages[resolvedSearchParams.saved] : null;
+  const savedMessage = resolvedSearchParams?.saved === "request-cooldown"
+    ? formatCooldownMessage(resolvedSearchParams.cooldownUntil)
+    : resolvedSearchParams?.saved
+      ? savedMessages[resolvedSearchParams.saved]
+      : null;
+
+  const needHelpHref = seekerRequests.length > 0 ? "/buddy" : "/buddy/new";
 
   return (
     <main className="lux-shell">
@@ -121,11 +182,56 @@ export default async function BuddyPage({
             <p className="lux-body mt-4">Buddy is member-to-member support and mentorship. It is not therapy, medical care, or legal advice.</p>
           </div>
           <div className="flex flex-wrap gap-2.5">
-            <Link className="lux-button-primary" href="/buddy/new">Need help? Get a Buddy</Link>
+            <Link className="lux-button-primary" href={needHelpHref}>Need help? Get a Buddy</Link>
             <Link className="lux-button-secondary" href="/settings#buddy-setup">Manage Buddy profile</Link>
           </div>
         </div>
       </section>
+
+      {recommendationRequests.length > 0 ? (
+        <section className="lux-card">
+          <div className="border-b lux-divider pb-5">
+            <p className="lux-overline">Buddy recommendations</p>
+            <h2 className="mt-3 text-2xl font-semibold tracking-tight text-[color:var(--lux-text)]">Members asking for your recommendation</h2>
+          </div>
+          <div className="mt-5 space-y-3">
+            {recommendationRequests.map((recommendation) => (
+              <div className="lux-card-soft" key={recommendation.id}>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      <p className="text-base font-semibold tracking-tight text-[color:var(--lux-text)]">{recommendation.applicationDomain.application.applicant.displayName}</p>
+                      <span className="lux-chip">{recommendation.applicationDomain.domain.name}</span>
+                    </div>
+                    <p className="mt-2 text-sm leading-6 text-[color:var(--lux-text-secondary)]">Recommendation notes are visible to admin only and cannot be edited after submission.</p>
+                    <p className="mt-3 text-xs uppercase tracking-[0.16em] text-[color:var(--lux-text-muted)]">Requested <RelativeTime value={recommendation.createdAt.toISOString()} /></p>
+                  </div>
+                </div>
+                <div className="mt-4 grid gap-3 md:grid-cols-2">
+                  <form action={submitBuddyRecommendationAction} className="grid gap-3">
+                    <input name="recommendationId" type="hidden" value={recommendation.id} />
+                    <input name="decision" type="hidden" value="approve" />
+                    <label className="grid gap-2 text-sm text-[color:var(--lux-text-secondary)]">
+                      <span className="font-medium text-[color:var(--lux-text)]">Admin-only note</span>
+                      <textarea className="lux-textarea min-h-[96px]" maxLength={500} name="note" placeholder="Optional private note for admin review." />
+                    </label>
+                    <button className="lux-button-primary" type="submit">Approve recommendation</button>
+                  </form>
+                  <form action={submitBuddyRecommendationAction} className="grid gap-3">
+                    <input name="recommendationId" type="hidden" value={recommendation.id} />
+                    <input name="decision" type="hidden" value="decline" />
+                    <label className="grid gap-2 text-sm text-[color:var(--lux-text-secondary)]">
+                      <span className="font-medium text-[color:var(--lux-text)]">Admin-only note</span>
+                      <textarea className="lux-textarea min-h-[96px]" maxLength={500} name="note" placeholder="Optional private note for admin review." />
+                    </label>
+                    <button className="lux-button-secondary" type="submit">Decline recommendation</button>
+                  </form>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
         <section className="lux-card">
@@ -144,7 +250,7 @@ export default async function BuddyPage({
               </div>
               <div className="mt-4 flex flex-wrap gap-2.5">
                 {buddyProfile?.domains.length ? buddyProfile.domains.map((domain) => (
-                  <span className="lux-chip lux-chip-accent" key={domain.domain}>{domainLabel(domain.domain)}</span>
+                  <span className="lux-chip lux-chip-accent" key={domain.domain.name}>{domain.domain.name}</span>
                 )) : <span className="text-sm text-[color:var(--lux-text-muted)]">No Buddy domains selected yet.</span>}
               </div>
             </div>
@@ -162,13 +268,12 @@ export default async function BuddyPage({
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <div className="flex flex-wrap items-center gap-2.5">
-                      <p className="text-base font-semibold tracking-tight text-[color:var(--lux-text)]">{domainLabel(request.domain)}</p>
+                      <p className="text-base font-semibold tracking-tight text-[color:var(--lux-text)]">{request.domain.name}</p>
                       <span className="lux-chip">{request.status}</span>
                     </div>
                     <p className="mt-2 text-sm leading-6 text-[color:var(--lux-text-secondary)]">{request.message ?? "No extra message was added."}</p>
                     <div className="mt-3 flex flex-wrap gap-4 text-xs uppercase tracking-[0.16em] text-[color:var(--lux-text-muted)]">
-                      <span>Mode {request.preferredMode}</span>
-                      <span>Created <RelativeTime value={request.createdAt.toISOString()} /></span>
+                      <span>Submitted <RelativeTime value={request.createdAt.toISOString()} /></span>
                       <span>{request.assignments.length} Buddy copies</span>
                     </div>
                   </div>
@@ -210,12 +315,11 @@ export default async function BuddyPage({
                     <div>
                       <div className="flex flex-wrap items-center gap-2.5">
                         <p className="text-base font-semibold tracking-tight text-[color:var(--lux-text)]">{assignment.buddyRequest.seeker.displayName}</p>
-                        <span className="lux-chip">{domainLabel(assignment.buddyRequest.domain)}</span>
+                        <span className="lux-chip">{assignment.buddyRequest.domain.name}</span>
                         {!isRelevant ? <span className="lux-chip">No longer relevant</span> : null}
                       </div>
                       <p className="mt-2 text-sm leading-6 text-[color:var(--lux-text-secondary)]">{assignment.buddyRequest.message ?? "No extra message was provided."}</p>
                       <div className="mt-3 flex flex-wrap gap-4 text-xs uppercase tracking-[0.16em] text-[color:var(--lux-text-muted)]">
-                        <span>Mode {assignment.buddyRequest.preferredMode}</span>
                         <span>Received <RelativeTime value={assignment.createdAt.toISOString()} /></span>
                       </div>
                     </div>
@@ -256,14 +360,12 @@ export default async function BuddyPage({
                       <div className="flex flex-wrap items-center gap-2.5">
                         <p className="text-base font-semibold tracking-tight text-[color:var(--lux-text)]">{otherUser.displayName}</p>
                         <span className="lux-chip lux-chip-accent">Buddy</span>
-                        <span className="lux-chip">{domainLabel(conversation.buddyRequest?.domain ?? "")}</span>
-                        {conversation.buddyVideoConsent?.status === ConsentStatus.APPROVED ? <span className="lux-chip lux-chip-accent">Video approved</span> : null}
+                        <span className="lux-chip">{conversation.buddyRequest?.domain.name ?? "Buddy"}</span>
                       </div>
                       <p className="mt-3 text-sm leading-6 text-[color:var(--lux-text-secondary)]">{latestMessage?.body ?? "Open your Buddy conversation to continue the exchange."}</p>
                     </div>
                     <div className="text-right text-xs uppercase tracking-[0.16em] text-[color:var(--lux-text-muted)]">
-                      <p>{conversation.buddyRequest?.preferredMode ?? "CHAT_ONLY"}</p>
-                      <RelativeTime className="mt-2 block" value={(latestMessage?.createdAt ?? conversation.updatedAt).toISOString()} />
+                      <RelativeTime className="block" value={(latestMessage?.createdAt ?? conversation.updatedAt).toISOString()} />
                     </div>
                   </div>
                 </Link>
