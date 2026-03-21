@@ -120,6 +120,17 @@ enum PostSensitivityStatus {
   SYSTEM_SENSITIVE
 }
 
+enum MediaStorageProvider {
+  LEGACY_INLINE
+  R2
+}
+
+enum MediaModerationStatus {
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+}
+
 enum ModerationStatus {
   CLEAN
   UNDER_REVIEW
@@ -334,6 +345,7 @@ model User {
   updatedAt            DateTime @updatedAt
 
   settings               UserSettings?
+  profileImageAssets     UserProfileImageAsset[]
   media                  UserProfileMedia[]
   buddyProfile           BuddyProfile?
   buddyApplications      BuddyApplication[] @relation("BuddyApplicationApplicant")
@@ -478,6 +490,24 @@ model UserProfileMedia {
   user            User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, mediaType, isActive])
+}
+
+model UserProfileImageAsset {
+  id               String                @id @default(cuid())
+  userId           String
+  objectKey        String
+  storageProvider  MediaStorageProvider  @default(R2)
+  mimeType         String
+  moderationStatus MediaModerationStatus @default(PENDING_REVIEW)
+  uploadedAt       DateTime              @default(now())
+  reviewedAt       DateTime?
+  moderationNote   String?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+
+  user             User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, moderationStatus, uploadedAt])
 }
 
 model VerificationRequest {
@@ -985,11 +1015,17 @@ model SingleOfWeekApplication {
 }
 
 model SingleOfWeekApplicationPhoto {
-  id            String @id @default(cuid())
-  applicationId String
-  storageKey    String
-  sortOrder     Int @default(0)
-  createdAt     DateTime @default(now())
+  id               String                @id @default(cuid())
+  applicationId    String
+  storageKey       String
+  storageProvider  MediaStorageProvider  @default(LEGACY_INLINE)
+  mimeType         String?
+  moderationStatus MediaModerationStatus @default(APPROVED)
+  uploadedAt       DateTime              @default(now())
+  reviewedAt       DateTime?
+  moderationNote   String?
+  sortOrder        Int                   @default(0)
+  createdAt        DateTime              @default(now())
 
   application   SingleOfWeekApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
 
@@ -1269,6 +1305,8 @@ model VerificationToken {
 
   @@unique([identifier, token])
 }
+
+
 
 
 

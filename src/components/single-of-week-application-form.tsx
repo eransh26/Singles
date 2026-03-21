@@ -18,9 +18,11 @@ type SingleOfWeekApplicationFormProps = {
   };
   disabled?: boolean;
   disabledMessage?: string | null;
+  useR2MediaPipeline?: boolean;
+  mediaStatusMessage?: string | null;
 };
 
-export function SingleOfWeekApplicationForm({ action, initialValues, disabled = false, disabledMessage }: SingleOfWeekApplicationFormProps) {
+export function SingleOfWeekApplicationForm({ action, initialValues, disabled = false, disabledMessage, useR2MediaPipeline = false, mediaStatusMessage }: SingleOfWeekApplicationFormProps) {
   const [bio, setBio] = useState(initialValues?.bio ?? "");
   const [interests, setInterests] = useState(initialValues?.interests ?? "");
   const [hobbies, setHobbies] = useState(initialValues?.hobbies ?? "");
@@ -31,6 +33,9 @@ export function SingleOfWeekApplicationForm({ action, initialValues, disabled = 
   const canSubmit = useMemo(() => {
     return !disabled && bio.trim().length > 0 && bio.trim().length <= SINGLE_OF_WEEK_BIO_MAX && interests.length <= SINGLE_OF_WEEK_TEXT_MAX && hobbies.length <= SINGLE_OF_WEEK_TEXT_MAX && relationshipIntent.length <= SINGLE_OF_WEEK_TEXT_MAX && preferredLocation.length <= SINGLE_OF_WEEK_TEXT_MAX && consented;
   }, [bio, consented, disabled, hobbies.length, interests.length, preferredLocation.length, relationshipIntent.length]);
+
+  const acceptedFormatsLabel = useR2MediaPipeline ? "JPG, PNG, WEBP" : "JPG, PNG, WEBP, GIF";
+  const acceptValue = useR2MediaPipeline ? "image/jpeg,image/png,image/webp" : "image/jpeg,image/png,image/webp,image/gif";
 
   return (
     <form action={action} className="grid gap-4 text-sm text-[color:var(--lux-text-secondary)]">
@@ -69,12 +74,13 @@ export function SingleOfWeekApplicationForm({ action, initialValues, disabled = 
 
       <fieldset className="grid gap-3">
         <legend className="font-medium text-[color:var(--lux-text)]">Featured photos</legend>
-        <p className="text-xs leading-5 text-[color:var(--lux-text-muted)]">Upload up to {SINGLE_OF_WEEK_MAX_PHOTOS} photos. Manual review is required and nudity is not allowed.</p>
+        <p className="text-xs leading-5 text-[color:var(--lux-text-muted)]">Upload up to {SINGLE_OF_WEEK_MAX_PHOTOS} photos. Accepted formats: {acceptedFormatsLabel}. Manual review is required and nudity is not allowed.</p>
+        {mediaStatusMessage ? <p className="text-xs text-[color:var(--lux-accent-deep)]">{mediaStatusMessage}</p> : null}
         <div className="grid gap-3 sm:grid-cols-2">
           {Array.from({ length: SINGLE_OF_WEEK_MAX_PHOTOS }).map((_, index) => (
             <label className="grid gap-2" key={index}>
               <span className="font-medium text-[color:var(--lux-text)]">Photo {index + 1}</span>
-              <input accept="image/jpeg,image/png,image/webp,image/gif" className="lux-input file:mr-3 file:rounded-full file:border-0 file:bg-[color:var(--lux-highlight-soft)] file:px-3 file:py-2 file:text-sm file:text-[color:var(--lux-accent-deep)]" disabled={disabled} name={`photo-${index}`} type="file" />
+              <input accept={acceptValue} className="lux-input file:mr-3 file:rounded-full file:border-0 file:bg-[color:var(--lux-highlight-soft)] file:px-3 file:py-2 file:text-sm file:text-[color:var(--lux-accent-deep)]" disabled={disabled} name={`photo-${index}`} type="file" />
             </label>
           ))}
         </div>

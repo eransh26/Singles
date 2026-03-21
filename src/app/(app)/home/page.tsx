@@ -23,6 +23,7 @@ import { PostAuthorActions } from "@/components/post-author-actions";
 
 import { PostEngagement } from "@/components/post-engagement";
 import { SingleOfWeekViewBeacon } from "@/components/single-of-week-view-beacon";
+import { resolveSingleOfWeekPhotoUrl } from "@/lib/media-display";
 
 
 
@@ -226,6 +227,7 @@ export default async function HomePage() {
 
 
   const featuredMember = featuredState?.status === "ACTIVE" ? featuredState : null;
+  const featuredPhotoUrl = featuredMember ? featuredMember.application.photos.map((photo) => resolveSingleOfWeekPhotoUrl(photo)).find((value): value is string => Boolean(value)) ?? null : null;
   const featuredRequestState = featuredMember
     ? await (async () => {
         const targetUserId = featuredMember.featuredUserId;
@@ -366,8 +368,8 @@ export default async function HomePage() {
               <SingleOfWeekViewBeacon featureId={featuredMember.id} />
               <div className="grid gap-5 md:grid-cols-[180px_minmax(0,1fr)] md:items-center">
                 <div className="overflow-hidden rounded-[1.4rem] border border-[color:var(--lux-border)] bg-[color:var(--lux-secondary)]">
-                  {featuredMember.application.photos[0] ? (
-                    <img alt={`${featuredMember.application.applicant.displayName} featured photo`} className="h-full min-h-[220px] w-full object-cover" src={featuredMember.application.photos[0].storageKey} />
+                  {featuredPhotoUrl ? (
+                    <img alt={`${featuredMember.application.applicant.displayName} featured photo`} className="h-full min-h-[220px] w-full object-cover" src={featuredPhotoUrl} />
                   ) : (
                     <div className="flex min-h-[220px] items-center justify-center text-sm text-[color:var(--lux-text-muted)]">Featured profile</div>
                   )}
@@ -933,6 +935,8 @@ export default async function HomePage() {
   );
 
 }
+
+
 
 
 

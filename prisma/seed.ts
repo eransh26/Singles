@@ -29,6 +29,12 @@ async function main() {
       description: "Controls Single of the Week applications, hero card, and featured request flow.",
       rolloutType: "GLOBAL",
     },
+    {
+      key: "r2_media_pipeline_enabled",
+      enabled: false,
+      description: "Controls the R2-backed media upload pipeline for profile images and Single of the Week photos.",
+      rolloutType: "GLOBAL",
+    },
   ] as const;
 
   for (const flag of featureFlags) {

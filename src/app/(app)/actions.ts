@@ -33,6 +33,7 @@ import { invalidateBuddyByBlock } from "@/lib/buddy";
 import { createNotificationRecord, deliverNotification } from "@/lib/notifications";
 import { canCreateSingleOfWeekRequest, syncSingleOfWeekState } from "@/lib/single-of-the-week";
 import { FEATURE_FLAG_KEYS, isFeatureEnabled } from "@/lib/feature-flags";
+import { uploadProfileImageToR2 } from "@/lib/r2-media";
 
 function textValue(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -125,6 +126,17 @@ function validateProfileImageValue(image: string | null) {
   }
 
   return image;
+}
+
+function getFirstUploadedFile(formData: FormData, keys: string[]) {
+  for (const key of keys) {
+    const value = formData.get(key);
+    if (value instanceof File && value.size > 0) {
+      return value;
+    }
+  }
+
+  return null;
 }
 
 async function uniqueGroupSlug(name: string) {
@@ -305,13 +317,19 @@ export async function updateProfileAction(formData: FormData) {
 
   const bio = optionalTextValue(formData, "bio");
   const region = optionalTextValue(formData, "region");
-  const image = validateProfileImageValue(optionalTextValue(formData, "image"));
+  const r2MediaPipelineEnabled = await isFeatureEnabled(FEATURE_FLAG_KEYS.r2MediaPipeline, user);
+  const uploadedProfileImage = r2MediaPipelineEnabled ? getFirstUploadedFile(formData, ["imageUpload", "imageCameraUpload"]) : null;
+  const image = uploadedProfileImage ? null : validateProfileImageValue(optionalTextValue(formData, "image"));
   if (bio && bio.length > 3000) {
     throw new Error("Bio must be 3000 characters or fewer.");
   }
   if (region && region.length > 100) {
     throw new Error("Region must be 100 characters or fewer.");
   }
+
+  const uploadedProfileAsset = uploadedProfileImage
+    ? await uploadProfileImageToR2(user.id, uploadedProfileImage)
+    : null;
 
   const interestIds = formData
     .getAll("interestIds")
@@ -329,6 +347,19 @@ export async function updateProfileAction(formData: FormData) {
       },
     });
 
+    if (uploadedProfileAsset) {
+      await tx.userProfileImageAsset.create({
+        data: {
+          userId: user.id,
+          objectKey: uploadedProfileAsset.objectKey,
+          storageProvider: uploadedProfileAsset.storageProvider,
+          mimeType: uploadedProfileAsset.mimeType,
+          moderationStatus: uploadedProfileAsset.moderationStatus,
+          uploadedAt: uploadedProfileAsset.uploadedAt,
+        },
+      });
+    }
+
     await tx.userInterest.deleteMany({ where: { userId: user.id } });
 
     if (interestIds.length > 0) {
@@ -341,7 +372,7 @@ export async function updateProfileAction(formData: FormData) {
 
   revalidatePath("/me");
   revalidatePath(`/users/${user.id}`);
-  redirect("/me?saved=profile");
+  redirect(`/me?saved=${uploadedProfileAsset ? "profile-image-pending" : "profile"}`);
 }
 
 export async function updatePrivacyAction(formData: FormData) {
@@ -1474,3 +1505,7 @@ export async function updateNotificationPreferencesAction(formData: FormData) {
   revalidatePath("/notifications");
   redirect("/settings?saved=notifications");
 }
+
+
+
+

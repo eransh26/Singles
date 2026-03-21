@@ -24,6 +24,7 @@ export default async function SingleOfWeekPage({ searchParams }: { searchParams?
   const user = await requireUser();
   const resolvedSearchParams = await searchParams;
   const featureEnabled = await isFeatureEnabled(FEATURE_FLAG_KEYS.singleOfWeek, user);
+  const r2MediaPipelineEnabled = await isFeatureEnabled(FEATURE_FLAG_KEYS.r2MediaPipeline, user);
 
   if (!featureEnabled) {
     return (
@@ -67,6 +68,9 @@ export default async function SingleOfWeekPage({ searchParams }: { searchParams?
   const deadline = feature ? getEditWindowDeadline(feature.publishAt) : null;
   const editingLocked = Boolean(deadline && new Date() >= deadline);
   const savedMessage = resolvedSearchParams?.saved ? saveMessages[resolvedSearchParams.saved] : null;
+  const approvedPhotoCount = application?.photos.filter((photo) => photo.moderationStatus === "APPROVED").length ?? 0;
+  const pendingPhotoCount = application?.photos.filter((photo) => photo.moderationStatus === "PENDING_REVIEW").length ?? 0;
+  const mediaStatusMessage = r2MediaPipelineEnabled && application ? `Approved photos: ${approvedPhotoCount}. Pending review: ${pendingPhotoCount}. Pending photos stay private until reviewed.` : null;
 
   return (
     <main className="lux-shell space-y-6">
@@ -127,6 +131,8 @@ export default async function SingleOfWeekPage({ searchParams }: { searchParams?
         ) : null}
 
         <SingleOfWeekApplicationForm
+          mediaStatusMessage={mediaStatusMessage}
+          useR2MediaPipeline={r2MediaPipelineEnabled}
           action={submitSingleOfWeekApplicationAction}
           disabled={!eligibility.allowed || editingLocked}
           disabledMessage={editingLocked ? "Editing is locked because this feature week is less than one day away." : null}
@@ -143,3 +149,4 @@ export default async function SingleOfWeekPage({ searchParams }: { searchParams?
     </main>
   );
 }
+

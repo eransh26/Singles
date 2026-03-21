@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MediaType, MembershipStatus } from "@prisma/client";
+import { MediaModerationStatus, MediaType, MembershipStatus } from "@prisma/client";
 import {
   addProfileMediaAction,
   deleteProfileMediaAction,
@@ -8,10 +8,13 @@ import {
 import { requireUser } from "@/lib/auth/guards";
 import { prisma } from "@/lib/db/prisma";
 import { AvatarOptionPicker } from "@/components/avatar-option-picker";
+import { FEATURE_FLAG_KEYS, isFeatureEnabled } from "@/lib/feature-flags";
+import { resolveProfileImageUrl } from "@/lib/media-display";
 
 const saveMessages: Record<string, string> = {
   media: "Media updated.",
   profile: "Profile saved.",
+  "profile-image-pending": "Profile saved. Your new uploaded image is pending review.",
 };
 
 function mediaLabel(mediaType: MediaType) {
@@ -25,6 +28,7 @@ export default async function MePage({
 }) {
   const viewer = await requireUser();
   const resolvedSearchParams = await searchParams;
+  const r2MediaPipelineEnabled = await isFeatureEnabled(FEATURE_FLAG_KEYS.r2MediaPipeline, viewer);
 
   const [user, interests, memberships] = await Promise.all([
     prisma.user.findUnique({
@@ -37,6 +41,16 @@ export default async function MePage({
         image: true,
         verificationStatus: true,
         interests: { select: { interestId: true } },
+        profileImageAssets: {
+          where: { moderationStatus: { in: [MediaModerationStatus.APPROVED, MediaModerationStatus.PENDING_REVIEW] } },
+          orderBy: [{ moderationStatus: "asc" }, { uploadedAt: "desc" }],
+          select: {
+            id: true,
+            storageProvider: true,
+            moderationStatus: true,
+            uploadedAt: true,
+          },
+        },
         media: {
           where: { isActive: true },
           orderBy: [{ mediaType: "asc" }, { sortOrder: "asc" }],
@@ -66,6 +80,15 @@ export default async function MePage({
   const galleryMedia = user.media.filter((item) => item.mediaType === MediaType.GALLERY);
   const savedMessage = resolvedSearchParams?.saved ? saveMessages[resolvedSearchParams.saved] : null;
   const totalMediaCount = profileMedia.length + galleryMedia.length;
+  const approvedProfileImageAsset = user.profileImageAssets.find((asset) => asset.moderationStatus === MediaModerationStatus.APPROVED) ?? null;
+  const pendingProfileImageAsset = user.profileImageAssets.find((asset) => asset.moderationStatus === MediaModerationStatus.PENDING_REVIEW) ?? null;
+  const resolvedProfileImage = resolveProfileImageUrl({
+    approvedProfileImageAsset,
+    legacyImage: user.image,
+  });
+  const pendingReviewMessage = pendingProfileImageAsset
+    ? `Your latest uploaded profile image is pending review since ${pendingProfileImageAsset.uploadedAt.toLocaleDateString("en-US", { month: "short", day: "numeric" })}.`
+    : null;
 
   return (
     <main className="lux-shell">
@@ -79,11 +102,16 @@ export default async function MePage({
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)] xl:items-end">
           <div className="space-y-5">
             <p className="lux-overline">Private member profile</p>
-            <div className="space-y-3">
-              <h1 className="text-[2.9rem] font-semibold tracking-tight text-[color:var(--lux-text)] md:text-[4rem] md:leading-[0.98]">{user.displayName}</h1>
-              <p className="max-w-2xl text-base leading-8 text-[color:var(--lux-text-secondary)]">
-                Shape how your member identity reads, which interests lead the conversation, and how your media collection feels to the people you allow close.
-              </p>
+            <div className="flex items-center gap-4">
+              <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border border-[color:var(--lux-accent-border)] bg-[color:var(--lux-highlight-soft)] text-2xl font-semibold text-[color:var(--lux-accent-deep)]">
+                {resolvedProfileImage ? <img alt={`${user.displayName} profile`} className="h-full w-full object-cover" src={resolvedProfileImage} /> : user.displayName.slice(0, 1).toUpperCase()}
+              </div>
+              <div className="space-y-3">
+                <h1 className="text-[2.9rem] font-semibold tracking-tight text-[color:var(--lux-text)] md:text-[4rem] md:leading-[0.98]">{user.displayName}</h1>
+                <p className="max-w-2xl text-base leading-8 text-[color:var(--lux-text-secondary)]">
+                  Shape how your member identity reads, which interests lead the conversation, and how your media collection feels to the people you allow close.
+                </p>
+              </div>
             </div>
             <div className="flex flex-wrap gap-2.5">
               <span className="lux-chip lux-chip-accent">{user.verificationStatus}</span>
@@ -127,7 +155,7 @@ export default async function MePage({
               <input className="lux-input" defaultValue={user.region ?? ""} maxLength={100} name="region" />
               <span className="text-xs text-[color:var(--lux-text-muted)]">Up to 100 characters.</span>
             </label>
-            <AvatarOptionPicker initialValue={user.image} />
+            <AvatarOptionPicker initialValue={user.image} pendingReviewMessage={pendingReviewMessage} useR2Pipeline={r2MediaPipelineEnabled} />
             <fieldset className="grid gap-3 text-sm">
               <legend className="font-medium text-[color:var(--lux-text)]">Interests</legend>
               <div className="grid gap-2 sm:grid-cols-2">
@@ -260,3 +288,4 @@ export default async function MePage({
     </main>
   );
 }
+

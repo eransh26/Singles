@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db/prisma";
 export const FEATURE_FLAG_KEYS = {
   buddy: "buddy_enabled",
   singleOfWeek: "single_of_week_enabled",
+  r2MediaPipeline: "r2_media_pipeline_enabled",
 } as const;
 
 export type KnownFeatureFlagKey = (typeof FEATURE_FLAG_KEYS)[keyof typeof FEATURE_FLAG_KEYS];
@@ -20,6 +21,13 @@ const DEFAULT_FEATURE_FLAGS = [
     key: FEATURE_FLAG_KEYS.singleOfWeek,
     enabled: true,
     description: "Controls Single of the Week applications, hero card, and featured request flow.",
+    rolloutType: FeatureFlagRolloutType.GLOBAL,
+    rolloutValue: null,
+  },
+  {
+    key: FEATURE_FLAG_KEYS.r2MediaPipeline,
+    enabled: false,
+    description: "Controls the R2-backed media upload pipeline for profile images and Single of the Week photos.",
     rolloutType: FeatureFlagRolloutType.GLOBAL,
     rolloutValue: null,
   },

@@ -70,6 +70,12 @@ export default async function MemberProfilePage({
         chatRequestPolicy: true,
         photoRequestPolicy: true,
         interests: { select: { interest: { select: { id: true, name: true } } } },
+        profileImageAssets: {
+          where: { moderationStatus: "APPROVED" },
+          orderBy: { uploadedAt: "desc" },
+          take: 1,
+          select: { id: true, storageProvider: true },
+        },
         media: {
           where: { isActive: true },
           orderBy: [{ mediaType: "asc" }, { sortOrder: "asc" }],
@@ -411,6 +417,10 @@ export default async function MemberProfilePage({
     </main>
   );
 }
+
+
+
+
 
 
 

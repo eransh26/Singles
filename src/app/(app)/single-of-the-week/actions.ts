@@ -17,10 +17,16 @@ import {
   hasPairBlock,
   isTrustedSingleOfWeekRequester,
 } from "@/lib/single-of-the-week";
+import { uploadSingleOfWeekImageToR2 } from "@/lib/r2-media";
 import { userPairKey } from "@/lib/interaction-consent";
 
-const PHOTO_ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+const LEGACY_PHOTO_ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 const PHOTO_MAX_BYTES = 5 * 1024 * 1024;
+
+type PendingPhotoFile = {
+  file: File;
+  sortOrder: number;
+};
 
 function textValue(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -36,20 +42,27 @@ async function fileToDataUrl(file: File) {
   return `data:${file.type};base64,${bytes.toString("base64")}`;
 }
 
-async function parsePhotos(formData: FormData) {
-  const result: { storageKey: string; sortOrder: number }[] = [];
+function getUploadedPhotos(formData: FormData) {
+  const result: PendingPhotoFile[] = [];
   for (let index = 0; index < SINGLE_OF_WEEK_MAX_PHOTOS; index += 1) {
     const file = formData.get(`photo-${index}`);
-    if (!(file instanceof File) || file.size === 0) {
-      continue;
+    if (file instanceof File && file.size > 0) {
+      result.push({ file, sortOrder: index });
     }
-    if (!PHOTO_ALLOWED_TYPES.has(file.type)) {
+  }
+  return result;
+}
+
+async function parseLegacyPhotos(photoFiles: PendingPhotoFile[]) {
+  const result: { storageKey: string; sortOrder: number }[] = [];
+  for (const photo of photoFiles) {
+    if (!LEGACY_PHOTO_ALLOWED_TYPES.has(photo.file.type)) {
       throw new Error("Single of the Week photos must be JPG, PNG, WEBP, or GIF.");
     }
-    if (file.size > PHOTO_MAX_BYTES) {
+    if (photo.file.size > PHOTO_MAX_BYTES) {
       throw new Error("Single of the Week photos must be 5 MB or smaller.");
     }
-    result.push({ storageKey: await fileToDataUrl(file), sortOrder: index });
+    result.push({ storageKey: await fileToDataUrl(photo.file), sortOrder: photo.sortOrder });
   }
   return result;
 }
@@ -87,7 +100,8 @@ export async function submitSingleOfWeekApplicationAction(formData: FormData) {
   const relationshipIntent = optionalTextValue(formData, "relationshipIntent");
   const preferredLocation = optionalTextValue(formData, "preferredLocation");
   const consented = formData.get("consented") === "on";
-  const photos = await parsePhotos(formData);
+  const photoFiles = getUploadedPhotos(formData);
+  const r2MediaPipelineEnabled = await isFeatureEnabled(FEATURE_FLAG_KEYS.r2MediaPipeline, user);
 
   if (bio.length == 0 || bio.length > SINGLE_OF_WEEK_BIO_MAX) {
     throw new Error(`Bio must be between 1 and ${SINGLE_OF_WEEK_BIO_MAX} characters.`);
@@ -111,7 +125,7 @@ export async function submitSingleOfWeekApplicationAction(formData: FormData) {
     include: { features: { where: { status: { in: [SingleOfWeekFeatureStatus.UPCOMING, SingleOfWeekFeatureStatus.AWAITING_RESPONSE, SingleOfWeekFeatureStatus.ACTIVE] } }, orderBy: { publishAt: "asc" }, take: 1 } },
   });
 
-  if (photos.length === 0 && !existing?.id) {
+  if (photoFiles.length === 0 && !existing?.id) {
     throw new Error("Add at least one photo to the featured profile snapshot.");
   }
 
@@ -122,7 +136,7 @@ export async function submitSingleOfWeekApplicationAction(formData: FormData) {
     }
   }
 
-  await prisma.$transaction(async (tx) => {
+  const application = await prisma.$transaction(async (tx) => {
     const data = {
       bio,
       interests,
@@ -137,17 +151,44 @@ export async function submitSingleOfWeekApplicationAction(formData: FormData) {
       withdrawnAt: null,
     };
 
-    const application = existing
-      ? await tx.singleOfWeekApplication.update({ where: { id: existing.id }, data, select: { id: true } })
-      : await tx.singleOfWeekApplication.create({ data: { applicantUserId: user.id, ...data }, select: { id: true } });
+    return existing
+      ? tx.singleOfWeekApplication.update({ where: { id: existing.id }, data, select: { id: true } })
+      : tx.singleOfWeekApplication.create({ data: { applicantUserId: user.id, ...data }, select: { id: true } });
+  });
 
-    if (photos.length > 0) {
-      await tx.singleOfWeekApplicationPhoto.deleteMany({ where: { applicationId: application.id } });
-      await tx.singleOfWeekApplicationPhoto.createMany({
-        data: photos.map((photo) => ({ applicationId: application.id, storageKey: photo.storageKey, sortOrder: photo.sortOrder })),
+  if (photoFiles.length > 0) {
+    if (r2MediaPipelineEnabled) {
+      const uploadedPhotos = await Promise.all(
+        photoFiles.map(async ({ file, sortOrder }) => {
+          const stored = await uploadSingleOfWeekImageToR2(user.id, application.id, file);
+          return { ...stored, sortOrder };
+        }),
+      );
+
+      await prisma.$transaction(async (tx) => {
+        await tx.singleOfWeekApplicationPhoto.deleteMany({ where: { applicationId: application.id } });
+        await tx.singleOfWeekApplicationPhoto.createMany({
+          data: uploadedPhotos.map((photo) => ({
+            applicationId: application.id,
+            storageKey: photo.objectKey,
+            storageProvider: photo.storageProvider,
+            mimeType: photo.mimeType,
+            moderationStatus: photo.moderationStatus,
+            uploadedAt: photo.uploadedAt,
+            sortOrder: photo.sortOrder,
+          })),
+        });
+      });
+    } else {
+      const legacyPhotos = await parseLegacyPhotos(photoFiles);
+      await prisma.$transaction(async (tx) => {
+        await tx.singleOfWeekApplicationPhoto.deleteMany({ where: { applicationId: application.id } });
+        await tx.singleOfWeekApplicationPhoto.createMany({
+          data: legacyPhotos.map((photo) => ({ applicationId: application.id, storageKey: photo.storageKey, sortOrder: photo.sortOrder })),
+        });
       });
     }
-  });
+  }
 
   revalidateSinglePaths();
   redirect("/single-of-the-week?saved=application");

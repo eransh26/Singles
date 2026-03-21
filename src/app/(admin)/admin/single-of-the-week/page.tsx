@@ -126,6 +126,7 @@ export default async function AdminSingleOfWeekPage({ searchParams }: { searchPa
               </div>
               <p className="mt-3 leading-6 text-[#d7c8bb]">{application.bio}</p>
               <p className="mt-3 text-xs uppercase tracking-[0.14em] text-[#8f7f72]">Photos {application.photos.length}</p>
+              <p className="mt-1 text-xs text-[#bbaea1]">Approved {application.photos.filter((photo) => photo.moderationStatus === "APPROVED").length} · Pending {application.photos.filter((photo) => photo.moderationStatus === "PENDING_REVIEW").length}</p>
               <div className="mt-4 flex flex-wrap gap-2">
                 {application.status !== SingleOfWeekApplicationStatus.REJECTED ? (
                   <>
@@ -203,3 +204,4 @@ export default async function AdminSingleOfWeekPage({ searchParams }: { searchPa
     </main>
   );
 }
+

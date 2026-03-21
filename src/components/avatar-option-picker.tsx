@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { Camera, ImagePlus, Loader2, Upload } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 const PRESET_AVATARS = [
   { value: "/avatars/avatar-female-1.svg", label: "Female 1" },
@@ -14,7 +14,8 @@ const PRESET_AVATARS = [
 ] as const;
 
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
-const ACCEPTED_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+const LEGACY_ACCEPTED_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+const R2_ACCEPTED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 function fileToDataUrl(file: File) {
   return new Promise<string>((resolve, reject) => {
@@ -25,19 +26,42 @@ function fileToDataUrl(file: File) {
   });
 }
 
-export function AvatarOptionPicker({ initialValue }: { initialValue?: string | null }) {
+type AvatarOptionPickerProps = {
+  initialValue?: string | null;
+  useR2Pipeline?: boolean;
+  pendingReviewMessage?: string | null;
+};
+
+export function AvatarOptionPicker({ initialValue, useR2Pipeline = false, pendingReviewMessage }: AvatarOptionPickerProps) {
   const [value, setValue] = useState(initialValue ?? "");
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const libraryInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
 
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
+
+  const acceptedTypes = useR2Pipeline ? R2_ACCEPTED_TYPES : LEGACY_ACCEPTED_TYPES;
+  const acceptedLabel = useR2Pipeline ? "JPG, PNG, WEBP" : "JPG, PNG, WEBP, GIF";
+  const acceptValue = useR2Pipeline ? "image/jpeg,image/png,image/webp" : "image/jpeg,image/png,image/webp,image/gif";
   const selectedLabel = useMemo(() => PRESET_AVATARS.find((avatar) => avatar.value === value)?.label ?? null, [value]);
+
+  function clearFileInputs() {
+    if (libraryInputRef.current) libraryInputRef.current.value = "";
+    if (cameraInputRef.current) cameraInputRef.current.value = "";
+  }
 
   async function handleFile(file: File | null) {
     if (!file) return;
-    if (!ACCEPTED_TYPES.has(file.type)) {
-      setError("Profile image must be a JPG, PNG, WEBP, or GIF.");
+    if (!acceptedTypes.has(file.type)) {
+      setError(`Profile image must be a ${acceptedLabel.replace(/, ([^,]+)$/, ", or $1")}.`);
       return;
     }
     if (file.size > MAX_FILE_BYTES) {
@@ -48,14 +72,26 @@ export function AvatarOptionPicker({ initialValue }: { initialValue?: string | n
     setIsLoading(true);
     setError(null);
     try {
-      const dataUrl = await fileToDataUrl(file);
-      setValue(dataUrl);
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+      if (useR2Pipeline) {
+        setValue("");
+        setPreviewUrl(URL.createObjectURL(file));
+      } else {
+        const dataUrl = await fileToDataUrl(file);
+        setPreviewUrl(null);
+        setValue(dataUrl);
+      }
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : "Profile image upload could not be processed.");
     } finally {
       setIsLoading(false);
     }
   }
+
+  const currentSelectionLabel = selectedLabel ?? (previewUrl ? "Pending upload" : value.startsWith("data:") ? "Uploaded image" : value);
+  const currentSelectionSrc = previewUrl || value;
 
   return (
     <div className="grid gap-3 text-sm text-[color:var(--lux-text-secondary)]">
@@ -71,6 +107,11 @@ export function AvatarOptionPicker({ initialValue }: { initialValue?: string | n
       <input
         className="lux-input"
         onChange={(event) => {
+          clearFileInputs();
+          if (previewUrl) {
+            URL.revokeObjectURL(previewUrl);
+            setPreviewUrl(null);
+          }
           setValue(event.target.value);
           setError(null);
         }}
@@ -80,16 +121,18 @@ export function AvatarOptionPicker({ initialValue }: { initialValue?: string | n
 
       <div className="flex flex-wrap gap-2">
         <input
-          accept="image/jpeg,image/png,image/webp,image/gif"
+          accept={acceptValue}
           className="hidden"
+          name="imageUpload"
           onChange={(event) => void handleFile(event.target.files?.[0] ?? null)}
           ref={libraryInputRef}
           type="file"
         />
         <input
-          accept="image/jpeg,image/png,image/webp,image/gif"
+          accept={acceptValue}
           capture="user"
           className="hidden"
+          name="imageCameraUpload"
           onChange={(event) => void handleFile(event.target.files?.[0] ?? null)}
           ref={cameraInputRef}
           type="file"
@@ -104,7 +147,8 @@ export function AvatarOptionPicker({ initialValue }: { initialValue?: string | n
         </button>
       </div>
 
-      {error ? <p className="text-xs text-[color:var(--lux-danger)]">{error}</p> : <p className="text-xs text-[color:var(--lux-text-muted)]">Accepted formats: JPG, PNG, WEBP, GIF. Max 5 MB.</p>}
+      {error ? <p className="text-xs text-[color:var(--lux-danger)]">{error}</p> : <p className="text-xs text-[color:var(--lux-text-muted)]">Accepted formats: {acceptedLabel}. Max 5 MB.</p>}
+      {pendingReviewMessage ? <p className="text-xs text-[color:var(--lux-accent-deep)]">{pendingReviewMessage}</p> : null}
 
       <div className="grid grid-cols-3 gap-3">
         {PRESET_AVATARS.map((avatar) => {
@@ -118,6 +162,11 @@ export function AvatarOptionPicker({ initialValue }: { initialValue?: string | n
               }`}
               key={avatar.value}
               onClick={() => {
+                clearFileInputs();
+                if (previewUrl) {
+                  URL.revokeObjectURL(previewUrl);
+                  setPreviewUrl(null);
+                }
                 setValue(avatar.value);
                 setError(null);
               }}
@@ -132,20 +181,21 @@ export function AvatarOptionPicker({ initialValue }: { initialValue?: string | n
         })}
       </div>
 
-      {value ? (
+      {currentSelectionSrc ? (
         <div className="flex items-center gap-3 rounded-[1rem] border border-[color:var(--lux-border)] bg-white px-4 py-3">
           <span className="relative h-12 w-12 overflow-hidden rounded-full border border-[color:var(--lux-border-soft)] bg-[color:var(--lux-secondary)]">
             {isLoading ? (
               <span className="flex h-full w-full items-center justify-center text-[color:var(--lux-text-muted)]"><Loader2 className="h-4 w-4 animate-spin" /></span>
-            ) : value ? (
-              <Image alt={selectedLabel ?? "Selected profile image"} className="object-cover" fill sizes="48px" src={value} unoptimized />
+            ) : currentSelectionSrc ? (
+              <Image alt={selectedLabel ?? "Selected profile image"} className="object-cover" fill sizes="48px" src={currentSelectionSrc} unoptimized />
             ) : (
               <span className="flex h-full w-full items-center justify-center text-[color:var(--lux-text-muted)]"><ImagePlus className="h-4 w-4" /></span>
             )}
           </span>
           <div>
             <p className="text-sm font-medium text-[color:var(--lux-text)]">Current selection</p>
-            <p className="text-xs text-[color:var(--lux-text-muted)]">{selectedLabel ?? (value.startsWith("data:") ? "Uploaded image" : value)}</p>
+            <p className="text-xs text-[color:var(--lux-text-muted)]">{currentSelectionLabel}</p>
+            {useR2Pipeline && previewUrl ? <p className="mt-1 text-xs text-[color:var(--lux-text-muted)]">This upload will stay private until reviewed.</p> : null}
           </div>
         </div>
       ) : null}
