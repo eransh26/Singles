@@ -10,6 +10,8 @@ import { requireActiveUser } from "@/lib/auth/guards";
 import { prisma } from "@/lib/db/prisma";
 import { refreshBuddyStateForUser } from "@/lib/buddy";
 import { RelativeTime } from "@/components/relative-time";
+import { FeatureUnavailableCard } from "@/components/feature-unavailable-card";
+import { FEATURE_FLAG_KEYS, isFeatureEnabled } from "@/lib/feature-flags";
 
 const savedMessages: Record<string, string> = {
   buddy: "Buddy availability updated.",
@@ -44,6 +46,18 @@ export default async function BuddyPage({
   searchParams?: Promise<{ saved?: string; cooldownUntil?: string }>;
 }) {
   const viewer = await requireActiveUser();
+  const featureEnabled = await isFeatureEnabled(FEATURE_FLAG_KEYS.buddy, viewer);
+
+  if (!featureEnabled) {
+    return (
+      <FeatureUnavailableCard
+        eyebrow="Buddy"
+        title="Buddy is currently unavailable"
+        description="Buddy support is turned off right now. Your regular chats and settings are still available."
+        href="/home"
+      />
+    );
+  }
   await refreshBuddyStateForUser(viewer.id);
   const resolvedSearchParams = await searchParams;
 

@@ -159,6 +159,7 @@ async function main() {
   await prisma.singleOfWeekApplicationPhoto.deleteMany();
   await prisma.singleOfWeekApplication.deleteMany();
   await prisma.singleOfWeekConfig.deleteMany();
+  await prisma.featureFlag.deleteMany();
   await prisma.webPushSubscription.deleteMany();
   await prisma.notification.deleteMany();
   await prisma.report.deleteMany();
@@ -653,6 +654,23 @@ async function main() {
       requesterWeeklyCap: 6,
       requesterMonthlyCap: 12,
     },
+  });
+
+  await prisma.featureFlag.createMany({
+    data: [
+      {
+        key: "buddy_enabled",
+        enabled: true,
+        description: "Controls Buddy applications, Buddy requests, and Buddy conversations.",
+        rolloutType: "GLOBAL",
+      },
+      {
+        key: "single_of_week_enabled",
+        enabled: true,
+        description: "Controls Single of the Week applications, hero card, and featured request flow.",
+        rolloutType: "GLOBAL",
+      },
+    ],
   });
 
   const featuredApplication = await prisma.singleOfWeekApplication.create({

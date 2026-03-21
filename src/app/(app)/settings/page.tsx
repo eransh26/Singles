@@ -27,6 +27,7 @@ import { BuddyApplicationForm } from "@/components/buddy-application-form";
 import { BuddyProfileForm } from "@/components/buddy-profile-form";
 import { RelativeTime } from "@/components/relative-time";
 import { getBuddyDomainOptions, getEligibleBuddyRecommenders, isBuddyVerifiedUser } from "@/lib/buddy";
+import { ensureDefaultFeatureFlags, FEATURE_FLAG_KEYS, getFeatureAvailability } from "@/lib/feature-flags";
 
 const saveMessages: Record<string, string> = {
   privacy: "Privacy preferences saved.",
@@ -77,6 +78,11 @@ export default async function SettingsPage({
   const viewer = await requireUser();
   const resolvedSearchParams = await searchParams;
   const pushPublicKey = getWebPushPublicKey();
+
+  await ensureDefaultFeatureFlags();
+  const features = await getFeatureAvailability([FEATURE_FLAG_KEYS.buddy, FEATURE_FLAG_KEYS.singleOfWeek], viewer);
+  const buddyEnabled = features[FEATURE_FLAG_KEYS.buddy];
+  const singleOfWeekEnabled = features[FEATURE_FLAG_KEYS.singleOfWeek];
 
   const [user, pendingPhotoRequests, activePhotoGrants, buddyProfile, pushSubscriptionCount, settings, buddyDomainOptions, activeBuddyApplication, eligibleBuddyRecommenders, rejectedBuddyApplicationDomains, buddyOverrides] = await Promise.all([
     prisma.user.findUnique({
@@ -134,8 +140,8 @@ export default async function SettingsPage({
       where: { userId: viewer.id },
       select: { webPushEnabled: true, emailActivityEnabled: true, silentModeEnabled: true, hideLockScreenTextEnabled: true },
     }),
-    getBuddyDomainOptions(),
-    prisma.buddyApplication.findFirst({
+    buddyEnabled ? getBuddyDomainOptions() : Promise.resolve([]),
+    buddyEnabled ? prisma.buddyApplication.findFirst({
       where: { applicantUserId: viewer.id, status: "ACTIVE" },
       orderBy: { createdAt: "desc" },
       select: {
@@ -162,19 +168,19 @@ export default async function SettingsPage({
           },
         },
       },
-    }),
-    prisma.$transaction((tx) => getEligibleBuddyRecommenders(tx, viewer.id)),
-    prisma.buddyApplicationDomain.findMany({
+    }) : Promise.resolve(null),
+    buddyEnabled ? prisma.$transaction((tx) => getEligibleBuddyRecommenders(tx, viewer.id)) : Promise.resolve([]),
+    buddyEnabled ? prisma.buddyApplicationDomain.findMany({
       where: {
         status: "REJECTED",
         application: { applicantUserId: viewer.id },
       },
       select: { domainId: true },
-    }),
-    prisma.buddyReapplicationOverride.findMany({
+    }) : Promise.resolve([]),
+    buddyEnabled ? prisma.buddyReapplicationOverride.findMany({
       where: { userId: viewer.id, isActive: true },
       select: { domainId: true },
-    }),
+    }) : Promise.resolve([]),
   ]);
 
   if (!user) {
@@ -310,6 +316,7 @@ export default async function SettingsPage({
         </section>
       </section>
 
+      {singleOfWeekEnabled ? (
       <section className="lux-card" id="single-of-week-link">
         <div className="border-b lux-divider pb-5">
           <p className="lux-overline">Single of the Week</p>
@@ -320,7 +327,9 @@ export default async function SettingsPage({
           <Link className="lux-button-secondary" href="/single-of-the-week">Open application</Link>
         </div>
       </section>
+      ) : null}
 
+      {buddyEnabled ? (
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
         <section className="lux-card" id="buddy-setup">
           <div className="border-b lux-divider pb-5">
@@ -481,6 +490,7 @@ export default async function SettingsPage({
           </section>
         </div>
       </section>
+      ) : null}
 
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]" id="notifications">
         <section className="lux-card">

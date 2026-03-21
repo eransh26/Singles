@@ -17,6 +17,7 @@ export const savedMessages: Record<string, string> = {
   selected: "Single of the Week selection saved.",
   limits: "Featured request overrides saved.",
   hidden: "Featured member hidden from the home card.",
+  "feature-flag": "Feature flag saved.",
 };
 
 export const adminErrorMessages: Record<string, string> = {

@@ -15,6 +15,29 @@ async function main() {
       create: interest,
     });
   }
+
+  const featureFlags = [
+    {
+      key: "buddy_enabled",
+      enabled: true,
+      description: "Controls Buddy applications, Buddy requests, and Buddy conversations.",
+      rolloutType: "GLOBAL",
+    },
+    {
+      key: "single_of_week_enabled",
+      enabled: true,
+      description: "Controls Single of the Week applications, hero card, and featured request flow.",
+      rolloutType: "GLOBAL",
+    },
+  ] as const;
+
+  for (const flag of featureFlags) {
+    await prisma.featureFlag.upsert({
+      where: { key: flag.key },
+      update: flag,
+      create: flag,
+    });
+  }
 }
 
 main()

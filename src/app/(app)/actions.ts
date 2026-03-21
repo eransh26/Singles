@@ -32,6 +32,7 @@ import { invalidatePairInteractionsByBlock, revokeChatConversationByPair, revoke
 import { invalidateBuddyByBlock } from "@/lib/buddy";
 import { createNotificationRecord, deliverNotification } from "@/lib/notifications";
 import { canCreateSingleOfWeekRequest, syncSingleOfWeekState } from "@/lib/single-of-the-week";
+import { FEATURE_FLAG_KEYS, isFeatureEnabled } from "@/lib/feature-flags";
 
 function textValue(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -867,7 +868,8 @@ export async function sendChatRequestAction(formData: FormData) {
     throw new Error("Chat requests are not available for this member.");
   }
 
-  const activeFeature = await syncSingleOfWeekState();
+  const singleOfWeekEnabled = await isFeatureEnabled(FEATURE_FLAG_KEYS.singleOfWeek, user);
+  const activeFeature = singleOfWeekEnabled ? await syncSingleOfWeekState() : null;
   const targetFeaturedFeature = activeFeature?.featuredUserId === targetUserId && activeFeature.status === "ACTIVE" ? activeFeature : null;
 
   if (targetFeaturedFeature) {

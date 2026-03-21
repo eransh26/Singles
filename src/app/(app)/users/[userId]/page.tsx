@@ -13,6 +13,7 @@ import { requestVideoConsentAction, sendChatRequestAction, sendPhotoAccessReques
 import { hasMinimalProfileVisibility, isFullyVerifiedUser, requireUser } from "@/lib/auth/guards";
 import { prisma } from "@/lib/db/prisma";
 import { canCreateSingleOfWeekRequest, syncSingleOfWeekState } from "@/lib/single-of-the-week";
+import { FEATURE_FLAG_KEYS, isFeatureEnabled } from "@/lib/feature-flags";
 import { notFound } from "next/navigation";
 
 export const dynamic = "force-dynamic";
@@ -52,7 +53,8 @@ export default async function MemberProfilePage({
   const resolvedSearchParams = await searchParams;
   const pairKey = userPairKey(viewer.id, userId);
 
-  const activeFeaturedState = await syncSingleOfWeekState();
+  const singleOfWeekEnabled = await isFeatureEnabled(FEATURE_FLAG_KEYS.singleOfWeek, viewer);
+  const activeFeaturedState = singleOfWeekEnabled ? await syncSingleOfWeekState() : null;
 
   const [user, sharedGroups, existingConversation, existingChatRequest, existingPhotoRequest, existingVideoConsent, photoGrant, existingBlock] = await Promise.all([
     prisma.user.findUnique({

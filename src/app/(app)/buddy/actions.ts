@@ -28,6 +28,13 @@ import {
   refreshBuddyStateForUser,
 } from "@/lib/buddy";
 import { createNotificationRecord, deliverNotifications } from "@/lib/notifications";
+import { FEATURE_FLAG_KEYS, isFeatureEnabled } from "@/lib/feature-flags";
+
+async function assertBuddyFeatureEnabled(user: { id: string; role?: unknown }) {
+  if (!(await isFeatureEnabled(FEATURE_FLAG_KEYS.buddy, user as never))) {
+    throw new Error("Buddy is currently unavailable.");
+  }
+}
 
 function textValue(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -115,6 +122,7 @@ function revalidateBuddyPaths(conversationId?: string | null) {
 
 export async function updateBuddyProfileAction(formData: FormData) {
   const user = await requireActiveUser();
+  await assertBuddyFeatureEnabled(user);
   const isAvailable = formData.get("isBuddyAvailable") === "on";
   const intro = optionalTextValue(formData, "buddyIntro");
   const availabilityLevelValue = optionalTextValue(formData, "buddyAvailabilityLevel");
@@ -165,6 +173,7 @@ export async function updateBuddyProfileAction(formData: FormData) {
 
 export async function createBuddyRequestAction(formData: FormData) {
   const user = await requireActiveUser();
+  await assertBuddyFeatureEnabled(user);
   await ensureBuddyDomainsSeeded();
   const domainId = textValue(formData, "domainId");
   const message = optionalTextValue(formData, "message");
@@ -259,6 +268,7 @@ export async function createBuddyRequestAction(formData: FormData) {
 
 export async function reviewBuddyAssignmentAction(formData: FormData) {
   const user = await requireActiveUser();
+  await assertBuddyFeatureEnabled(user);
   const assignmentId = textValue(formData, "assignmentId");
   const decision = textValue(formData, "decision");
 
@@ -432,6 +442,7 @@ export async function reviewBuddyAssignmentAction(formData: FormData) {
 
 export async function extendBuddyRequestAction(formData: FormData) {
   const user = await requireActiveUser();
+  await assertBuddyFeatureEnabled(user);
   const buddyRequestId = textValue(formData, "buddyRequestId");
   const notificationIds: string[] = [];
 
@@ -499,6 +510,7 @@ export async function extendBuddyRequestAction(formData: FormData) {
 
 export async function cancelBuddyRequestAction(formData: FormData) {
   const user = await requireActiveUser();
+  await assertBuddyFeatureEnabled(user);
   const buddyRequestId = textValue(formData, "buddyRequestId");
 
   await prisma.$transaction(async (tx) => {
@@ -543,6 +555,7 @@ export async function cancelBuddyRequestAction(formData: FormData) {
 
 export async function requestBuddyVideoConsentAction(formData: FormData) {
   const user = await requireActiveUser();
+  await assertBuddyFeatureEnabled(user);
   const conversationId = textValue(formData, "conversationId");
 
   const conversation = await prisma.conversation.findUnique({
@@ -614,6 +627,7 @@ export async function requestBuddyVideoConsentAction(formData: FormData) {
 
 export async function reviewBuddyVideoConsentAction(formData: FormData) {
   const user = await requireActiveUser();
+  await assertBuddyFeatureEnabled(user);
   const consentId = textValue(formData, "consentId");
   const decision = textValue(formData, "decision");
 
@@ -676,6 +690,7 @@ export async function reviewBuddyVideoConsentAction(formData: FormData) {
 
 export async function revokeBuddyVideoConsentAction(formData: FormData) {
   const user = await requireActiveUser();
+  await assertBuddyFeatureEnabled(user);
   const conversationId = textValue(formData, "conversationId");
 
   const conversation = await prisma.conversation.findUnique({
@@ -722,6 +737,7 @@ export async function revokeBuddyVideoConsentAction(formData: FormData) {
 
 export async function endBuddyConversationAction(formData: FormData) {
   const user = await requireActiveUser();
+  await assertBuddyFeatureEnabled(user);
   const conversationId = textValue(formData, "conversationId");
 
   const conversation = await prisma.conversation.findUnique({
@@ -762,6 +778,7 @@ export async function endBuddyConversationAction(formData: FormData) {
 
 export async function blockBuddyUserAction(formData: FormData) {
   const user = await requireActiveUser();
+  await assertBuddyFeatureEnabled(user);
   const blockedUserId = textValue(formData, "blockedUserId");
   const sourcePath = optionalTextValue(formData, "sourcePath") ?? "/buddy";
   const reason = optionalTextValue(formData, "reason") ?? "Blocked from Buddy support";
@@ -795,6 +812,7 @@ export async function blockBuddyUserAction(formData: FormData) {
 
 export async function primeBuddyStateAction() {
   const user = await requireActiveUser();
+  await assertBuddyFeatureEnabled(user);
   await refreshBuddyStateForUser(user.id);
 }
 

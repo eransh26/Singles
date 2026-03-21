@@ -6,6 +6,7 @@ import { ChatRequestOriginType, ChatRequestPolicy, ChatRequestStatus, Conversati
 import { hasMinimalProfileVisibility, requireActiveUser } from "@/lib/auth/guards";
 import { prisma } from "@/lib/db/prisma";
 import { createNotificationWithDelivery } from "@/lib/notifications";
+import { FEATURE_FLAG_KEYS, isFeatureEnabled } from "@/lib/feature-flags";
 import {
   SINGLE_OF_WEEK_BIO_MAX,
   SINGLE_OF_WEEK_MAX_PHOTOS,
@@ -59,6 +60,12 @@ function validateLength(value: string | null, max: number, label: string) {
   }
 }
 
+async function assertSingleOfWeekEnabled(user: { id: string; role?: unknown }) {
+  if (!(await isFeatureEnabled(FEATURE_FLAG_KEYS.singleOfWeek, user as never))) {
+    throw new Error("Single of the Week is currently unavailable.");
+  }
+}
+
 function revalidateSinglePaths() {
   revalidatePath("/home");
   revalidatePath("/settings");
@@ -68,6 +75,7 @@ function revalidateSinglePaths() {
 
 export async function submitSingleOfWeekApplicationAction(formData: FormData) {
   const user = await requireActiveUser();
+  await assertSingleOfWeekEnabled(user);
   const eligibility = await canApplyForSingleOfWeek(prisma, user.id);
   if (!eligibility.allowed) {
     throw new Error(eligibility.reason ?? "You cannot apply for Single of the Week right now.");
@@ -147,6 +155,7 @@ export async function submitSingleOfWeekApplicationAction(formData: FormData) {
 
 export async function respondToSingleOfWeekSelectionAction(formData: FormData) {
   const user = await requireActiveUser();
+  await assertSingleOfWeekEnabled(user);
   const featureId = textValue(formData, "featureId");
   const decision = textValue(formData, "decision");
 
@@ -190,6 +199,7 @@ export async function respondToSingleOfWeekSelectionAction(formData: FormData) {
 
 export async function sendSingleOfWeekChatRequestAction(formData: FormData) {
   const user = await requireActiveUser();
+  await assertSingleOfWeekEnabled(user);
   const featureId = textValue(formData, "featureId");
   const sourcePath = optionalTextValue(formData, "sourcePath") ?? "/home";
 
@@ -287,6 +297,7 @@ export async function sendSingleOfWeekChatRequestAction(formData: FormData) {
 
 export async function withdrawSingleOfWeekApplicationAction(formData: FormData) {
   const user = await requireActiveUser();
+  await assertSingleOfWeekEnabled(user);
   const applicationId = textValue(formData, "applicationId");
 
   await prisma.singleOfWeekApplication.updateMany({

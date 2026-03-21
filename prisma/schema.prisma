@@ -273,6 +273,13 @@ enum ActivityContextType {
   BUDDY_CONVERSATION
 }
 
+enum FeatureFlagRolloutType {
+  GLOBAL
+  ADMIN_ONLY
+  USER_LIST
+  PERCENTAGE
+}
+
 enum ReportTargetType {
   USER
   POST
@@ -419,6 +426,19 @@ model UserActivityState {
 
   @@index([lastActiveAt])
   @@index([contextType, contextId])
+}
+
+model FeatureFlag {
+  id          String                 @id @default(cuid())
+  key         String                 @unique
+  enabled     Boolean                @default(false)
+  description String?
+  rolloutType FeatureFlagRolloutType @default(GLOBAL)
+  rolloutValue Json?
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+
+  @@index([enabled, rolloutType])
 }
 
 model Interest {

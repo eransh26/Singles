@@ -5,9 +5,23 @@ import { requireActiveUser } from "@/lib/auth/guards";
 import { prisma } from "@/lib/db/prisma";
 import { getBuddyDomainOptions, getBuddyRequestCooldownDeadline } from "@/lib/buddy";
 import { BuddyRequestForm } from "@/components/buddy-request-form";
+import { FeatureUnavailableCard } from "@/components/feature-unavailable-card";
+import { FEATURE_FLAG_KEYS, isFeatureEnabled } from "@/lib/feature-flags";
 
 export default async function NewBuddyRequestPage() {
   const viewer = await requireActiveUser();
+  const featureEnabled = await isFeatureEnabled(FEATURE_FLAG_KEYS.buddy, viewer);
+
+  if (!featureEnabled) {
+    return (
+      <FeatureUnavailableCard
+        eyebrow="Buddy"
+        title="Buddy is currently unavailable"
+        description="Buddy support is turned off right now. Your regular chats and settings are still available."
+        href="/home"
+      />
+    );
+  }
 
   const [existingOpenRequest, recentCancelledRequest, domainOptions] = await Promise.all([
     prisma.buddyRequest.findFirst({

@@ -6,16 +6,21 @@ import { MemberNav } from "./member-nav";
 import { MemberHeaderActions } from "./member-header-actions";
 import { MemberHeaderFrame } from "./member-header-frame";
 import { NotificationActivityClient } from "@/components/notification-activity-client";
+import { ensureDefaultFeatureFlags, FEATURE_FLAG_KEYS, getFeatureAvailability } from "@/lib/feature-flags";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const viewer = await requireMemberUser();
-  const counts = await getUnreadNotificationCounts(viewer.id);
+  await ensureDefaultFeatureFlags();
+  const [counts, features] = await Promise.all([
+    getUnreadNotificationCounts(viewer.id),
+    getFeatureAvailability([FEATURE_FLAG_KEYS.buddy, FEATURE_FLAG_KEYS.singleOfWeek], viewer),
+  ]);
 
   const navigation = [
     { href: "/home", label: "Home", icon: "home" as const },
     { href: "/groups", label: "Groups", icon: "groups" as const },
     { href: "/chats", label: "Chats", icon: "chats" as const, badgeCount: counts.chats },
-    { href: "/buddy", label: "Buddy", icon: "buddy" as const, badgeCount: counts.buddy },
+    ...(features[FEATURE_FLAG_KEYS.buddy] ? [{ href: "/buddy", label: "Buddy", icon: "buddy" as const, badgeCount: counts.buddy }] : []),
     { href: "/notifications", label: "Notifications", icon: "notifications" as const, badgeCount: counts.total },
     { href: "/me", label: "Profile", icon: "profile" as const },
   ];

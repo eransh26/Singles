@@ -13,6 +13,8 @@ import {
 } from "../actions";
 import { ConversationThread } from "../../chats/[conversationId]/conversation-thread";
 import { StartBuddyVideoCallButton } from "../start-buddy-video-call-button";
+import { FeatureUnavailableCard } from "@/components/feature-unavailable-card";
+import { FEATURE_FLAG_KEYS, isFeatureEnabled } from "@/lib/feature-flags";
 
 const savedMessages: Record<string, string> = {
   assigned: "Buddy connection created.",
@@ -30,6 +32,18 @@ export default async function BuddyConversationPage({
   searchParams?: Promise<{ saved?: string }>;
 }) {
   const viewer = await requireActiveUser();
+  const featureEnabled = await isFeatureEnabled(FEATURE_FLAG_KEYS.buddy, viewer);
+
+  if (!featureEnabled) {
+    return (
+      <FeatureUnavailableCard
+        eyebrow="Buddy"
+        title="Buddy is currently unavailable"
+        description="Buddy support is turned off right now. Your regular chats and settings are still available."
+        href="/home"
+      />
+    );
+  }
   const { conversationId } = await params;
   const resolvedSearchParams = await searchParams;
 

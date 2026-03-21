@@ -11,6 +11,7 @@ import { hasMinimalProfileVisibility, isFullyVerifiedUser, requireUser } from "@
 
 import { prisma } from "@/lib/db/prisma";
 import { canCreateSingleOfWeekRequest, isTrustedSingleOfWeekRequester, syncSingleOfWeekState } from "@/lib/single-of-the-week";
+import { ensureDefaultFeatureFlags, FEATURE_FLAG_KEYS, getFeatureAvailability } from "@/lib/feature-flags";
 
 import { getPromotedPlacement } from "@/lib/promotions";
 
@@ -37,6 +38,11 @@ export default async function HomePage() {
 
   const viewer = await requireUser();
 
+  await ensureDefaultFeatureFlags();
+  const features = await getFeatureAvailability([FEATURE_FLAG_KEYS.buddy, FEATURE_FLAG_KEYS.singleOfWeek], viewer);
+  const buddyEnabled = features[FEATURE_FLAG_KEYS.buddy];
+  const singleOfWeekEnabled = features[FEATURE_FLAG_KEYS.singleOfWeek];
+
   const viewerIsVerified = isFullyVerifiedUser(viewer);
 
 
@@ -57,7 +63,7 @@ export default async function HomePage() {
 
 
 
-  const featuredState = await syncSingleOfWeekState();
+  const featuredState = singleOfWeekEnabled ? await syncSingleOfWeekState() : null;
 
   const [posts, recommendedGroups, promotedPlacement, activeBuddyRequest] = await Promise.all([
 
@@ -199,19 +205,21 @@ export default async function HomePage() {
 
     getPromotedPlacement(PlacementType.HOME_FEED_CARD),
 
-    prisma.buddyRequest.findFirst({
+    buddyEnabled
+      ? prisma.buddyRequest.findFirst({
 
-      where: {
+          where: {
 
-        seekerId: viewer.id,
+            seekerId: viewer.id,
 
-        status: { in: [BuddyRequestStatus.PENDING, BuddyRequestStatus.AWAITING_SEEKER_DECISION, BuddyRequestStatus.ASSIGNED] },
+            status: { in: [BuddyRequestStatus.PENDING, BuddyRequestStatus.AWAITING_SEEKER_DECISION, BuddyRequestStatus.ASSIGNED] },
 
-      },
+          },
 
-      select: { id: true, status: true },
+          select: { id: true, status: true },
 
-    }),
+        })
+      : Promise.resolve(null),
 
   ]);
 
@@ -353,7 +361,7 @@ export default async function HomePage() {
 
         <div className="space-y-4">
 
-          {featuredMember ? (
+          {singleOfWeekEnabled && featuredMember ? (
             <section className="lux-card overflow-hidden p-4 shadow-[0_22px_44px_rgba(43,43,43,0.08)] md:p-5">
               <SingleOfWeekViewBeacon featureId={featuredMember.id} />
               <div className="grid gap-5 md:grid-cols-[180px_minmax(0,1fr)] md:items-center">
@@ -754,6 +762,7 @@ export default async function HomePage() {
 
 
 
+{buddyEnabled ? (
           <section className="lux-card p-4">
 
             <div className="flex items-center justify-between gap-3">
@@ -779,9 +788,11 @@ export default async function HomePage() {
             {activeBuddyRequest ? <p className="mt-3 text-xs uppercase tracking-[0.16em] text-[color:var(--lux-text-muted)]">Current request {activeBuddyRequest.status}</p> : null}
 
           </section>
+          ) : null}
 
 
 
+          {singleOfWeekEnabled ? (
           <section className="lux-card p-4">
 
             <div className="flex items-center justify-between gap-3">
@@ -805,6 +816,7 @@ export default async function HomePage() {
             <p className="mt-3 text-sm leading-6 text-[color:var(--lux-text-secondary)]">Use a dedicated featured-profile snapshot to apply for the Sunday spotlight.</p>
 
           </section>
+          ) : null}
 
 
 

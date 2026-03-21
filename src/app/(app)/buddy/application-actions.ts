@@ -23,6 +23,13 @@ import {
   syncBuddyApplicationDomainStatus,
 } from "@/lib/buddy";
 import { createNotificationRecord, deliverNotifications } from "@/lib/notifications";
+import { FEATURE_FLAG_KEYS, isFeatureEnabled } from "@/lib/feature-flags";
+
+async function assertBuddyFeatureEnabled(user: { id: string; role?: unknown }) {
+  if (!(await isFeatureEnabled(FEATURE_FLAG_KEYS.buddy, user as never))) {
+    throw new Error("Buddy is currently unavailable.");
+  }
+}
 
 function textValue(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -46,6 +53,7 @@ async function createNotification(tx: Prisma.TransactionClient, userId: string, 
 
 export async function createBuddyApplicationAction(formData: FormData) {
   const user = await requireActiveUser();
+  await assertBuddyFeatureEnabled(user);
   await ensureBuddyDomainsSeeded();
 
   if (!isBuddyVerifiedUser(user)) {
@@ -160,6 +168,7 @@ export async function createBuddyApplicationAction(formData: FormData) {
 
 export async function submitBuddyRecommendationAction(formData: FormData) {
   const user = await requireActiveUser();
+  await assertBuddyFeatureEnabled(user);
   const recommendationId = textValue(formData, "recommendationId");
   const decision = textValue(formData, "decision");
   const note = textValue(formData, "note");
@@ -211,6 +220,7 @@ export async function submitBuddyRecommendationAction(formData: FormData) {
 
 export async function replaceBuddyRecommenderAction(formData: FormData) {
   const user = await requireActiveUser();
+  await assertBuddyFeatureEnabled(user);
   const applicationDomainId = textValue(formData, "applicationDomainId");
   const recommenderUserId = textValue(formData, "recommenderUserId");
 
@@ -273,6 +283,7 @@ export async function replaceBuddyRecommenderAction(formData: FormData) {
 
 export async function cancelBuddyApplicationAction(formData: FormData) {
   const user = await requireActiveUser();
+  await assertBuddyFeatureEnabled(user);
   const applicationId = textValue(formData, "applicationId");
 
   await prisma.$transaction(async (tx) => {

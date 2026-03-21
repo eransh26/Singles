@@ -3,7 +3,9 @@ import { SingleOfWeekApplicationStatus, SingleOfWeekFeatureStatus } from "@prism
 import { requireUser } from "@/lib/auth/guards";
 import { prisma } from "@/lib/db/prisma";
 import { canApplyForSingleOfWeek, getEditWindowDeadline, syncSingleOfWeekState } from "@/lib/single-of-the-week";
+import { FEATURE_FLAG_KEYS, isFeatureEnabled } from "@/lib/feature-flags";
 import { RelativeTime } from "@/components/relative-time";
+import { FeatureUnavailableCard } from "@/components/feature-unavailable-card";
 import { SingleOfWeekApplicationForm } from "@/components/single-of-week-application-form";
 import {
   respondToSingleOfWeekSelectionAction,
@@ -21,6 +23,20 @@ const saveMessages: Record<string, string> = {
 export default async function SingleOfWeekPage({ searchParams }: { searchParams?: Promise<{ saved?: string }> }) {
   const user = await requireUser();
   const resolvedSearchParams = await searchParams;
+  const featureEnabled = await isFeatureEnabled(FEATURE_FLAG_KEYS.singleOfWeek, user);
+
+  if (!featureEnabled) {
+    return (
+      <FeatureUnavailableCard
+        eyebrow="Single of the Week"
+        title="Single of the Week is currently unavailable"
+        description="This weekly feature is turned off right now. The rest of your profile and chat settings are still available."
+        href="/settings"
+        actionLabel="Open settings"
+      />
+    );
+  }
+
   await syncSingleOfWeekState();
 
   const [eligibility, application, activeFeature] = await Promise.all([

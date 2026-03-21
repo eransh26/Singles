@@ -3,6 +3,7 @@ import { AccountStatus, ConsentStatus, ConversationKind, UserRole } from "@prism
 import { AccessToken } from "livekit-server-sdk";
 import { getCurrentUser } from "@/lib/auth/guards";
 import { prisma } from "@/lib/db/prisma";
+import { FEATURE_FLAG_KEYS, isFeatureEnabled } from "@/lib/feature-flags";
 import { createOrJoinVideoCallRecord, getConversationRoomName, getVideoConversationById, isAuthorizedVideoParticipant } from "@/lib/livekit";
 
 export async function POST(request: Request) {
@@ -10,6 +11,10 @@ export async function POST(request: Request) {
 
   if (!user) {
     return NextResponse.json({ error: "Authentication required." }, { status: 401 });
+  }
+
+  if (!(await isFeatureEnabled(FEATURE_FLAG_KEYS.buddy, user))) {
+    return NextResponse.json({ error: "Feature unavailable." }, { status: 404 });
   }
 
   if (user.accountStatus !== AccountStatus.ACTIVE || user.role === UserRole.ADMIN || user.role === UserRole.SUPER_ADMIN) {
