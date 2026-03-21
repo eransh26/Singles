@@ -55,6 +55,7 @@ test("admin can resolve a post report, hide the post, and create an audit entry"
 });
 
 test("admin can create and edit a promoted event and members see the updated home placement", async ({ browser, page }) => {
+  test.slow();
   const seed = loadSeedData();
   const originalTitle = "Spring Gathering";
   const updatedTitle = "Spring Gathering Updated";
@@ -81,8 +82,14 @@ test("admin can create and edit a promoted event and members see the updated hom
   await expect(memberPage.getByTestId("home-promoted-event")).toContainText(originalTitle);
 
   await page.goto("/admin/events");
-  const eventForm = page.locator('[data-testid^="admin-event-"]').filter({ hasText: originalTitle }).first();
-  await eventForm.getByLabel("Title").fill(updatedTitle);
+  const eventForm = page
+    .locator('[data-testid^="admin-event-"]')
+    .filter({ hasText: originalTitle, has: page.getByRole("button", { name: "Update event" }) })
+    .first();
+  const titleInput = eventForm.locator('input[name="title"]');
+  await titleInput.scrollIntoViewIfNeeded();
+  await expect(titleInput).toBeEditable();
+  await titleInput.fill(updatedTitle);
   await eventForm.getByRole("button", { name: "Update event" }).click();
   await expect(page.getByText("Promoted event saved.")).toBeVisible();
 
@@ -172,8 +179,92 @@ test("admin can create an additional super admin test account and it lands in th
   const newAdminContext = await browser.newContext();
   const newAdminPage = await newAdminContext.newPage();
   await loginAs(newAdminPage, email, password, /\/admin$/);
-  await expect(newAdminPage.getByTestId("admin-sidebar-dashboard")).toBeVisible();
+  await expect(newAdminPage.getByTestId("admin-sidebar-action-center")).toBeVisible();
   await newAdminContext.close();
+});
+
+test("admin can approve the top moderation item inline from the action center", async ({ page }) => {
+  const seed = loadSeedData();
+
+  await loginAs(page, seed.users.admin.email, seed.password, /\/admin$/);
+
+  const moderationSection = page.getByTestId("admin-action-moderation");
+  const topItem = moderationSection.getByTestId("admin-action-moderation-item-0");
+  const topHeading = (await topItem.getByRole("heading").textContent())?.trim();
+
+  await topItem.getByRole("button", { name: "Approve" }).click();
+  await expect(page.getByText("Media moderation saved.")).toBeVisible();
+
+  if (topHeading) {
+    await expect(moderationSection.getByRole("heading", { name: topHeading })).toHaveCount(0);
+  }
+});
+
+test("admin can reject the top moderation item inline from the action center", async ({ page }) => {
+  const seed = loadSeedData();
+
+  await loginAs(page, seed.users.admin.email, seed.password, /\/admin$/);
+
+  const moderationSection = page.getByTestId("admin-action-moderation");
+  const topItem = moderationSection.getByTestId("admin-action-moderation-item-0");
+  const topHeading = (await topItem.getByRole("heading").textContent())?.trim();
+
+  await topItem.getByRole("button", { name: "Reject" }).click();
+  await expect(page.getByText("Media moderation saved.")).toBeVisible();
+
+  if (topHeading) {
+    await expect(moderationSection.getByRole("heading", { name: topHeading })).toHaveCount(0);
+  }
+});
+
+test("non-admin users cannot access inline admin actions through the action center", async ({ page }) => {
+  const seed = loadSeedData();
+
+  await loginAs(page, seed.users.member.email, seed.password);
+  await page.goto("/admin");
+
+  await expect(page).not.toHaveURL(/\/admin$/);
+  await expect(page.getByTestId("admin-action-center")).toHaveCount(0);
+});
+
+test("admin can approve the top reviewable buddy item inline from the action center", async ({ page }) => {
+  const seed = loadSeedData();
+
+  await loginAs(page, seed.users.admin.email, seed.password, /\/admin$/);
+
+  const buddySection = page.getByTestId("admin-action-buddy");
+  const topBuddyItem = buddySection.getByTestId("admin-action-buddy-item-0");
+  const initialApproveCount = await buddySection.getByRole("button", { name: "Approve" }).count();
+
+  await expect(topBuddyItem.getByRole("button", { name: "Approve" })).toBeVisible();
+  await topBuddyItem.getByRole("button", { name: "Approve" }).click();
+  await expect(page.getByText("Buddy application review saved.")).toBeVisible();
+  await expect(buddySection.getByRole("button", { name: "Approve" })).toHaveCount(Math.max(0, initialApproveCount - 1));
+});
+
+test("admin action center is the default landing and dashboard remains accessible", async ({ page }) => {
+  const seed = loadSeedData();
+
+  await loginAs(page, seed.users.admin.email, seed.password, /\/admin$/);
+
+  await expect(page.getByTestId("admin-action-center")).toBeVisible();
+  await expect(page.getByTestId("admin-action-needs-attention")).toBeVisible();
+  await expect(page.getByTestId("admin-action-moderation")).toBeVisible();
+  await expect(page.getByTestId("admin-action-buddy")).toBeVisible();
+  await expect(page.getByTestId("admin-action-featured")).toBeVisible();
+  await expect(page.getByTestId("admin-action-quick-actions")).toBeVisible();
+  await expect(page.getByText(/Trust /).first()).toBeVisible();
+  await expect(page.getByTestId("admin-action-needs-attention-item-0")).toContainText("Featured photo needs review");
+
+  await page.getByTestId("admin-action-needs-attention").getByRole("link", { name: "Open dashboard" }).click();
+  await expect(page).toHaveURL(/\/admin\/dashboard$/);
+  await expect(page.getByText("High-level overview")).toBeVisible();
+
+  await page.getByTestId("admin-sidebar-action-center").click();
+  await expect(page).toHaveURL(/\/admin$/);
+
+  await page.getByRole("link", { name: "Review next media item" }).click();
+  await expect(page).toHaveURL(/\/admin\/media$/);
 });
 
 

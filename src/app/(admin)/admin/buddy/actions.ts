@@ -30,8 +30,29 @@ function revalidateBuddyAdmin() {
   revalidatePath("/buddy");
 }
 
+function redirectBuddyAdmin(path: "domain" | "application" | "override", returnTo?: string) {
+  if (returnTo === "action-center") {
+    if (path === "application") {
+      redirect("/admin?saved=buddy-application-review");
+    }
+    if (path === "override") {
+      redirect("/admin?saved=buddy-override");
+    }
+    redirect("/admin?saved=buddy-domain");
+  }
+
+  if (path === "application") {
+    redirect("/admin/buddy?saved=buddy-application-review");
+  }
+  if (path === "override") {
+    redirect("/admin/buddy?saved=buddy-override");
+  }
+  redirect("/admin/buddy?saved=buddy-domain");
+}
+
 export async function saveBuddyDomainAdminAction(formData: FormData) {
   const admin = await requireAdmin();
+  const returnTo = optionalTextValue(formData, "returnTo");
   await ensureBuddyDomainsSeeded();
   const buddyDomainId = optionalTextValue(formData, "buddyDomainId");
   const name = textValue(formData, "name");
@@ -71,13 +92,14 @@ export async function saveBuddyDomainAdminAction(formData: FormData) {
   });
 
   revalidateBuddyAdmin();
-  redirect("/admin/buddy?saved=buddy-domain");
+  redirectBuddyAdmin("domain", returnTo ?? undefined);
 }
 
 export async function reviewBuddyApplicationDomainAdminAction(formData: FormData) {
   const admin = await requireAdmin();
   const applicationDomainId = textValue(formData, "applicationDomainId");
   const decision = textValue(formData, "decision");
+  const returnTo = optionalTextValue(formData, "returnTo");
 
   await prisma.$transaction(async (tx) => {
     if (decision === "approve") {
@@ -97,13 +119,14 @@ export async function reviewBuddyApplicationDomainAdminAction(formData: FormData
   });
 
   revalidateBuddyAdmin();
-  redirect("/admin/buddy?saved=buddy-application-review");
+  redirectBuddyAdmin("application", returnTo ?? undefined);
 }
 
 export async function grantBuddyReapplicationOverrideAdminAction(formData: FormData) {
   const admin = await requireAdmin();
   const userId = textValue(formData, "userId");
   const domainId = textValue(formData, "domainId");
+  const returnTo = optionalTextValue(formData, "returnTo");
 
   await prisma.$transaction(async (tx) => {
     await tx.buddyReapplicationOverride.upsert({
@@ -124,5 +147,5 @@ export async function grantBuddyReapplicationOverrideAdminAction(formData: FormD
   });
 
   revalidateBuddyAdmin();
-  redirect("/admin/buddy?saved=buddy-override");
+  redirectBuddyAdmin("override", returnTo ?? undefined);
 }

@@ -149,7 +149,7 @@ export async function getAdminDashboardData() {
   const fourteenDaysAgo = new Date(now);
   fourteenDaysAgo.setDate(now.getDate() - 14);
 
-  const [newUsers, previousNewUsers, memberUsers, adminUsers, recentPosts, pendingVerifications, openReports, activeEvents] = await Promise.all([
+  const [newUsers, previousNewUsers, memberUsers, adminUsers, recentPosts, pendingVerifications, openReports, activeEvents, pendingFeaturedApplications] = await Promise.all([
     prisma.user.count({ where: { createdAt: { gte: sevenDaysAgo } } }),
     prisma.user.count({ where: { createdAt: { gte: fourteenDaysAgo, lt: sevenDaysAgo } } }),
     prisma.user.count({ where: { role: UserRole.USER } }),
@@ -158,6 +158,7 @@ export async function getAdminDashboardData() {
     prisma.verificationRequest.count({ where: { status: VerificationStatus.PENDING } }),
     prisma.report.count({ where: { status: { in: ["OPEN", "IN_REVIEW"] } } }),
     prisma.eventPromotion.count({ where: { status: EventPromotionStatus.ACTIVE } }),
+    prisma.singleOfWeekApplication.count({ where: { status: { in: ["SUBMITTED", "SHORTLISTED", "SELECTED"] } } }),
   ]);
 
   const growthLabel = previousNewUsers === 0 ? `${newUsers} this week` : `${newUsers - previousNewUsers >= 0 ? "+" : ""}${newUsers - previousNewUsers} vs last week`;
@@ -165,6 +166,9 @@ export async function getAdminDashboardData() {
   return {
     memberUsers,
     adminUsers,
+    sevenDaysAgo,
+    openReports,
+    pendingFeaturedApplications,
     cards: [
       { label: "New users", value: String(newUsers), helper: "Joined in the last 7 days" },
       { label: "User growth", value: growthLabel, helper: `${memberUsers + adminUsers} total accounts` },

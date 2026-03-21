@@ -11,7 +11,10 @@ function textValue(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
 }
 
-function redirectBack(type: string, status: string, priority: string, stale: string) {
+function redirectBack(type: string, status: string, priority: string, stale: string, returnTo?: string) {
+  if (returnTo === "action-center") {
+    redirect("/admin?saved=media-moderation");
+  }
   redirect(`/admin/media?saved=media-moderation&type=${encodeURIComponent(type)}&status=${encodeURIComponent(status)}&priority=${encodeURIComponent(priority)}&stale=${encodeURIComponent(stale)}`);
 }
 
@@ -50,6 +53,7 @@ function getReturnFilters(formData: FormData) {
     currentStatus: textValue(formData, "currentStatus") || "pending",
     currentPriority: textValue(formData, "currentPriority") || "all",
     currentStale: textValue(formData, "currentStale") || "all",
+    returnTo: textValue(formData, "returnTo"),
   };
 }
 
@@ -58,7 +62,7 @@ export async function reviewProfileImageAssetAdminAction(formData: FormData) {
   const assetId = textValue(formData, "assetId");
   const decision = normalizeDecision(textValue(formData, "decision"));
   const moderationNote = textValue(formData, "moderationNote") || null;
-  const { currentType, currentStatus, currentPriority, currentStale } = getReturnFilters(formData);
+  const { currentType, currentStatus, currentPriority, currentStale, returnTo } = getReturnFilters(formData);
 
   validateModerationNote(moderationNote);
 
@@ -101,7 +105,7 @@ export async function reviewProfileImageAssetAdminAction(formData: FormData) {
   });
 
   revalidateMediaPaths(asset.userId);
-  redirectBack(currentType, currentStatus, currentPriority, currentStale);
+  redirectBack(currentType, currentStatus, currentPriority, currentStale, returnTo);
 }
 
 export async function reviewSingleOfWeekPhotoAdminAction(formData: FormData) {
@@ -109,7 +113,7 @@ export async function reviewSingleOfWeekPhotoAdminAction(formData: FormData) {
   const photoId = textValue(formData, "photoId");
   const decision = normalizeDecision(textValue(formData, "decision"));
   const moderationNote = textValue(formData, "moderationNote") || null;
-  const { currentType, currentStatus, currentPriority, currentStale } = getReturnFilters(formData);
+  const { currentType, currentStatus, currentPriority, currentStale, returnTo } = getReturnFilters(formData);
 
   validateModerationNote(moderationNote);
 
@@ -163,7 +167,7 @@ export async function reviewSingleOfWeekPhotoAdminAction(formData: FormData) {
   });
 
   revalidateMediaPaths(photo.application.applicantUserId);
-  redirectBack(currentType, currentStatus, currentPriority, currentStale);
+  redirectBack(currentType, currentStatus, currentPriority, currentStale, returnTo);
 }
 
 export async function bulkReviewMediaAdminAction(formData: FormData) {
@@ -174,7 +178,7 @@ export async function bulkReviewMediaAdminAction(formData: FormData) {
     .getAll("selectedItems")
     .map((value) => String(value).trim())
     .filter(Boolean);
-  const { currentType, currentStatus, currentPriority, currentStale } = getReturnFilters(formData);
+  const { currentType, currentStatus, currentPriority, currentStale, returnTo } = getReturnFilters(formData);
 
   validateModerationNote(moderationNote);
 
@@ -182,7 +186,7 @@ export async function bulkReviewMediaAdminAction(formData: FormData) {
   const photoIds = selectedItems.filter((value) => value.startsWith("single-of-week:")).map((value) => value.slice(15));
 
   if (profileIds.length === 0 && photoIds.length === 0) {
-    redirectBack(currentType, currentStatus, currentPriority, currentStale);
+    redirectBack(currentType, currentStatus, currentPriority, currentStale, returnTo);
   }
 
   const revalidatedUserIds = new Set<string>();
@@ -267,6 +271,6 @@ export async function bulkReviewMediaAdminAction(formData: FormData) {
 
   revalidatedUserIds.forEach((userId) => revalidateMediaPaths(userId));
   revalidateMediaPaths();
-  redirectBack(currentType, currentStatus, currentPriority, currentStale);
+  redirectBack(currentType, currentStatus, currentPriority, currentStale, returnTo);
 }
 

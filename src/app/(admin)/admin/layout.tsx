@@ -8,7 +8,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const counts = await getAdminSidebarCounts();
 
   const adminNavigation = [
-    { href: "/admin", label: "Dashboard" },
+    { href: "/admin", label: "Action Center" },
+    { href: "/admin/dashboard", label: "Dashboard" },
     { href: "/admin/users", label: "Users", badge: counts.memberUserCount },
     { href: "/admin/operators", label: "Admin Users", badge: counts.adminUserCount },
     { href: "/admin/verifications", label: "Verifications", badge: counts.pendingVerificationCount },
@@ -31,7 +32,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
                 <p className="lux-overline text-[color:var(--lux-accent-strong)]">Evyta operational shell</p>
                 <h1 className="mt-2 text-[2.1rem] font-semibold tracking-tight text-[color:var(--lux-text)]">Admin</h1>
                 <p className="mt-2 text-sm leading-6 text-[color:var(--lux-text-secondary)]">
-                  A discreet control console for moderation, verification, reporting, and launch operations.
+                  An action-first control center for moderation, trust, verification, featured operations, and launch work.
                 </p>
               </div>
               <div className="admin-card">
