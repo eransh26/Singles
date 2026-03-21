@@ -14,6 +14,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { href: "/admin/verifications", label: "Verifications", badge: counts.pendingVerificationCount },
     { href: "/admin/reports", label: "Reports", badge: counts.openReportCount },
     { href: "/admin/buddy", label: "Buddy", badge: counts.buddyPendingCount },
+    { href: "/admin/single-of-the-week", label: "Single of the Week", badge: counts.singleOfWeekPendingCount },
     { href: "/admin/events", label: "Events", badge: counts.activeEventCount },
     { href: "/admin/audit-logs", label: "Audit Logs", badge: counts.auditLogCount },
   ];

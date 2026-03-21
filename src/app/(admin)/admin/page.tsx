@@ -36,6 +36,7 @@ export default async function AdminDashboardPage({
         <AdminQuickLink href="/admin/verifications" label="Verifications" hint="Review pending verification requests and approve or reject them." />
         <AdminQuickLink href="/admin/reports" label="Reports" hint="Resolve open reports and apply the V1 moderation actions." />
         <AdminQuickLink href="/admin/buddy" label="Buddy" hint="Review Buddy applications, recommendation progress, and domain operations." />
+        <AdminQuickLink href="/admin/single-of-the-week" label="Single of the Week" hint="Shortlist, select, and manage weekly featured members and request caps." />
         <AdminQuickLink href="/admin/events" label="Events" hint="Create and update promoted events and placements." />
         <AdminQuickLink href="/admin/audit-logs" label="Audit Logs" hint="Review sensitive admin actions and keep the audit trail visible." />
       </section>

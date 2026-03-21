@@ -40,6 +40,9 @@ const saveMessages: Record<string, string> = {
   "buddy-application-active": "You already have an active Buddy application.",
   "buddy-recommender-replaced": "Replacement recommender requested.",
   notifications: "Notification preferences saved.",
+  application: "Single of the Week application saved.",
+  response: "Single of the Week response saved.",
+  withdrawn: "Single of the Week application withdrawn.",
 };
 
 function formatDateTime(value: Date) {
@@ -305,6 +308,17 @@ export default async function SettingsPage({
             </div>
           </form>
         </section>
+      </section>
+
+      <section className="lux-card" id="single-of-week-link">
+        <div className="border-b lux-divider pb-5">
+          <p className="lux-overline">Single of the Week</p>
+          <h2 className="mt-3 text-[1.9rem] font-semibold tracking-tight text-[color:var(--lux-text)]">Weekly featured member application</h2>
+        </div>
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-4">
+          <p className="max-w-2xl text-sm leading-6 text-[color:var(--lux-text-secondary)]">Apply with a dedicated featured-profile snapshot that stays separate from your main profile and goes through manual review before it appears on the home screen.</p>
+          <Link className="lux-button-secondary" href="/single-of-the-week">Open application</Link>
+        </div>
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">

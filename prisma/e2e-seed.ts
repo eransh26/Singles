@@ -64,6 +64,7 @@ const prisma = new PrismaClient();
 const PASSWORD = "12345678a";
 const TEST_USER_PASSWORD = "Test1234!";
 const VERIFIED_AT = new Date("2026-01-15T10:00:00.000Z");
+const IMAGE_DATA_URL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO7Z0nQAAAAASUVORK5CYII=";
 
 const DEFAULT_BUDDY_DOMAINS = [
   { slug: "divorce-support", name: "Divorce support" },
@@ -152,6 +153,12 @@ async function main() {
   const testUserPasswordHash = await bcrypt.hash(TEST_USER_PASSWORD, 10);
 
   await prisma.notificationEmailFallback.deleteMany();
+  await prisma.singleOfWeekView.deleteMany();
+  await prisma.singleOfWeekFeatureLimitOverride.deleteMany();
+  await prisma.singleOfWeekFeature.deleteMany();
+  await prisma.singleOfWeekApplicationPhoto.deleteMany();
+  await prisma.singleOfWeekApplication.deleteMany();
+  await prisma.singleOfWeekConfig.deleteMany();
   await prisma.webPushSubscription.deleteMany();
   await prisma.notification.deleteMany();
   await prisma.report.deleteMany();
@@ -237,6 +244,14 @@ async function main() {
     displayName: "Member Uno",
     passwordHash,
     phone: "+15550000003",
+  });
+
+  const reportedMember = await createUser({
+    email: "reported-member@example.com",
+    displayName: "Reported Rhea",
+    passwordHash,
+    phone: "+15550000031",
+    verifiedPrerequisites: true,
   });
 
   const verified = await createUser({
@@ -628,6 +643,112 @@ async function main() {
     select: { id: true },
   });
 
+  await prisma.singleOfWeekConfig.create({
+    data: {
+      id: "default",
+      targetDailyCap: 10,
+      targetWeeklyCap: 20,
+      targetMonthlyCap: 50,
+      requesterDailyCap: 3,
+      requesterWeeklyCap: 6,
+      requesterMonthlyCap: 12,
+    },
+  });
+
+  const featuredApplication = await prisma.singleOfWeekApplication.create({
+    data: {
+      applicantUserId: testMale2.id,
+      bio: "A grounded featured snapshot for the weekly spotlight.",
+      interests: "Wellness, Culture",
+      hobbies: "Travel, reading",
+      relationshipIntent: "Intentional dating",
+      preferredLocation: "Tel Aviv",
+      consentedAt: new Date("2026-03-10T10:00:00.000Z"),
+      status: "SELECTED",
+      submittedAt: new Date("2026-03-10T10:00:00.000Z"),
+      selectedAt: new Date("2026-03-14T10:00:00.000Z"),
+      photos: {
+        create: [
+          { storageKey: IMAGE_DATA_URL, sortOrder: 0 },
+          { storageKey: IMAGE_DATA_URL, sortOrder: 1 },
+        ],
+      },
+    },
+    select: { id: true },
+  });
+
+  const currentFeature = await prisma.singleOfWeekFeature.create({
+    data: {
+      applicationId: featuredApplication.id,
+      featuredUserId: testMale2.id,
+      weekOf: new Date("2026-03-15T00:00:00.000Z"),
+      publishAt: new Date("2026-03-15T00:00:00.000Z"),
+      notifyAt: new Date("2026-03-13T00:00:00.000Z"),
+      status: "ACTIVE",
+      selectedByAdminId: admin.id,
+      notifiedAt: new Date("2026-03-13T00:00:00.000Z"),
+      acceptedAt: new Date("2026-03-13T10:00:00.000Z"),
+    },
+    select: { id: true },
+  });
+
+  const upcomingLockedApplication = await prisma.singleOfWeekApplication.create({
+    data: {
+      applicantUserId: owner.id,
+      bio: "An upcoming featured profile that is about to lock.",
+      interests: "Events",
+      hobbies: "Long walks",
+      relationshipIntent: "Serious connection",
+      preferredLocation: "Jerusalem",
+      consentedAt: new Date("2026-03-17T10:00:00.000Z"),
+      status: "SELECTED",
+      submittedAt: new Date("2026-03-17T10:00:00.000Z"),
+      selectedAt: new Date("2026-03-19T10:00:00.000Z"),
+      photos: { create: [{ storageKey: IMAGE_DATA_URL, sortOrder: 0 }] },
+    },
+    select: { id: true },
+  });
+
+  await prisma.singleOfWeekFeature.create({
+    data: {
+      applicationId: upcomingLockedApplication.id,
+      featuredUserId: owner.id,
+      weekOf: new Date("2026-03-20T00:00:00.000Z"),
+      publishAt: new Date("2026-03-20T00:00:00.000Z"),
+      notifyAt: new Date("2026-03-18T00:00:00.000Z"),
+      status: "AWAITING_RESPONSE",
+      selectedByAdminId: admin.id,
+      notifiedAt: new Date("2026-03-20T00:00:00.000Z"),
+    },
+  });
+
+  const pendingFeaturedApplication = await prisma.singleOfWeekApplication.create({
+    data: {
+      applicantUserId: verified.id,
+      bio: "I am ready to be considered for a future Sunday spotlight.",
+      interests: "Travel",
+      hobbies: "Pilates",
+      relationshipIntent: "Slow and intentional",
+      preferredLocation: "Haifa",
+      consentedAt: new Date("2026-03-18T10:00:00.000Z"),
+      status: "SUBMITTED",
+      submittedAt: new Date("2026-03-18T10:00:00.000Z"),
+      photos: { create: [{ storageKey: IMAGE_DATA_URL, sortOrder: 0 }] },
+    },
+    select: { id: true },
+  });
+
+  await prisma.report.create({
+    data: {
+      filedByUserId: owner.id,
+      targetType: ReportTargetType.USER,
+      targetUserId: reportedMember.id,
+      reasonCode: "SAFETY",
+      details: "Seeded user report for Single of the Week eligibility coverage.",
+      status: ReportStatus.OPEN,
+    },
+  });
+
   const approvedConversation = await prisma.conversation.create({
     data: {
       userOneId: owner.id,
@@ -670,6 +791,11 @@ async function main() {
     },
     conversations: {
       approvedConversation,
+    },
+    singleOfWeek: {
+      currentFeature,
+      pendingFeaturedApplication,
+      reportedMember,
     },
     buddy: {
       expiringBuddyRequest,

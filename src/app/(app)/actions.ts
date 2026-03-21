@@ -31,6 +31,7 @@ import { prisma } from "@/lib/db/prisma";
 import { invalidatePairInteractionsByBlock, revokeChatConversationByPair, revokeVideoConsentForPair, userPairKey } from "@/lib/interaction-consent";
 import { invalidateBuddyByBlock } from "@/lib/buddy";
 import { createNotificationRecord, deliverNotification } from "@/lib/notifications";
+import { canCreateSingleOfWeekRequest, syncSingleOfWeekState } from "@/lib/single-of-the-week";
 
 function textValue(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -866,12 +867,23 @@ export async function sendChatRequestAction(formData: FormData) {
     throw new Error("Chat requests are not available for this member.");
   }
 
+  const activeFeature = await syncSingleOfWeekState();
+  const targetFeaturedFeature = activeFeature?.featuredUserId === targetUserId && activeFeature.status === "ACTIVE" ? activeFeature : null;
+
+  if (targetFeaturedFeature) {
+    const singleOfWeekCapState = await canCreateSingleOfWeekRequest(targetFeaturedFeature.id, user.id);
+    if (singleOfWeekCapState.blocked) {
+      throw new Error(singleOfWeekCapState.reason ?? "This featured member has reached the maximum number of requests.");
+    }
+  }
+
   await prisma.chatRequest.create({
     data: {
       fromUserId: user.id,
       toUserId: targetUserId,
       pairKey,
       pendingKey: pairKey,
+      singleOfWeekFeatureId: targetFeaturedFeature?.id ?? null,
     },
   });
 

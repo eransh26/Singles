@@ -12,6 +12,7 @@ import {
 import { requestVideoConsentAction, sendChatRequestAction, sendPhotoAccessRequestAction } from "../../actions";
 import { hasMinimalProfileVisibility, isFullyVerifiedUser, requireUser } from "@/lib/auth/guards";
 import { prisma } from "@/lib/db/prisma";
+import { canCreateSingleOfWeekRequest, syncSingleOfWeekState } from "@/lib/single-of-the-week";
 import { notFound } from "next/navigation";
 
 export const dynamic = "force-dynamic";
@@ -50,6 +51,8 @@ export default async function MemberProfilePage({
   const { userId } = await params;
   const resolvedSearchParams = await searchParams;
   const pairKey = userPairKey(viewer.id, userId);
+
+  const activeFeaturedState = await syncSingleOfWeekState();
 
   const [user, sharedGroups, existingConversation, existingChatRequest, existingPhotoRequest, existingVideoConsent, photoGrant, existingBlock] = await Promise.all([
     prisma.user.findUnique({
@@ -171,6 +174,8 @@ export default async function MemberProfilePage({
   const hasApprovedVideoConsent = existingVideoConsent?.status === ConsentStatus.APPROVED;
   const hasPendingPhotoRequest = existingPhotoRequest?.status === PhotoAccessRequestStatus.PENDING && existingPhotoRequest.requesterUserId === viewer.id;
   const isBlocked = Boolean(existingBlock);
+  const activeFeatureForProfile = activeFeaturedState?.status === "ACTIVE" && activeFeaturedState.featuredUserId === user.id ? activeFeaturedState : null;
+  const featuredCapState = activeFeatureForProfile ? await canCreateSingleOfWeekRequest(activeFeatureForProfile.id, viewer.id) : null;
   const chatBlockedByPolicy = user.chatRequestPolicy === ChatRequestPolicy.NOBODY;
   const chatNeedsVerification = user.chatRequestPolicy === ChatRequestPolicy.VERIFIED_ONLY && !fullyVerifiedViewer;
   const photoBlockedByPolicy = user.photoRequestPolicy === PhotoRequestPolicy.NOBODY;
@@ -285,11 +290,13 @@ export default async function MemberProfilePage({
                   <div className="rounded-2xl border p-4">
                     <p className="font-medium">Direct chat</p>
                     <p className="mt-1 text-muted-foreground">
-                      {chatBlockedByPolicy
-                        ? "This member is not accepting chat requests right now."
-                        : chatNeedsVerification
-                          ? "Only fully verified members can send a chat request to this profile."
-                          : "You can request a direct conversation from here."}
+                      {featuredCapState?.blocked
+                        ? featuredCapState.reason
+                        : chatBlockedByPolicy
+                          ? "This member is not accepting chat requests right now."
+                          : chatNeedsVerification
+                            ? "Only fully verified members can send a chat request to this profile."
+                            : "You can request a direct conversation from here."}
                     </p>
                     <div className="mt-4">
                       {hasActiveConversation && existingConversation ? (
@@ -304,6 +311,8 @@ export default async function MemberProfilePage({
                         <span className="inline-flex rounded-full border px-4 py-2 font-medium">Chat request pending</span>
                       ) : isBlocked ? (
                         <span className="inline-flex rounded-full border px-4 py-2 font-medium">Chat unavailable</span>
+                      ) : featuredCapState?.blocked ? (
+                        <span className="inline-flex rounded-full border px-4 py-2 font-medium">Request unavailable</span>
                       ) : chatBlockedByPolicy || chatNeedsVerification ? (
                         <span className="inline-flex rounded-full border px-4 py-2 font-medium">Request unavailable</span>
                       ) : (

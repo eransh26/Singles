@@ -16,6 +16,7 @@ export type SeedData = {
     verified: SeedUser;
     blockedRequester: SeedUser;
     blockedTarget: SeedUser;
+    reportedMember?: SeedUser;
     verificationApproveUser: SeedUser;
     verificationRejectUser: SeedUser;
     defaultTestUsers?: SeedUser[];
@@ -36,6 +37,11 @@ export type SeedData = {
   };
   conversations?: {
     approvedConversation: { id: string };
+  };
+  singleOfWeek?: {
+    currentFeature?: { id: string };
+    pendingFeaturedApplication?: { id: string };
+    reportedMember?: SeedUser;
   };
   buddy?: {
     expiringBuddyRequest?: { id: string };

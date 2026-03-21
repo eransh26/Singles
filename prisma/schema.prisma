@@ -134,6 +134,11 @@ enum ChatRequestStatus {
   EXPIRED
 }
 
+enum ChatRequestOriginType {
+  STANDARD
+  SINGLE_OF_WEEK
+}
+
 enum ConsentStatus {
   PENDING
   APPROVED
@@ -178,6 +183,24 @@ enum BuddyRecommendationStatus {
   PENDING
   APPROVED
   DECLINED
+}
+
+enum SingleOfWeekApplicationStatus {
+  SUBMITTED
+  SHORTLISTED
+  SELECTED
+  REJECTED
+  WITHDRAWN
+}
+
+enum SingleOfWeekFeatureStatus {
+  UPCOMING
+  AWAITING_RESPONSE
+  ACTIVE
+  DECLINED
+  HIDDEN
+  COMPLETED
+  CANCELLED
 }
 
 enum BuddyRequestStatus {
@@ -312,6 +335,11 @@ model User {
   buddyReapplicationOverridesGranted BuddyReapplicationOverride[] @relation("BuddyReapplicationAdmin")
   buddyApplicationsApproved       BuddyApplicationDomain[] @relation("BuddyApplicationDomainApprovedBy")
   buddyApplicationsRejected       BuddyApplicationDomain[] @relation("BuddyApplicationDomainRejectedBy")
+  singleOfWeekApplications        SingleOfWeekApplication[] @relation("SingleOfWeekApplicationApplicant")
+  singleOfWeekFeatures            SingleOfWeekFeature[] @relation("SingleOfWeekFeatureUser")
+  singleOfWeekSelections          SingleOfWeekFeature[] @relation("SingleOfWeekSelectedByAdmin")
+  singleOfWeekResponses           SingleOfWeekFeature[] @relation("SingleOfWeekRespondedByUser")
+  singleOfWeekViews               SingleOfWeekView[]
   buddyRequestsSought    BuddyRequest[] @relation("BuddyRequestSeeker")
   buddyRequestsAssigned  BuddyRequest[] @relation("BuddyRequestAssignedBuddy")
   buddyAssignments       BuddyRequestAssignment[] @relation("BuddyRequestAssignmentBuddy")
@@ -621,16 +649,20 @@ model ChatRequest {
   toUserId     String
   pairKey      String
   pendingKey   String? @unique
+  originType   ChatRequestOriginType @default(STANDARD)
+  singleOfWeekFeatureId String?
   status       ChatRequestStatus @default(PENDING)
   createdAt    DateTime @default(now())
   respondedAt  DateTime?
 
   fromUser     User @relation("ChatRequestFromUser", fields: [fromUserId], references: [id], onDelete: Cascade)
   toUser       User @relation("ChatRequestToUser", fields: [toUserId], references: [id], onDelete: Cascade)
+  singleOfWeekFeature SingleOfWeekFeature? @relation(fields: [singleOfWeekFeatureId], references: [id], onDelete: SetNull)
   conversation Conversation?
 
   @@index([toUserId, status, createdAt])
   @@index([pairKey, createdAt])
+  @@index([singleOfWeekFeatureId, createdAt])
 }
 
 model Conversation {
@@ -902,6 +934,114 @@ model BuddyVideoConsent {
 
   @@index([targetUserId, status, createdAt])
   @@index([requesterUserId, status, createdAt])
+}
+
+model SingleOfWeekApplication {
+  id                 String @id @default(cuid())
+  applicantUserId    String
+  bio                String
+  interests          String?
+  hobbies            String?
+  relationshipIntent String?
+  preferredLocation  String?
+  consentedAt        DateTime
+  status             SingleOfWeekApplicationStatus @default(SUBMITTED)
+  submittedAt        DateTime @default(now())
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  shortlistedAt      DateTime?
+  selectedAt         DateTime?
+  rejectedAt         DateTime?
+  withdrawnAt        DateTime?
+  adminNotes         String?
+  shortlistScore     Int?
+
+  applicant          User @relation("SingleOfWeekApplicationApplicant", fields: [applicantUserId], references: [id], onDelete: Cascade)
+  photos             SingleOfWeekApplicationPhoto[]
+  features           SingleOfWeekFeature[]
+
+  @@index([applicantUserId, status, submittedAt])
+  @@index([status, submittedAt])
+}
+
+model SingleOfWeekApplicationPhoto {
+  id            String @id @default(cuid())
+  applicationId String
+  storageKey    String
+  sortOrder     Int @default(0)
+  createdAt     DateTime @default(now())
+
+  application   SingleOfWeekApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId, sortOrder])
+}
+
+model SingleOfWeekFeature {
+  id                String @id @default(cuid())
+  applicationId     String
+  featuredUserId    String
+  weekOf            DateTime @unique
+  publishAt         DateTime
+  notifyAt          DateTime
+  status            SingleOfWeekFeatureStatus @default(UPCOMING)
+  selectedByAdminId String
+  respondedByUserId String?
+  selectedAt        DateTime @default(now())
+  notifiedAt        DateTime?
+  acceptedAt        DateTime?
+  declinedAt        DateTime?
+  hiddenAt          DateTime?
+  hiddenReason      String?
+  completedAt       DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  application       SingleOfWeekApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  featuredUser      User @relation("SingleOfWeekFeatureUser", fields: [featuredUserId], references: [id], onDelete: Cascade)
+  selectedByAdmin   User @relation("SingleOfWeekSelectedByAdmin", fields: [selectedByAdminId], references: [id], onDelete: Restrict)
+  respondedByUser   User? @relation("SingleOfWeekRespondedByUser", fields: [respondedByUserId], references: [id], onDelete: SetNull)
+  requestLimitOverride SingleOfWeekFeatureLimitOverride?
+  views             SingleOfWeekView[]
+  chatRequests      ChatRequest[]
+
+  @@index([status, publishAt])
+  @@index([featuredUserId, status, weekOf])
+}
+
+model SingleOfWeekFeatureLimitOverride {
+  featureId    String @id
+  dailyCap     Int?
+  weeklyCap    Int?
+  monthlyCap   Int?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  feature      SingleOfWeekFeature @relation(fields: [featureId], references: [id], onDelete: Cascade)
+}
+
+model SingleOfWeekConfig {
+  id                String @id
+  targetDailyCap    Int @default(10)
+  targetWeeklyCap   Int @default(20)
+  targetMonthlyCap  Int @default(50)
+  requesterDailyCap Int @default(3)
+  requesterWeeklyCap Int @default(6)
+  requesterMonthlyCap Int @default(12)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model SingleOfWeekView {
+  id          String @id @default(cuid())
+  featureId   String
+  viewerUserId String
+  viewedAt    DateTime @default(now())
+
+  feature     SingleOfWeekFeature @relation(fields: [featureId], references: [id], onDelete: Cascade)
+  viewer      User @relation(fields: [viewerUserId], references: [id], onDelete: Cascade)
+
+  @@unique([featureId, viewerUserId])
+  @@index([featureId, viewedAt])
 }
 
 model PhotoAccessRequest {
