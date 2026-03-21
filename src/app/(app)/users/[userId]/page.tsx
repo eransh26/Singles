@@ -14,6 +14,7 @@ import { hasMinimalProfileVisibility, isFullyVerifiedUser, requireUser } from "@
 import { prisma } from "@/lib/db/prisma";
 import { canCreateSingleOfWeekRequest, syncSingleOfWeekState } from "@/lib/single-of-the-week";
 import { FEATURE_FLAG_KEYS, isFeatureEnabled } from "@/lib/feature-flags";
+import { resolveProfileImageUrl } from "@/lib/media-display";
 import { notFound } from "next/navigation";
 
 export const dynamic = "force-dynamic";
@@ -64,6 +65,7 @@ export default async function MemberProfilePage({
         displayName: true,
         bio: true,
         region: true,
+        image: true,
         profileVisibility: true,
         verificationStatus: true,
         verifiedBadgeVisible: true,
@@ -71,7 +73,7 @@ export default async function MemberProfilePage({
         photoRequestPolicy: true,
         interests: { select: { interest: { select: { id: true, name: true } } } },
         profileImageAssets: {
-          where: { moderationStatus: "APPROVED" },
+          where: { moderationStatus: "APPROVED", hiddenByModeration: false },
           orderBy: { uploadedAt: "desc" },
           take: 1,
           select: { id: true, storageProvider: true },
@@ -172,6 +174,8 @@ export default async function MemberProfilePage({
     }
     return item.visibilityLevel === MediaVisibilityLevel.APPROVED && hasApprovedPhotoGrant;
   });
+  const approvedProfileImageAsset = user.profileImageAssets[0] ?? null;
+  const profileImageUrl = resolveProfileImageUrl({ approvedProfileImageAsset, legacyImage: user.image });
   const profileMedia = visibleMedia.filter((item) => item.mediaType === "PROFILE");
   const galleryMedia = visibleMedia.filter((item) => item.mediaType === "GALLERY");
   const savedMessage = resolvedSearchParams?.saved ? saveMessages[resolvedSearchParams.saved] : null;
@@ -201,6 +205,9 @@ export default async function MemberProfilePage({
         <div>
           <p className="text-sm text-muted-foreground">Member profile</p>
           <div className="mt-1 flex flex-wrap items-center gap-3">
+            <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border bg-muted text-lg font-semibold text-foreground">
+              {profileImageUrl ? <img alt={`${user.displayName} profile`} className="h-full w-full object-cover" src={profileImageUrl} /> : user.displayName.slice(0, 1).toUpperCase()}
+            </div>
             <h1 className="text-3xl font-semibold tracking-tight">{user.displayName}</h1>
             {user.verificationStatus === VerificationStatus.APPROVED && user.verifiedBadgeVisible ? (
               <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">Verified</span>
@@ -417,6 +424,9 @@ export default async function MemberProfilePage({
     </main>
   );
 }
+
+
+
 
 
 

@@ -190,3 +190,19 @@ test("admin can update both target-user and requester caps", async ({ page }) =>
   await expect(page.locator('input[name="targetDailyCap"]')).toHaveValue("8");
   await expect(page.locator('input[name="requesterMonthlyCap"]')).toHaveValue("7");
 });
+
+test("requester caps also block non-feature profile requests to the active featured member", async ({ page }) => {
+  const seed = loadSeedData();
+  const featuredMember = seed.users.defaultTestUsers.find((user) => user.email === "test.male2@evyta.dev");
+  if (!featuredMember) throw new Error("Missing featured member seed data.");
+
+  await openSingleOfWeekAdmin(page, seed.users.admin.email, seed.password);
+  await page.locator('input[name="requesterDailyCap"]').fill("0");
+  await page.getByRole("button", { name: /save caps/i }).click();
+  await expect(page).toHaveURL(/saved=config/);
+
+  await loginAs(page, seed.users.verified.email, seed.password);
+  await page.goto(`/users/${featuredMember.id}`);
+  await expect(page.getByText(/you have reached the maximum number of featured requests/i)).toBeVisible();
+  await expect(page.getByText(/request unavailable/i)).toBeVisible();
+});

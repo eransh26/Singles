@@ -200,6 +200,7 @@ async function main() {
   await prisma.account.deleteMany();
   await prisma.session.deleteMany();
   await prisma.userSettings.deleteMany();
+  await prisma.userProfileImageAsset.deleteMany();
   await prisma.verificationToken.deleteMany();
   await prisma.user.deleteMany();
   await prisma.interest.deleteMany();
@@ -261,6 +262,7 @@ async function main() {
     passwordHash,
     phone: "+15550000004",
     verifiedPrerequisites: true,
+    image: "/avatars/avatar-neutral-2.svg",
   });
 
   const blockedRequester = await createUser({
@@ -540,6 +542,12 @@ async function main() {
     },
     select: { id: true },
   });
+  await prisma.userActivityState.createMany({
+    data: [
+      { userId: verified.id, lastActiveAt: new Date("2026-03-21T08:00:00.000Z"), contextType: "APP", isVisible: true },
+    ],
+  });
+
   await prisma.userInterest.createMany({
     data: [
       { userId: owner.id, interestId: interests[0].id },
@@ -584,6 +592,23 @@ async function main() {
     select: { id: true, contentText: true },
   });
 
+  await prisma.post.createMany({
+    data: [
+      {
+        authorUserId: verified.id,
+        contextType: PostContextType.GLOBAL_FEED,
+        contentText: "Verified Vera post for moderation queue and safety actions.",
+        isAnonymous: false,
+      },
+      {
+        authorUserId: testMale2.id,
+        contextType: PostContextType.GLOBAL_FEED,
+        contentText: "Noam Darel featured post for moderation report coverage.",
+        isAnonymous: false,
+      },
+    ],
+  });
+
   await prisma.post.create({
     data: {
       authorUserId: owner.id,
@@ -621,6 +646,27 @@ async function main() {
         storageKey: "https://example.com/gallery-owner-approved.jpg",
         visibilityLevel: MediaVisibilityLevel.APPROVED,
         sortOrder: 0,
+      },
+    ],
+  });
+
+  await prisma.userProfileImageAsset.createMany({
+    data: [
+      {
+        userId: verified.id,
+        objectKey: IMAGE_DATA_URL,
+        storageProvider: "LEGACY_INLINE",
+        mimeType: "image/png",
+        moderationStatus: "PENDING_REVIEW",
+        uploadedAt: new Date("2026-03-18T09:00:00.000Z"),
+      },
+      {
+        userId: member.id,
+        objectKey: IMAGE_DATA_URL,
+        storageProvider: "LEGACY_INLINE",
+        mimeType: "image/png",
+        moderationStatus: "PENDING_REVIEW",
+        uploadedAt: new Date("2026-03-19T15:00:00.000Z"),
       },
     ],
   });
@@ -670,6 +716,12 @@ async function main() {
         description: "Controls Single of the Week applications, hero card, and featured request flow.",
         rolloutType: "GLOBAL",
       },
+      {
+        key: "r2_media_pipeline_enabled",
+        enabled: false,
+        description: "Controls the R2-backed media upload pipeline for profile images and Single of the Week photos.",
+        rolloutType: "GLOBAL",
+      },
     ],
   });
 
@@ -687,8 +739,7 @@ async function main() {
       selectedAt: new Date("2026-03-14T10:00:00.000Z"),
       photos: {
         create: [
-          { storageKey: IMAGE_DATA_URL, sortOrder: 0 },
-          { storageKey: IMAGE_DATA_URL, sortOrder: 1 },
+          { storageKey: IMAGE_DATA_URL, storageProvider: "LEGACY_INLINE", moderationStatus: "PENDING_REVIEW", uploadedAt: new Date("2026-03-20T10:00:00.000Z"), sortOrder: 0 },
         ],
       },
     },
@@ -837,6 +888,12 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
+
+
+
+
+
+
 
 
 

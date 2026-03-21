@@ -74,5 +74,8 @@ test("pending media is gated from display helpers", () => {
   assert.equal(resolveProfileImageUrl({ approvedProfileImageAsset: null, legacyImage: "/avatars/avatar-neutral-1.svg" }), "/avatars/avatar-neutral-1.svg");
   assert.equal(resolveProfileImageUrl({ approvedProfileImageAsset: { id: "asset-1", storageProvider: MediaStorageProvider.R2 }, legacyImage: "/avatars/avatar-neutral-1.svg" }), "/api/media/profile-image/asset-1");
   assert.equal(resolveSingleOfWeekPhotoUrl({ id: "photo-1", storageKey: "single-of-week/u/a/file.webp", storageProvider: MediaStorageProvider.R2, moderationStatus: MediaModerationStatus.PENDING_REVIEW }), null);
-  assert.equal(resolveSingleOfWeekPhotoUrl({ id: "photo-2", storageKey: "single-of-week/u/a/file.webp", storageProvider: MediaStorageProvider.R2, moderationStatus: MediaModerationStatus.APPROVED }), "/api/media/single-of-week-photo/photo-2");
+  assert.equal(resolveSingleOfWeekPhotoUrl({ id: "photo-2", storageKey: "single-of-week/u/a/file.webp", storageProvider: MediaStorageProvider.R2, moderationStatus: MediaModerationStatus.APPROVED, hiddenByModeration: false }), "/api/media/single-of-week-photo/photo-2");
+  assert.equal(resolveSingleOfWeekPhotoUrl({ id: "photo-3", storageKey: "single-of-week/u/a/file.webp", storageProvider: MediaStorageProvider.R2, moderationStatus: MediaModerationStatus.APPROVED, hiddenByModeration: true }), null);
 });
+
+

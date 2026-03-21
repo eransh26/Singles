@@ -18,6 +18,7 @@ export const savedMessages: Record<string, string> = {
   limits: "Featured request overrides saved.",
   hidden: "Featured member hidden from the home card.",
   "feature-flag": "Feature flag saved.",
+  "media-moderation": "Media moderation saved.",
 };
 
 export const adminErrorMessages: Record<string, string> = {
@@ -178,7 +179,7 @@ export async function getAdminDashboardData() {
 }
 
 export async function getAdminSidebarCounts() {
-  const [memberUserCount, adminUserCount, pendingVerificationCount, openReportCount, activeEventCount, auditLogCount, buddyPendingCount, singleOfWeekPendingCount] = await Promise.all([
+  const [memberUserCount, adminUserCount, pendingVerificationCount, openReportCount, activeEventCount, auditLogCount, buddyPendingCount, singleOfWeekPendingCount, pendingMediaCount] = await Promise.all([
     prisma.user.count({ where: { role: UserRole.USER } }),
     prisma.user.count({ where: { role: { in: [UserRole.ADMIN, UserRole.SUPER_ADMIN] } } }),
     prisma.verificationRequest.count({ where: { status: VerificationStatus.PENDING } }),
@@ -187,6 +188,9 @@ export async function getAdminSidebarCounts() {
     prisma.auditLog.count(),
     prisma.buddyApplicationDomain.count({ where: { status: { in: ["PENDING_RECOMMENDATIONS", "REPLACEMENT_NEEDED", "PENDING_ADMIN_REVIEW"] } } }),
     prisma.singleOfWeekApplication.count({ where: { status: { in: ["SUBMITTED", "SHORTLISTED", "SELECTED"] } } }),
+    prisma.userProfileImageAsset.count({ where: { moderationStatus: "PENDING_REVIEW" } }).then((count) =>
+      prisma.singleOfWeekApplicationPhoto.count({ where: { moderationStatus: "PENDING_REVIEW" } }).then((photoCount) => count + photoCount),
+    ),
   ]);
 
   return {
@@ -198,6 +202,7 @@ export async function getAdminSidebarCounts() {
     auditLogCount,
     buddyPendingCount,
     singleOfWeekPendingCount,
+    pendingMediaCount,
   };
 }
 
@@ -326,3 +331,7 @@ export function AdminQuickLink({ href, label, hint }: { href: string; label: str
     </Link>
   );
 }
+
+
+
+

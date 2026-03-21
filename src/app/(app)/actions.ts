@@ -33,6 +33,11 @@ import { invalidateBuddyByBlock } from "@/lib/buddy";
 import { createNotificationRecord, deliverNotification } from "@/lib/notifications";
 import { canCreateSingleOfWeekRequest, syncSingleOfWeekState } from "@/lib/single-of-the-week";
 import { FEATURE_FLAG_KEYS, isFeatureEnabled } from "@/lib/feature-flags";
+import {
+  autoHideReportedUserMedia,
+  REPORT_RATE_LIMIT_MAX_PER_WINDOW,
+  REPORT_RATE_LIMIT_WINDOW_MS,
+} from "@/lib/media-moderation";
 import { uploadProfileImageToR2 } from "@/lib/r2-media";
 
 function textValue(formData: FormData, key: string) {
@@ -291,17 +296,51 @@ export async function reportUserAction(formData: FormData) {
     throw new Error("Choose another member to report.");
   }
 
-  await prisma.report.create({
-    data: {
-      filedByUserId: user.id,
-      targetType: ReportTargetType.USER,
-      targetUserId,
-      reasonCode: "USER_REPORT",
-      details,
-    },
+  const rateWindowStart = new Date(Date.now() - REPORT_RATE_LIMIT_WINDOW_MS);
+
+  await prisma.$transaction(async (tx) => {
+    const [existingOpenReport, recentReportCount] = await Promise.all([
+      tx.report.findFirst({
+        where: {
+          filedByUserId: user.id,
+          targetType: ReportTargetType.USER,
+          targetUserId,
+          status: { in: ["OPEN", "IN_REVIEW"] },
+        },
+        select: { id: true },
+      }),
+      tx.report.count({
+        where: {
+          filedByUserId: user.id,
+          createdAt: { gte: rateWindowStart },
+        },
+      }),
+    ]);
+
+    if (!existingOpenReport && recentReportCount >= REPORT_RATE_LIMIT_MAX_PER_WINDOW) {
+      throw new Error("Please slow down and try reporting again later.");
+    }
+
+    if (!existingOpenReport) {
+      await tx.report.create({
+        data: {
+          filedByUserId: user.id,
+          targetType: ReportTargetType.USER,
+          targetUserId,
+          reasonCode: "USER_REPORT",
+          details,
+        },
+      });
+    }
+
+    await autoHideReportedUserMedia(tx, targetUserId);
   });
 
   revalidatePath("/notifications");
+  revalidatePath("/admin/media");
+  revalidatePath("/single-of-the-week");
+  revalidatePath(`/users/${targetUserId}`);
+  revalidatePath("/home");
   if (sourcePath !== "/home") {
     revalidatePath(sourcePath);
   }
@@ -1505,6 +1544,11 @@ export async function updateNotificationPreferencesAction(formData: FormData) {
   revalidatePath("/notifications");
   redirect("/settings?saved=notifications");
 }
+
+
+
+
+
 
 
 

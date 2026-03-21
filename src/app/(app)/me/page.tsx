@@ -42,13 +42,19 @@ export default async function MePage({
         verificationStatus: true,
         interests: { select: { interestId: true } },
         profileImageAssets: {
-          where: { moderationStatus: { in: [MediaModerationStatus.APPROVED, MediaModerationStatus.PENDING_REVIEW] } },
+          where: {
+            OR: [
+              { moderationStatus: { in: [MediaModerationStatus.APPROVED, MediaModerationStatus.PENDING_REVIEW] } },
+              { hiddenByModeration: true },
+            ],
+          },
           orderBy: [{ moderationStatus: "asc" }, { uploadedAt: "desc" }],
           select: {
             id: true,
             storageProvider: true,
             moderationStatus: true,
             uploadedAt: true,
+            hiddenByModeration: true,
           },
         },
         media: {
@@ -80,14 +86,16 @@ export default async function MePage({
   const galleryMedia = user.media.filter((item) => item.mediaType === MediaType.GALLERY);
   const savedMessage = resolvedSearchParams?.saved ? saveMessages[resolvedSearchParams.saved] : null;
   const totalMediaCount = profileMedia.length + galleryMedia.length;
-  const approvedProfileImageAsset = user.profileImageAssets.find((asset) => asset.moderationStatus === MediaModerationStatus.APPROVED) ?? null;
-  const pendingProfileImageAsset = user.profileImageAssets.find((asset) => asset.moderationStatus === MediaModerationStatus.PENDING_REVIEW) ?? null;
+  const approvedProfileImageAsset = user.profileImageAssets.find((asset) => asset.moderationStatus === MediaModerationStatus.APPROVED && !asset.hiddenByModeration) ?? null;
+  const pendingProfileImageAsset = user.profileImageAssets.find((asset) => asset.hiddenByModeration || asset.moderationStatus === MediaModerationStatus.PENDING_REVIEW) ?? null;
   const resolvedProfileImage = resolveProfileImageUrl({
     approvedProfileImageAsset,
     legacyImage: user.image,
   });
   const pendingReviewMessage = pendingProfileImageAsset
-    ? `Your latest uploaded profile image is pending review since ${pendingProfileImageAsset.uploadedAt.toLocaleDateString("en-US", { month: "short", day: "numeric" })}.`
+    ? pendingProfileImageAsset.hiddenByModeration
+      ? `Your latest uploaded profile image is hidden pending moderation review since ${pendingProfileImageAsset.uploadedAt.toLocaleDateString("en-US", { month: "short", day: "numeric" })}.`
+      : `Your latest uploaded profile image is pending review since ${pendingProfileImageAsset.uploadedAt.toLocaleDateString("en-US", { month: "short", day: "numeric" })}.`
     : null;
 
   return (
@@ -288,4 +296,6 @@ export default async function MePage({
     </main>
   );
 }
+
+
 

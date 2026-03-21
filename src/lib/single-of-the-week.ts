@@ -329,9 +329,9 @@ export async function getSingleOfWeekTargetUsage(featureId: string, featuredUser
 export async function getSingleOfWeekRequesterUsage(requesterUserId: string, now = new Date()) {
   const { startOfDay, weekOf, startOfMonth } = getSingleOfWeekCountsWindow(now);
   const [dailyCount, weeklyCount, monthlyCount] = await Promise.all([
-    prisma.chatRequest.count({ where: { fromUserId: requesterUserId, originType: ChatRequestOriginType.SINGLE_OF_WEEK, createdAt: { gte: startOfDay } } }),
-    prisma.chatRequest.count({ where: { fromUserId: requesterUserId, originType: ChatRequestOriginType.SINGLE_OF_WEEK, createdAt: { gte: weekOf } } }),
-    prisma.chatRequest.count({ where: { fromUserId: requesterUserId, originType: ChatRequestOriginType.SINGLE_OF_WEEK, createdAt: { gte: startOfMonth } } }),
+    prisma.chatRequest.count({ where: { fromUserId: requesterUserId, singleOfWeekFeatureId: { not: null }, createdAt: { gte: startOfDay } } }),
+    prisma.chatRequest.count({ where: { fromUserId: requesterUserId, singleOfWeekFeatureId: { not: null }, createdAt: { gte: weekOf } } }),
+    prisma.chatRequest.count({ where: { fromUserId: requesterUserId, singleOfWeekFeatureId: { not: null }, createdAt: { gte: startOfMonth } } }),
   ]);
 
   return { dailyCount, weeklyCount, monthlyCount };
@@ -442,3 +442,4 @@ export async function getSingleOfWeekFeatureMetrics(featureId: string) {
 
   return { views, requests, approvals };
 }
+

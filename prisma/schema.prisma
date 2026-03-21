@@ -502,6 +502,9 @@ model UserProfileImageAsset {
   uploadedAt       DateTime              @default(now())
   reviewedAt       DateTime?
   moderationNote   String?
+  hiddenByModeration Boolean             @default(false)
+  hiddenAt         DateTime?
+  hiddenReason     String?
   createdAt        DateTime              @default(now())
   updatedAt        DateTime              @updatedAt
 
@@ -1024,6 +1027,9 @@ model SingleOfWeekApplicationPhoto {
   uploadedAt       DateTime              @default(now())
   reviewedAt       DateTime?
   moderationNote   String?
+  hiddenByModeration Boolean             @default(false)
+  hiddenAt         DateTime?
+  hiddenReason     String?
   sortOrder        Int                   @default(0)
   createdAt        DateTime              @default(now())
 
@@ -1305,6 +1311,8 @@ model VerificationToken {
 
   @@unique([identifier, token])
 }
+
+
 
 
 

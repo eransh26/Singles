@@ -1,7 +1,15 @@
 import { SingleOfWeekApplicationStatus } from "@prisma/client";
 import { requireAdmin } from "@/lib/auth/guards";
 import { prisma } from "@/lib/db/prisma";
-import { buildSingleOfWeekShortlist, ensureSingleOfWeekConfig, getSingleOfWeekEffectiveTargetCaps, getSingleOfWeekFeatureMetrics, getSingleOfWeekTargetUsage, syncSingleOfWeekState } from "@/lib/single-of-the-week";
+import { resolveSingleOfWeekPhotoUrl } from "@/lib/media-display";
+import {
+  buildSingleOfWeekShortlist,
+  ensureSingleOfWeekConfig,
+  getSingleOfWeekEffectiveTargetCaps,
+  getSingleOfWeekFeatureMetrics,
+  getSingleOfWeekTargetUsage,
+  syncSingleOfWeekState,
+} from "@/lib/single-of-the-week";
 import { AdminPageIntro, SavedMessageBanner } from "../lib";
 import {
   hideSingleOfWeekFeatureAdminAction,
@@ -41,14 +49,16 @@ export default async function AdminSingleOfWeekPage({ searchParams }: { searchPa
     }),
   ]);
 
-  const featureMetrics = await Promise.all(features.map(async (feature) => {
-    const [metrics, effectiveCaps, usage] = await Promise.all([
-      getSingleOfWeekFeatureMetrics(feature.id),
-      getSingleOfWeekEffectiveTargetCaps(feature.id),
-      getSingleOfWeekTargetUsage(feature.id, feature.featuredUserId),
-    ]);
-    return { id: feature.id, ...metrics, effectiveCaps, usage };
-  }));
+  const featureMetrics = await Promise.all(
+    features.map(async (feature) => {
+      const [metrics, effectiveCaps, usage] = await Promise.all([
+        getSingleOfWeekFeatureMetrics(feature.id),
+        getSingleOfWeekEffectiveTargetCaps(feature.id),
+        getSingleOfWeekTargetUsage(feature.id, feature.featuredUserId),
+      ]);
+      return { id: feature.id, ...metrics, effectiveCaps, usage };
+    }),
+  );
   const metricsByFeatureId = new Map(featureMetrics.map((entry) => [entry.id, entry]));
 
   return (
@@ -77,7 +87,7 @@ export default async function AdminSingleOfWeekPage({ searchParams }: { searchPa
           </div>
           <div>
             <p className="text-sm font-medium text-[#fff4ea]">Requester caps</p>
-            <p className="mt-1 text-xs text-[#bbaea1]">These caps limit how many featured requests one sender can create through Single of the Week surfaces.</p>
+            <p className="mt-1 text-xs text-[#bbaea1]">These caps limit how many featured requests one sender can create toward currently featured members.</p>
             <div className="mt-4 grid gap-4 md:grid-cols-3">
               <label className="grid gap-2 text-sm text-[#d7c8bb]"><span>Daily cap</span><input className="admin-input" defaultValue={config?.requesterDailyCap ?? 3} name="requesterDailyCap" type="number" min="0" /></label>
               <label className="grid gap-2 text-sm text-[#d7c8bb]"><span>Weekly cap</span><input className="admin-input" defaultValue={config?.requesterWeeklyCap ?? 6} name="requesterWeeklyCap" type="number" min="0" /></label>
@@ -115,41 +125,55 @@ export default async function AdminSingleOfWeekPage({ searchParams }: { searchPa
           <h2 className="mt-3 text-[1.85rem] font-semibold tracking-tight text-[#fff4ea]">Submitted, shortlisted, selected, and rejected profiles</h2>
         </div>
         <div className="mt-5 space-y-4">
-          {applications.map((application) => (
-            <article className="admin-card text-sm" key={application.id}>
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="text-base font-semibold tracking-tight text-[#fff4ea]">{application.applicant.displayName}</p>
-                  <p className="text-[#bbaea1]">{application.applicant.email}</p>
+          {applications.map((application) => {
+            const approvedPreviewUrl =
+              application.photos.map((photo) => resolveSingleOfWeekPhotoUrl(photo)).find((value): value is string => Boolean(value)) ?? null;
+
+            return (
+              <article className="admin-card text-sm" key={application.id}>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-base font-semibold tracking-tight text-[#fff4ea]">{application.applicant.displayName}</p>
+                    <p className="text-[#bbaea1]">{application.applicant.email}</p>
+                  </div>
+                  <span className="admin-pill">{application.status}</span>
                 </div>
-                <span className="admin-pill">{application.status}</span>
-              </div>
-              <p className="mt-3 leading-6 text-[#d7c8bb]">{application.bio}</p>
-              <p className="mt-3 text-xs uppercase tracking-[0.14em] text-[#8f7f72]">Photos {application.photos.length}</p>
-              <p className="mt-1 text-xs text-[#bbaea1]">Approved {application.photos.filter((photo) => photo.moderationStatus === "APPROVED").length} · Pending {application.photos.filter((photo) => photo.moderationStatus === "PENDING_REVIEW").length}</p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {application.status !== SingleOfWeekApplicationStatus.REJECTED ? (
-                  <>
-                    <form action={reviewSingleOfWeekApplicationAdminAction}>
-                      <input name="applicationId" type="hidden" value={application.id} />
-                      <input name="decision" type="hidden" value="shortlist" />
-                      <button className="admin-button-secondary" type="submit">Keep reviewable</button>
-                    </form>
-                    <form action={selectSingleOfWeekApplicationAdminAction}>
-                      <input name="applicationId" type="hidden" value={application.id} />
-                      <button className="admin-button-primary" type="submit">Select for next Sunday</button>
-                    </form>
-                  </>
-                ) : null}
-                <form action={reviewSingleOfWeekApplicationAdminAction} className="flex flex-wrap gap-2">
-                  <input name="applicationId" type="hidden" value={application.id} />
-                  <input name="decision" type="hidden" value="reject" />
-                  <input className="admin-input" name="adminNotes" placeholder="Admin note" />
-                  <button className="admin-button-secondary" type="submit">Reject</button>
-                </form>
-              </div>
-            </article>
-          ))}
+                <p className="mt-3 leading-6 text-[#d7c8bb]">{application.bio}</p>
+                <p className="mt-3 text-xs uppercase tracking-[0.14em] text-[#8f7f72]">Photos {application.photos.length}</p>
+                <div className="mt-3 overflow-hidden rounded-[1.15rem] border border-[rgba(148,127,112,0.24)] bg-[rgba(41,33,29,0.92)]">
+                  {approvedPreviewUrl ? (
+                    <img alt={`${application.applicant.displayName} approved featured photo`} className="h-40 w-full object-cover" src={approvedPreviewUrl} />
+                  ) : (
+                    <div className="flex h-40 items-center justify-center text-xs uppercase tracking-[0.14em] text-[#8f7f72]">No approved photo yet</div>
+                  )}
+                </div>
+                <p className="mt-1 text-xs text-[#bbaea1]">
+                  Approved {application.photos.filter((photo) => photo.moderationStatus === "APPROVED" && !photo.hiddenByModeration).length} · Pending {application.photos.filter((photo) => photo.moderationStatus === "PENDING_REVIEW" || photo.hiddenByModeration).length}
+                </p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {application.status !== SingleOfWeekApplicationStatus.REJECTED ? (
+                    <>
+                      <form action={reviewSingleOfWeekApplicationAdminAction}>
+                        <input name="applicationId" type="hidden" value={application.id} />
+                        <input name="decision" type="hidden" value="shortlist" />
+                        <button className="admin-button-secondary" type="submit">Keep reviewable</button>
+                      </form>
+                      <form action={selectSingleOfWeekApplicationAdminAction}>
+                        <input name="applicationId" type="hidden" value={application.id} />
+                        <button className="admin-button-primary" type="submit">Select for next Sunday</button>
+                      </form>
+                    </>
+                  ) : null}
+                  <form action={reviewSingleOfWeekApplicationAdminAction} className="flex flex-wrap gap-2">
+                    <input name="applicationId" type="hidden" value={application.id} />
+                    <input name="decision" type="hidden" value="reject" />
+                    <input className="admin-input" name="adminNotes" placeholder="Admin note" />
+                    <button className="admin-button-secondary" type="submit">Reject</button>
+                  </form>
+                </div>
+              </article>
+            );
+          })}
         </div>
       </section>
 
