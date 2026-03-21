@@ -28,6 +28,7 @@ import {
 } from "@prisma/client";
 import { hasMinimalProfileVisibility, isFullyVerifiedUser, requireActiveUser, requireUser } from "@/lib/auth/guards";
 import { prisma } from "@/lib/db/prisma";
+import { createLocalSession } from "@/lib/auth/local-session";
 import { invalidatePairInteractionsByBlock, revokeChatConversationByPair, revokeVideoConsentForPair, userPairKey } from "@/lib/interaction-consent";
 import { invalidateBuddyByBlock } from "@/lib/buddy";
 import { createNotificationRecord, deliverNotification } from "@/lib/notifications";
@@ -38,6 +39,12 @@ import {
   REPORT_RATE_LIMIT_MAX_PER_WINDOW,
   REPORT_RATE_LIMIT_WINDOW_MS,
 } from "@/lib/media-moderation";
+import {
+  issueEmailVerificationForUser,
+  normalizeEmailAddress,
+} from "@/lib/email-verification";
+import { refreshUserTrustStates } from "@/lib/internal-trust";
+import { HIGH_RISK_ACTIONS, assertHighRiskAccess } from "@/lib/high-risk-access";
 import { uploadProfileImageToR2 } from "@/lib/r2-media";
 
 function textValue(formData: FormData, key: string) {
@@ -333,6 +340,7 @@ export async function reportUserAction(formData: FormData) {
       });
     }
 
+    await refreshUserTrustStates(tx, [user.id, targetUserId]);
     await autoHideReportedUserMedia(tx, targetUserId);
   });
 
@@ -343,6 +351,86 @@ export async function reportUserAction(formData: FormData) {
   revalidatePath("/home");
   if (sourcePath !== "/home") {
     revalidatePath(sourcePath);
+  }
+}
+
+export async function requestEmailVerificationAction(formData: FormData) {
+  const user = await requireUser();
+  const sourcePath = optionalTextValue(formData, "sourcePath") ?? "/settings";
+
+  const emailVerificationEnabled = await isFeatureEnabled(FEATURE_FLAG_KEYS.emailVerification, user);
+  if (!emailVerificationEnabled) {
+    throw new Error("Email verification is currently unavailable.");
+  }
+
+  try {
+    const result = await issueEmailVerificationForUser(user.id);
+    const saved = result.alreadyVerified ? "email-already-verified" : "email-verification-sent";
+    revalidatePath("/settings");
+    revalidatePath(`/users/${user.id}`);
+    redirect(withSavedParam(sourcePath, saved));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Verification email could not be sent.";
+    throw new Error(message);
+  }
+}
+
+export async function updateEmailAddressAction(formData: FormData) {
+  const user = await requireUser();
+  const nextEmail = normalizeEmailAddress(textValue(formData, "email"));
+
+  const emailVerificationEnabled = await isFeatureEnabled(FEATURE_FLAG_KEYS.emailVerification, user);
+  if (!emailVerificationEnabled) {
+    throw new Error("Email verification is currently unavailable.");
+  }
+
+  if (!nextEmail || !nextEmail.includes("@")) {
+    throw new Error("Enter a valid email address.");
+  }
+
+  if (nextEmail === user.email) {
+    redirect("/settings?saved=email-unchanged");
+  }
+
+  const existingUser = await prisma.user.findUnique({
+    where: { email: nextEmail },
+    select: { id: true },
+  });
+
+  if (existingUser && existingUser.id !== user.id) {
+    throw new Error("Email is already in use.");
+  }
+
+  const invalidatedAt = new Date();
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({
+      where: { id: user.id },
+      data: {
+        email: nextEmail,
+        emailVerified: null,
+      },
+    });
+
+    await tx.emailVerificationToken.updateMany({
+      where: {
+        userId: user.id,
+        usedAt: null,
+      },
+      data: { usedAt: invalidatedAt },
+    });
+  });
+
+  await createLocalSession(nextEmail);
+
+  try {
+    await issueEmailVerificationForUser(user.id, { skipRateLimit: true });
+    revalidatePath("/settings");
+    revalidatePath(`/users/${user.id}`);
+    redirect("/settings?saved=email-changed");
+  } catch {
+    revalidatePath("/settings");
+    revalidatePath(`/users/${user.id}`);
+    redirect("/settings?saved=email-changed-send-failed");
   }
 }
 
@@ -943,6 +1031,7 @@ export async function sendChatRequestAction(formData: FormData) {
   const targetFeaturedFeature = activeFeature?.featuredUserId === targetUserId && activeFeature.status === "ACTIVE" ? activeFeature : null;
 
   if (targetFeaturedFeature) {
+    await assertHighRiskAccess(prisma, user.id, HIGH_RISK_ACTIONS.FEATURED_REQUEST);
     const singleOfWeekCapState = await canCreateSingleOfWeekRequest(targetFeaturedFeature.id, user.id);
     if (singleOfWeekCapState.blocked) {
       throw new Error(singleOfWeekCapState.reason ?? "This featured member has reached the maximum number of requests.");
@@ -1065,6 +1154,8 @@ export async function requestVideoConsentAction(formData: FormData) {
   if (!targetUserId || targetUserId === user.id) {
     throw new Error("Choose another member to request video access from.");
   }
+
+  await assertHighRiskAccess(prisma, user.id, HIGH_RISK_ACTIONS.VIDEO_REQUEST);
 
   const pairKey = userPairKey(user.id, targetUserId);
 

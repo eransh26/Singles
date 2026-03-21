@@ -75,18 +75,20 @@ test("featured card appears on home and admin can hide it immediately", async ({
   await loginAs(page, seed.users.verified.email, seed.password);
   await page.goto("/home");
   await expect(page.getByText(/single of the week/i).first()).toBeVisible();
-  await expect(page.getByText("Noam Darel")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Noam Darel" }).first()).toBeVisible();
 
   await loginAs(page, seed.users.admin.email, seed.password, /\/admin$/);
   await page.goto("/admin/single-of-the-week");
+  await expect(page.getByTestId("admin-sotw-applications")).toContainText(/Trust\s+(LOW|NORMAL|HIGH)/i);
   const featureCard = page.locator('[data-testid="admin-sotw-features"] article').filter({ hasText: "Noam Darel" }).first();
+  await expect(featureCard).toContainText(/Trust\s+(LOW|NORMAL|HIGH)/i);
   await featureCard.getByPlaceholder(/reason for hiding/i).fill("Safety follow-up");
   await featureCard.getByRole("button", { name: /hide immediately/i }).click();
   await expect(page).toHaveURL(/saved=hidden/);
 
   await loginAs(page, seed.users.verified.email, seed.password);
   await page.goto("/home");
-  await expect(page.getByText("Noam Darel")).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Noam Darel" })).toHaveCount(0);
 });
 
 test("trusted users can send featured requests and admin metrics count them", async ({ page }) => {
@@ -103,6 +105,20 @@ test("trusted users can send featured requests and admin metrics count them", as
   await expect(featureCard.getByText(/^1$/).first()).toBeVisible();
   await expect(featureCard).toContainText("Requests");
   await expect(featureCard).toContainText("1");
+});
+
+test("low-trust users cannot contact the currently featured member from featured or profile entry points", async ({ page }) => {
+  const seed = loadSeedData();
+  const featuredMember = seed.users.defaultTestUsers.find((user) => user.email === "test.male2@evyta.dev");
+  if (!featuredMember) throw new Error("Missing featured member seed data.");
+
+  await loginAs(page, seed.users.lowTrust!.email, seed.password);
+  await page.goto("/home");
+  await expect(page.getByText(/complete more trust requirements before contacting the featured member/i)).toBeVisible();
+  await expect(page.getByRole("button", { name: /request chat/i })).toBeDisabled();
+
+  await page.goto(`/users/${featuredMember.id}`);
+  await expect(page.getByText(/request unavailable/i)).toBeVisible();
 });
 
 test("target-user daily cap blocks both the featured card and non-feature profile entry points", async ({ page }) => {

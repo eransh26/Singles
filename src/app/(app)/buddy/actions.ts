@@ -29,6 +29,7 @@ import {
 } from "@/lib/buddy";
 import { createNotificationRecord, deliverNotifications } from "@/lib/notifications";
 import { FEATURE_FLAG_KEYS, isFeatureEnabled } from "@/lib/feature-flags";
+import { HIGH_RISK_ACTIONS, assertHighRiskAccess } from "@/lib/high-risk-access";
 
 async function assertBuddyFeatureEnabled(user: { id: string; role?: unknown }) {
   if (!(await isFeatureEnabled(FEATURE_FLAG_KEYS.buddy, user as never))) {
@@ -557,6 +558,8 @@ export async function requestBuddyVideoConsentAction(formData: FormData) {
   const user = await requireActiveUser();
   await assertBuddyFeatureEnabled(user);
   const conversationId = textValue(formData, "conversationId");
+
+  await assertHighRiskAccess(prisma, user.id, HIGH_RISK_ACTIONS.VIDEO_REQUEST);
 
   const conversation = await prisma.conversation.findUnique({
     where: { id: conversationId },

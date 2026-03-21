@@ -5,6 +5,7 @@ export const FEATURE_FLAG_KEYS = {
   buddy: "buddy_enabled",
   singleOfWeek: "single_of_week_enabled",
   r2MediaPipeline: "r2_media_pipeline_enabled",
+  emailVerification: "email_verification_enabled",
 } as const;
 
 export type KnownFeatureFlagKey = (typeof FEATURE_FLAG_KEYS)[keyof typeof FEATURE_FLAG_KEYS];
@@ -28,6 +29,13 @@ const DEFAULT_FEATURE_FLAGS = [
     key: FEATURE_FLAG_KEYS.r2MediaPipeline,
     enabled: false,
     description: "Controls the R2-backed media upload pipeline for profile images and Single of the Week photos.",
+    rolloutType: FeatureFlagRolloutType.GLOBAL,
+    rolloutValue: null,
+  },
+  {
+    key: FEATURE_FLAG_KEYS.emailVerification,
+    enabled: false,
+    description: "Controls provider-backed email verification sending, verification links, and resend flow.",
     rolloutType: FeatureFlagRolloutType.GLOBAL,
     rolloutValue: null,
   },

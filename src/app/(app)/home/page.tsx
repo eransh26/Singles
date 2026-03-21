@@ -11,6 +11,7 @@ import { hasMinimalProfileVisibility, isFullyVerifiedUser, requireUser } from "@
 
 import { prisma } from "@/lib/db/prisma";
 import { canCreateSingleOfWeekRequest, isTrustedSingleOfWeekRequester, syncSingleOfWeekState } from "@/lib/single-of-the-week";
+import { getHighRiskAccessState, HIGH_RISK_ACTIONS } from "@/lib/high-risk-access";
 import { ensureDefaultFeatureFlags, FEATURE_FLAG_KEYS, getFeatureAvailability } from "@/lib/feature-flags";
 
 import { getPromotedPlacement } from "@/lib/promotions";
@@ -45,6 +46,11 @@ export default async function HomePage() {
   const singleOfWeekEnabled = features[FEATURE_FLAG_KEYS.singleOfWeek];
 
   const viewerIsVerified = isFullyVerifiedUser(viewer);
+  const [videoTrustAccess, featuredTrustAccess, buddyTrustAccess] = await Promise.all([
+    getHighRiskAccessState(prisma, viewer.id, HIGH_RISK_ACTIONS.VIDEO_REQUEST),
+    getHighRiskAccessState(prisma, viewer.id, HIGH_RISK_ACTIONS.FEATURED_REQUEST),
+    getHighRiskAccessState(prisma, viewer.id, HIGH_RISK_ACTIONS.BUDDY_ELIGIBILITY),
+  ]);
 
 
 
@@ -239,7 +245,7 @@ export default async function HomePage() {
             orderBy: { createdAt: "desc" },
             select: { id: true, fromUserId: true, toUserId: true },
           }),
-          viewer.id === targetUserId ? Promise.resolve(false) : isTrustedSingleOfWeekRequester(prisma, viewer.id, targetUserId),
+          viewer.id === targetUserId ? Promise.resolve(false) : Promise.resolve(featuredTrustAccess.allowed).then((allowed) => allowed && isTrustedSingleOfWeekRequester(prisma, viewer.id, targetUserId)),
           canCreateSingleOfWeekRequest(featuredMember.id, viewer.id),
         ]);
 
@@ -404,11 +410,13 @@ export default async function HomePage() {
                   </div>
                   {viewer.id !== featuredMember.featuredUserId ? (
                     <p className="mt-3 text-sm leading-6 text-[color:var(--lux-text-muted)]">
-                      {featuredRequestState?.capState.blocked
-                        ? featuredRequestState.capState.reason
-                        : featuredRequestState?.trustedRequester
-                          ? "Requests from this card still use the standard private chat approval flow."
-                          : "Only trusted verified members can request chat from the featured card."}
+                      {!featuredTrustAccess.allowed
+                        ? `${featuredTrustAccess.reason} ${featuredTrustAccess.nextStep ?? ""}`.trim()
+                        : featuredRequestState?.capState.blocked
+                          ? featuredRequestState.capState.reason
+                          : featuredRequestState?.trustedRequester
+                            ? "Requests from this card still use the standard private chat approval flow."
+                            : "Only trusted verified members can request chat from the featured card."}
                     </p>
                   ) : null}
                 </div>
@@ -526,9 +534,13 @@ export default async function HomePage() {
 
                       ? "pending"
 
-                      : isBlocked
+                      : !videoTrustAccess.allowed
 
                         ? "blocked"
+
+                        : isBlocked
+
+                          ? "blocked"
 
                         : "request"
 
@@ -787,6 +799,7 @@ export default async function HomePage() {
 
             <p className="mt-3 text-sm leading-6 text-[color:var(--lux-text-secondary)]">Private peer support for moments where you need someone steady, without browsing for the right person yourself.</p>
 
+            {!buddyTrustAccess.allowed ? <p className="mt-3 text-sm leading-6 text-[color:var(--lux-text-muted)]">{buddyTrustAccess.reason} {buddyTrustAccess.nextStep}</p> : null}
             {activeBuddyRequest ? <p className="mt-3 text-xs uppercase tracking-[0.16em] text-[color:var(--lux-text-muted)]">Current request {activeBuddyRequest.status}</p> : null}
 
           </section>

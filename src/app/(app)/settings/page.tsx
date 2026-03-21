@@ -7,9 +7,11 @@ import {
   VerificationStatus,
 } from "@prisma/client";
 import {
+  requestEmailVerificationAction,
   reviewPhotoAccessRequestAction,
   revokePhotoAccessGrantAction,
   submitVerificationRequestAction,
+  updateEmailAddressAction,
   updateNotificationPreferencesAction,
   updatePrivacyAction,
 } from "../actions";
@@ -28,10 +30,17 @@ import { BuddyProfileForm } from "@/components/buddy-profile-form";
 import { RelativeTime } from "@/components/relative-time";
 import { getBuddyDomainOptions, getEligibleBuddyRecommenders, isBuddyVerifiedUser } from "@/lib/buddy";
 import { ensureDefaultFeatureFlags, FEATURE_FLAG_KEYS, getFeatureAvailability } from "@/lib/feature-flags";
+import { getHighRiskAccessState, HIGH_RISK_ACTIONS } from "@/lib/high-risk-access";
 
 const saveMessages: Record<string, string> = {
   privacy: "Privacy preferences saved.",
   verification: "Verification request submitted.",
+  "email-verification-sent": "Verification email sent.",
+  "email-verification-send-failed": "Your email changed, but the verification email could not be sent yet.",
+  "email-already-verified": "Your email is already verified.",
+  "email-changed": "Email updated. Please verify your new address.",
+  "email-changed-send-failed": "Email updated, but sending the verification email failed. You can resend it below.",
+  "email-unchanged": "Your email address is unchanged.",
   photoReview: "Photo access request reviewed.",
   "photo-review": "Photo access request reviewed.",
   "photo-revoked": "Gallery access revoked.",
@@ -78,11 +87,13 @@ export default async function SettingsPage({
   const viewer = await requireUser();
   const resolvedSearchParams = await searchParams;
   const pushPublicKey = getWebPushPublicKey();
+  const buddyTrustAccess = await getHighRiskAccessState(prisma, viewer.id, HIGH_RISK_ACTIONS.BUDDY_ELIGIBILITY);
 
   await ensureDefaultFeatureFlags();
-  const features = await getFeatureAvailability([FEATURE_FLAG_KEYS.buddy, FEATURE_FLAG_KEYS.singleOfWeek], viewer);
+  const features = await getFeatureAvailability([FEATURE_FLAG_KEYS.buddy, FEATURE_FLAG_KEYS.singleOfWeek, FEATURE_FLAG_KEYS.emailVerification], viewer);
   const buddyEnabled = features[FEATURE_FLAG_KEYS.buddy];
   const singleOfWeekEnabled = features[FEATURE_FLAG_KEYS.singleOfWeek];
+  const emailVerificationEnabled = features[FEATURE_FLAG_KEYS.emailVerification];
 
   const [user, pendingPhotoRequests, activePhotoGrants, buddyProfile, pushSubscriptionCount, settings, buddyDomainOptions, activeBuddyApplication, eligibleBuddyRecommenders, rejectedBuddyApplicationDomains, buddyOverrides] = await Promise.all([
     prisma.user.findUnique({
@@ -90,6 +101,7 @@ export default async function SettingsPage({
       select: {
         id: true,
         displayName: true,
+        email: true,
         ageVerified: true,
         emailVerified: true,
         phoneVerifiedAt: true,
@@ -249,7 +261,7 @@ export default async function SettingsPage({
               </div>
             </div>
 
-            <div className="rounded-[1.5rem] border border-[color:rgba(124,74,110,0.16)] bg-[color:var(--lux-highlight-soft)] p-4">
+            <div className="space-y-4 rounded-[1.5rem] border border-[color:rgba(124,74,110,0.16)] bg-[color:var(--lux-highlight-soft)] p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <p className="text-base font-semibold tracking-tight text-[color:var(--lux-text)]">Status {user.verificationStatus}</p>
@@ -262,6 +274,35 @@ export default async function SettingsPage({
                     </button>
                   </form>
                 )}
+              </div>
+
+              <div className="rounded-[1.2rem] border border-[color:var(--lux-border)] bg-white p-4 text-sm text-[color:var(--lux-text-secondary)]">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="lux-overline">Email verification</p>
+                    <p className="mt-3 text-base font-semibold tracking-tight text-[color:var(--lux-text)]">{user.email}</p>
+                    <p className="mt-2 leading-6">
+                      {user.emailVerified ? `Verified on ${formatDateTime(user.emailVerified)}.` : "Your email is not verified yet."}
+                    </p>
+                    {!emailVerificationEnabled ? <p className="mt-2 text-xs text-[color:var(--lux-text-muted)]">Email verification delivery is currently unavailable.</p> : null}
+                  </div>
+                  {emailVerificationEnabled && !user.emailVerified ? (
+                    <form action={requestEmailVerificationAction}>
+                      <input name="sourcePath" type="hidden" value="/settings" />
+                      <button className="lux-button-secondary" type="submit">Send verification email</button>
+                    </form>
+                  ) : null}
+                </div>
+
+                {emailVerificationEnabled ? (
+                  <form action={updateEmailAddressAction} className="mt-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+                    <label className="grid gap-2">
+                      <span className="font-medium text-[color:var(--lux-text)]">Change email</span>
+                      <input className="lux-input" defaultValue={user.email} name="email" placeholder="Email" required type="email" />
+                    </label>
+                    <button className="lux-button-primary" type="submit">Update email</button>
+                  </form>
+                ) : null}
               </div>
             </div>
           </div>
@@ -337,12 +378,6 @@ export default async function SettingsPage({
             <h2 className="mt-3 text-[1.9rem] font-semibold tracking-tight text-[color:var(--lux-text)]">Offer peer support in the domains you know best</h2>
           </div>
 
-          {!buddyEligibility ? (
-            <div className="mt-5 rounded-[1.4rem] border border-[color:var(--lux-border)] bg-[color:var(--lux-highlight-soft)] p-5 text-sm text-[color:var(--lux-text-secondary)]">
-              <p className="text-base font-semibold tracking-tight text-[color:var(--lux-text)]">Buddy applications require verified contact details</p>
-              <p className="mt-2 leading-6">Complete both email and phone verification before you can apply to become a Buddy.</p>
-            </div>
-          ) : null}
 
           <BuddyProfileForm
             action={updateBuddyProfileAction}
@@ -401,7 +436,7 @@ export default async function SettingsPage({
                   </div>
                 ))}
               </div>
-            ) : buddyEligibility ? (
+            ) : buddyEligibility && buddyTrustAccess.allowed ? (
               <>
                 {blockedBuddyApplicationDomains.length > 0 ? (
                   <div className="mt-5 rounded-[1.2rem] border border-[color:var(--lux-border)] bg-[color:var(--lux-secondary)] p-4 text-sm text-[color:var(--lux-text-secondary)]">
@@ -416,7 +451,7 @@ export default async function SettingsPage({
                 />
               </>
             ) : (
-              <p className="mt-5 text-sm leading-6 text-[color:var(--lux-text-secondary)]">Finish verification first to start a Buddy application.</p>
+              <p className="mt-5 text-sm leading-6 text-[color:var(--lux-text-secondary)]">{!buddyEligibility ? "Finish verification first to start a Buddy application." : `${buddyTrustAccess.reason} ${buddyTrustAccess.nextStep}`.trim()}</p>
             )}
           </div>
         </section>

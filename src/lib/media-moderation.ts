@@ -1,11 +1,13 @@
 import {
   AccountStatus,
+  InternalTrustTier,
   MediaModerationStatus,
   SingleOfWeekApplicationStatus,
   SingleOfWeekFeatureStatus,
   type Prisma,
 } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
+import { refreshUserTrustStates } from "@/lib/internal-trust";
 
 export const MEDIA_AUTO_HIDE_WEIGHTED_THRESHOLD = 2.5;
 export const REPORT_RATE_LIMIT_WINDOW_MS = 1000 * 60 * 60 * 24;
@@ -27,6 +29,8 @@ export type ReporterSignalInput = {
     activeReportsAgainstReporter?: number;
     activeBlockCount?: number;
     recentFiledReportCount?: number;
+    trustTier?: InternalTrustTier | null;
+    trustSummary?: string | null;
   } | null;
 };
 
@@ -182,6 +186,14 @@ export function getReporterTrustTier(input: ReporterSignalInput["reporter"]): Re
     return "LOW";
   }
 
+  if (input.trustTier === InternalTrustTier.HIGH) {
+    return "HIGH";
+  }
+
+  if (input.trustTier === InternalTrustTier.NORMAL) {
+    return "NORMAL";
+  }
+
   const isVerified = Boolean(input.emailVerified && input.phoneVerifiedAt);
   const hasTrustedHistory = (input.approvedConversationCount ?? 0) > 0;
   const hasLowSignalQuality = (input.activeReportsAgainstReporter ?? 0) > 0 || (input.activeBlockCount ?? 0) >= 4;
@@ -270,10 +282,11 @@ export async function getWeightedUserReportSignalSummary(db: ReportQueryClient, 
 
   const reporterIds = Array.from(new Set(reports.map((report) => report.filedByUserId)));
   const reporterSignals = new Map<string, ReporterSignalInput["reporter"]>();
+  await refreshUserTrustStates(db, reporterIds);
 
   await Promise.all(
     reporterIds.map(async (reporterUserId) => {
-      const [approvedConversationCount, activeReportsAgainstReporter, activeBlockCount, recentFiledReportCount] = await Promise.all([
+      const [approvedConversationCount, activeReportsAgainstReporter, activeBlockCount, recentFiledReportCount, reporterUser] = await Promise.all([
         db.conversation.count({
           where: {
             kind: "MEMBER_CHAT",
@@ -299,6 +312,10 @@ export async function getWeightedUserReportSignalSummary(db: ReportQueryClient, 
             createdAt: { gte: new Date(Date.now() - REPORT_RATE_LIMIT_WINDOW_MS) },
           },
         }),
+        db.user.findUnique({
+          where: { id: reporterUserId },
+          select: { trustTier: true, trustSummary: true },
+        }),
       ]);
 
       const reporter = reports.find((report) => report.filedByUserId === reporterUserId)?.filedBy ?? null;
@@ -313,6 +330,8 @@ export async function getWeightedUserReportSignalSummary(db: ReportQueryClient, 
               activeReportsAgainstReporter,
               activeBlockCount,
               recentFiledReportCount,
+              trustTier: reporterUser?.trustTier ?? null,
+              trustSummary: reporterUser?.trustSummary ?? null,
             }
           : null,
       );

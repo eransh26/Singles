@@ -3,12 +3,15 @@ import {
   ChatRequestOriginType,
   ChatRequestStatus,
   ConversationStatus,
+  InternalTrustTier,
   Prisma,
   ReportStatus,
   SingleOfWeekApplicationStatus,
   SingleOfWeekFeatureStatus,
 } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
+import { refreshUserTrustStates } from "@/lib/internal-trust";
+import { getHighRiskAccessState, HIGH_RISK_ACTIONS } from "@/lib/high-risk-access";
 import { createNotificationWithDelivery } from "@/lib/notifications";
 
 export const SINGLE_OF_WEEK_BIO_MAX = 300;
@@ -148,6 +151,10 @@ export async function canApplyForSingleOfWeek(db: Prisma.TransactionClient | typ
 }
 
 export async function isTrustedSingleOfWeekRequester(db: Prisma.TransactionClient | typeof prisma, requesterUserId: string, featuredUserId: string) {
+  const trustAccess = await getHighRiskAccessState(db, requesterUserId, HIGH_RISK_ACTIONS.FEATURED_REQUEST);
+  if (!trustAccess.allowed) {
+    return false;
+  }
   const requester = await db.user.findUnique({
     where: { id: requesterUserId },
     select: {
@@ -381,6 +388,12 @@ export async function canCreateSingleOfWeekRequest(featureId: string, requesterU
 }
 
 export async function buildSingleOfWeekShortlist(limit = 5) {
+  const applicationApplicants = await prisma.singleOfWeekApplication.findMany({
+    where: { status: { in: [SingleOfWeekApplicationStatus.SUBMITTED, SingleOfWeekApplicationStatus.SHORTLISTED] } },
+    select: { applicantUserId: true },
+  });
+  await refreshUserTrustStates(prisma, applicationApplicants.map((entry) => entry.applicantUserId));
+
   const applications = await prisma.singleOfWeekApplication.findMany({
     where: { status: { in: [SingleOfWeekApplicationStatus.SUBMITTED, SingleOfWeekApplicationStatus.SHORTLISTED] } },
     include: {
@@ -390,6 +403,8 @@ export async function buildSingleOfWeekShortlist(limit = 5) {
           displayName: true,
           email: true,
           region: true,
+          trustTier: true,
+          trustSummary: true,
           _count: {
             select: {
               posts: true,
@@ -419,6 +434,8 @@ export async function buildSingleOfWeekShortlist(limit = 5) {
       if (application.photos.length >= 3) score += 5;
       if (!recentFeaturedUserIds.has(application.applicant.id)) score += 4;
       if (application.applicant.region && !recentRegions.has(application.applicant.region)) score += 3;
+      if (application.applicant.trustTier === InternalTrustTier.HIGH) score += 3;
+      else if (application.applicant.trustTier === InternalTrustTier.NORMAL) score += 1;
       return { application, score };
     })
     .sort((left, right) => right.score - left.score || left.application.submittedAt.getTime() - right.application.submittedAt.getTime())

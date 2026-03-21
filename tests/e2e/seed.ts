@@ -14,6 +14,7 @@ export type SeedData = {
     owner: SeedUser;
     member: SeedUser;
     verified: SeedUser;
+    lowTrust?: SeedUser;
     blockedRequester: SeedUser;
     blockedTarget: SeedUser;
     reportedMember?: SeedUser;
@@ -37,6 +38,7 @@ export type SeedData = {
   };
   conversations?: {
     approvedConversation: { id: string };
+    lowTrustApprovedConversation?: { id: string };
   };
   singleOfWeek?: {
     currentFeature?: { id: string };

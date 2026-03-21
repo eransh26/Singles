@@ -69,6 +69,7 @@ test("queue prioritizes featured media above profile media and shows stale indic
 
   const verifiedCard = cards.filter({ hasText: "Verified Vera" }).first();
   const memberCard = cards.filter({ hasText: "Member Uno" }).first();
+  await expect(verifiedCard).toContainText(/Trust\s+(LOW|NORMAL|HIGH)/i);
   await expect(verifiedCard).toContainText(">72h");
   await expect(memberCard).toContainText(">24h");
   await expect(page.getByText("Pending total")).toBeVisible();

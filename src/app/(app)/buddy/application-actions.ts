@@ -24,6 +24,7 @@ import {
 } from "@/lib/buddy";
 import { createNotificationRecord, deliverNotifications } from "@/lib/notifications";
 import { FEATURE_FLAG_KEYS, isFeatureEnabled } from "@/lib/feature-flags";
+import { HIGH_RISK_ACTIONS, assertHighRiskAccess } from "@/lib/high-risk-access";
 
 async function assertBuddyFeatureEnabled(user: { id: string; role?: unknown }) {
   if (!(await isFeatureEnabled(FEATURE_FLAG_KEYS.buddy, user as never))) {
@@ -59,6 +60,8 @@ export async function createBuddyApplicationAction(formData: FormData) {
   if (!isBuddyVerifiedUser(user)) {
     throw new Error("Complete email and phone verification before applying to become a Buddy.");
   }
+
+  await assertHighRiskAccess(prisma, user.id, HIGH_RISK_ACTIONS.BUDDY_ELIGIBILITY);
 
   const intro = textValue(formData, "buddyIntro");
   const availabilityLevelValue = textValue(formData, "buddyAvailabilityLevel");

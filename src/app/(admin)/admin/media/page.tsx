@@ -18,6 +18,7 @@ import {
   type MediaStaleState,
   type WeightedReportSignalSummary,
 } from "@/lib/media-moderation";
+import { formatTrustLabel, refreshUserTrustStates } from "@/lib/internal-trust";
 import { AdminPageIntro, SavedMessageBanner, formatDateTime } from "../lib";
 import {
   bulkReviewMediaAdminAction,
@@ -48,6 +49,7 @@ type MediaQueueItem = {
   previewUrl: string;
   metaLabel: string;
   signalSummary: WeightedReportSignalSummary | null;
+  ownerTrustLabel: string;
 };
 
 function normalizeType(value?: string): MediaTypeFilter {
@@ -200,6 +202,17 @@ export default async function AdminMediaPage({
     }),
   ]);
 
+  const ownerIds = Array.from(new Set([
+    ...profileAssets.map((asset) => asset.user.id),
+    ...singleOfWeekPhotos.map((photo) => photo.application.applicant.id),
+  ]));
+  await refreshUserTrustStates(prisma, ownerIds);
+  const ownerTrustRows = await prisma.user.findMany({
+    where: { id: { in: ownerIds } },
+    select: { id: true, trustTier: true, trustSummary: true },
+  });
+  const ownerTrustById = new Map(ownerTrustRows.map((entry) => [entry.id, formatTrustLabel(entry.trustTier, entry.trustSummary)]));
+
   const hiddenOwnerIds = Array.from(
     new Set(
       [
@@ -239,6 +252,7 @@ export default async function AdminMediaPage({
         previewUrl: previewUrlForProfileAsset(asset.id),
         metaLabel: "Profile image",
         signalSummary: asset.hiddenByModeration ? hiddenSignalSummaryByOwner.get(asset.user.id) ?? null : null,
+        ownerTrustLabel: ownerTrustById.get(asset.user.id) ?? "LOW",
       };
     }),
     ...singleOfWeekPhotos.map((photo) => {
@@ -266,6 +280,7 @@ export default async function AdminMediaPage({
         previewUrl: previewUrlForSingleOfWeekPhoto(photo.id),
         metaLabel: `Single of the Week · ${photo.application.status}`,
         signalSummary: photo.hiddenByModeration ? hiddenSignalSummaryByOwner.get(photo.application.applicant.id) ?? null : null,
+        ownerTrustLabel: ownerTrustById.get(photo.application.applicant.id) ?? "LOW",
       };
     }),
   ];
@@ -384,6 +399,7 @@ export default async function AdminMediaPage({
                       <div>
                         <p className="text-base font-semibold tracking-tight text-[#fff4ea]">{item.displayName}</p>
                         <p className="text-[#bbaea1]">{item.email}</p>
+                        <p className="mt-2 text-xs leading-5 text-[#d7c8bb]">Trust {item.ownerTrustLabel}</p>
                       </div>
                       <div className="flex flex-wrap justify-end gap-2">
                         <span className="admin-pill">{item.moderationStatus}</span>

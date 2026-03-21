@@ -19,6 +19,7 @@ import {
 } from "@/lib/single-of-the-week";
 import { uploadSingleOfWeekImageToR2 } from "@/lib/r2-media";
 import { userPairKey } from "@/lib/interaction-consent";
+import { HIGH_RISK_ACTIONS, assertHighRiskAccess } from "@/lib/high-risk-access";
 
 const LEGACY_PHOTO_ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 const PHOTO_MAX_BYTES = 5 * 1024 * 1024;
@@ -263,6 +264,8 @@ export async function sendSingleOfWeekChatRequestAction(formData: FormData) {
   if (!(await isTrustedSingleOfWeekRequester(prisma, user.id, feature.featuredUserId))) {
     throw new Error("Only trusted verified members can send requests to the featured member.");
   }
+
+  await assertHighRiskAccess(prisma, user.id, HIGH_RISK_ACTIONS.FEATURED_REQUEST);
 
   const capState = await canCreateSingleOfWeekRequest(feature.id, user.id);
   if (capState.blocked) {

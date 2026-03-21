@@ -201,6 +201,7 @@ async function main() {
   await prisma.session.deleteMany();
   await prisma.userSettings.deleteMany();
   await prisma.userProfileImageAsset.deleteMany();
+  await prisma.emailVerificationToken.deleteMany();
   await prisma.verificationToken.deleteMany();
   await prisma.user.deleteMany();
   await prisma.interest.deleteMany();
@@ -263,6 +264,14 @@ async function main() {
     phone: "+15550000004",
     verifiedPrerequisites: true,
     image: "/avatars/avatar-neutral-2.svg",
+  });
+
+  const lowTrust = await createUser({
+    email: "lowtrust@example.com",
+    displayName: "Low Trust Lior",
+    passwordHash,
+    phone: "+15550000032",
+    verifiedPrerequisites: true,
   });
 
   const blockedRequester = await createUser({
@@ -408,6 +417,7 @@ async function main() {
     createApprovedMemberConversation(verified.id, testFemale2.id, "A third trusted contact for replacement recommendations."),
     createApprovedMemberConversation(testFemale2.id, testMale1.id, "Connected and ready for Buddy application tests."),
     createApprovedMemberConversation(testFemale2.id, testFemale1.id, "Another trusted contact for recommendations."),
+    createApprovedMemberConversation(lowTrust.id, owner.id, "A seeded approved chat for trust-gating tests."),
   ]);
 
   const rejectedAttemptTimes = [3, 2, 1].map((daysAgo) => new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000));
@@ -668,6 +678,36 @@ async function main() {
         moderationStatus: "PENDING_REVIEW",
         uploadedAt: new Date("2026-03-19T15:00:00.000Z"),
       },
+      {
+        userId: lowTrust.id,
+        objectKey: IMAGE_DATA_URL,
+        storageProvider: "LEGACY_INLINE",
+        mimeType: "image/png",
+        moderationStatus: "REJECTED",
+        uploadedAt: new Date("2026-03-19T10:00:00.000Z"),
+        reviewedAt: new Date("2026-03-19T12:00:00.000Z"),
+        moderationNote: "Seeded rejection for trust gating coverage.",
+      },
+      {
+        userId: lowTrust.id,
+        objectKey: IMAGE_DATA_URL,
+        storageProvider: "LEGACY_INLINE",
+        mimeType: "image/png",
+        moderationStatus: "REJECTED",
+        uploadedAt: new Date("2026-03-19T13:00:00.000Z"),
+        reviewedAt: new Date("2026-03-19T15:00:00.000Z"),
+        moderationNote: "Seeded rejection for trust gating coverage.",
+      },
+      {
+        userId: lowTrust.id,
+        objectKey: IMAGE_DATA_URL,
+        storageProvider: "LEGACY_INLINE",
+        mimeType: "image/png",
+        moderationStatus: "REJECTED",
+        uploadedAt: new Date("2026-03-19T16:00:00.000Z"),
+        reviewedAt: new Date("2026-03-19T18:00:00.000Z"),
+        moderationNote: "Seeded rejection for trust gating coverage.",
+      },
     ],
   });
 
@@ -818,6 +858,17 @@ async function main() {
     },
   });
 
+  await prisma.report.create({
+    data: {
+      filedByUserId: admin.id,
+      targetType: ReportTargetType.USER,
+      targetUserId: lowTrust.id,
+      reasonCode: "SAFETY",
+      details: "Seeded low-trust report for high-risk gating coverage.",
+      status: ReportStatus.OPEN,
+    },
+  });
+
   const approvedConversation = await prisma.conversation.create({
     data: {
       userOneId: owner.id,
@@ -835,6 +886,45 @@ async function main() {
     select: { id: true },
   });
 
+  const lowTrustApprovedRequest = await prisma.chatRequest.create({
+    data: {
+      fromUserId: lowTrust.id,
+      toUserId: verified.id,
+      pairKey: [lowTrust.id, verified.id].sort().join(":"),
+      status: "ACCEPTED",
+      respondedAt: new Date("2026-03-01T10:00:00.000Z"),
+    },
+    select: { id: true },
+  });
+
+  const lowTrustApprovedConversation = await prisma.conversation.create({
+    data: {
+      userOneId: [lowTrust.id, verified.id].sort()[0],
+      userTwoId: [lowTrust.id, verified.id].sort()[1],
+      pairKey: [lowTrust.id, verified.id].sort().join(":"),
+      createdFromChatRequestId: lowTrustApprovedRequest.id,
+      status: "ACTIVE",
+      messages: {
+        create: {
+          senderUserId: lowTrust.id,
+          body: "Seeded low-trust conversation for high-risk access tests.",
+        },
+      },
+    },
+    select: { id: true, pairKey: true },
+  });
+
+  await prisma.videoConsent.create({
+    data: {
+      pairKey: lowTrustApprovedConversation.pairKey,
+      requesterUserId: lowTrust.id,
+      targetUserId: verified.id,
+      approvedByUserId: verified.id,
+      status: "APPROVED",
+      respondedAt: new Date("2026-03-02T12:00:00.000Z"),
+    },
+  });
+
   const manifest = {
     password: PASSWORD,
     defaultTestUserPassword: TEST_USER_PASSWORD,
@@ -843,6 +933,7 @@ async function main() {
       owner,
       member,
       verified,
+      lowTrust,
       blockedRequester,
       blockedTarget,
       verificationApproveUser,
@@ -860,6 +951,7 @@ async function main() {
     },
     conversations: {
       approvedConversation,
+      lowTrustApprovedConversation: { id: lowTrustApprovedConversation.id },
     },
     singleOfWeek: {
       currentFeature,

@@ -1,6 +1,7 @@
 import { SingleOfWeekApplicationStatus } from "@prisma/client";
 import { requireAdmin } from "@/lib/auth/guards";
 import { prisma } from "@/lib/db/prisma";
+import { formatTrustLabel, refreshUserTrustStates } from "@/lib/internal-trust";
 import { resolveSingleOfWeekPhotoUrl } from "@/lib/media-display";
 import {
   buildSingleOfWeekShortlist,
@@ -26,12 +27,18 @@ export default async function AdminSingleOfWeekPage({ searchParams }: { searchPa
   await ensureSingleOfWeekConfig();
   await syncSingleOfWeekState();
 
+  const trustUserIds = await Promise.all([
+    prisma.singleOfWeekApplication.findMany({ where: { status: { in: ["SUBMITTED", "SHORTLISTED", "SELECTED", "REJECTED"] } }, select: { applicantUserId: true }, take: 20 }),
+    prisma.singleOfWeekFeature.findMany({ select: { featuredUserId: true }, take: 10 }),
+  ]);
+  await refreshUserTrustStates(prisma, [...trustUserIds[0].map((entry) => entry.applicantUserId), ...trustUserIds[1].map((entry) => entry.featuredUserId)]);
+
   const [config, applications, shortlist, features] = await Promise.all([
     prisma.singleOfWeekConfig.findUnique({ where: { id: "default" } }),
     prisma.singleOfWeekApplication.findMany({
       orderBy: { submittedAt: "desc" },
       include: {
-        applicant: { select: { id: true, displayName: true, email: true, region: true } },
+        applicant: { select: { id: true, displayName: true, email: true, region: true, trustTier: true, trustSummary: true } },
         photos: { orderBy: { sortOrder: "asc" } },
         features: { orderBy: { publishAt: "desc" }, take: 1 },
       },
@@ -41,7 +48,7 @@ export default async function AdminSingleOfWeekPage({ searchParams }: { searchPa
     prisma.singleOfWeekFeature.findMany({
       orderBy: { publishAt: "desc" },
       include: {
-        featuredUser: { select: { displayName: true, email: true } },
+        featuredUser: { select: { displayName: true, email: true, trustTier: true, trustSummary: true } },
         application: { select: { bio: true } },
         requestLimitOverride: true,
       },
@@ -108,6 +115,7 @@ export default async function AdminSingleOfWeekPage({ searchParams }: { searchPa
             <article className="admin-card" key={application.id}>
               <p className="text-lg font-semibold tracking-tight text-[#fff4ea]">{application.applicant.displayName}</p>
               <p className="mt-2 text-sm text-[#bbaea1]">{application.applicant.email}</p>
+              <p className="mt-2 text-xs leading-5 text-[#d7c8bb]">Trust {formatTrustLabel(application.applicant.trustTier, application.applicant.trustSummary)}</p>
               <p className="mt-3 text-sm text-[#d7c8bb]">Score {score}</p>
               <form action={shortlistSingleOfWeekApplicationAdminAction} className="mt-4 flex items-center justify-between gap-3">
                 <input name="applicationId" type="hidden" value={application.id} />
@@ -135,6 +143,7 @@ export default async function AdminSingleOfWeekPage({ searchParams }: { searchPa
                   <div>
                     <p className="text-base font-semibold tracking-tight text-[#fff4ea]">{application.applicant.displayName}</p>
                     <p className="text-[#bbaea1]">{application.applicant.email}</p>
+                    <p className="mt-2 text-xs leading-5 text-[#d7c8bb]">Trust {formatTrustLabel(application.applicant.trustTier, application.applicant.trustSummary)}</p>
                   </div>
                   <span className="admin-pill">{application.status}</span>
                 </div>
@@ -191,6 +200,7 @@ export default async function AdminSingleOfWeekPage({ searchParams }: { searchPa
                   <div>
                     <p className="text-base font-semibold tracking-tight text-[#fff4ea]">{feature.featuredUser.displayName}</p>
                     <p className="text-[#bbaea1]">{feature.featuredUser.email}</p>
+                    <p className="mt-2 text-xs leading-5 text-[#d7c8bb]">Trust {formatTrustLabel(feature.featuredUser.trustTier, feature.featuredUser.trustSummary)}</p>
                   </div>
                   <span className="admin-pill">{feature.status}</span>
                 </div>

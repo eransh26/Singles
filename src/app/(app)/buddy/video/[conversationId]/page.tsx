@@ -7,6 +7,7 @@ import { getVideoConversationById, isAuthorizedVideoParticipant } from "@/lib/li
 import { BuddyVideoRoomClient } from "./video-room-client";
 import { FeatureUnavailableCard } from "@/components/feature-unavailable-card";
 import { FEATURE_FLAG_KEYS, isFeatureEnabled } from "@/lib/feature-flags";
+import { getHighRiskAccessState, HIGH_RISK_ACTIONS } from "@/lib/high-risk-access";
 
 export default async function BuddyVideoConversationPage({ params }: { params: Promise<{ conversationId: string }> }) {
   const user = await requireActiveUser();
@@ -39,6 +40,24 @@ export default async function BuddyVideoConversationPage({ params }: { params: P
   }
 
   const otherUser = conversation.userOne.id === user.id ? conversation.userTwo : conversation.userOne;
+  const videoTrustAccess = await getHighRiskAccessState(prisma, user.id, HIGH_RISK_ACTIONS.VIDEO_REQUEST);
+
+  if (!videoTrustAccess.allowed) {
+    return (
+      <main className="lux-shell">
+        <section className="lux-hero">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="max-w-2xl">
+              <p className="lux-overline">Buddy video</p>
+              <h1 className="lux-title mt-3 !text-[2.3rem] md:!text-[2.8rem]">{otherUser.displayName}</h1>
+              <p className="lux-body mt-4">{`${videoTrustAccess.reason} ${videoTrustAccess.nextStep ?? ""}`.trim()}</p>
+            </div>
+            <Link className="lux-button-secondary" href={`/buddy/${conversation.id}`}>Back to Buddy chat</Link>
+          </div>
+        </section>
+      </main>
+    );
+  }
 
   return (
     <main className="lux-shell">

@@ -13,6 +13,7 @@ import { requestVideoConsentAction, sendChatRequestAction, sendPhotoAccessReques
 import { hasMinimalProfileVisibility, isFullyVerifiedUser, requireUser } from "@/lib/auth/guards";
 import { prisma } from "@/lib/db/prisma";
 import { canCreateSingleOfWeekRequest, syncSingleOfWeekState } from "@/lib/single-of-the-week";
+import { getHighRiskAccessState, HIGH_RISK_ACTIONS } from "@/lib/high-risk-access";
 import { FEATURE_FLAG_KEYS, isFeatureEnabled } from "@/lib/feature-flags";
 import { resolveProfileImageUrl } from "@/lib/media-display";
 import { notFound } from "next/navigation";
@@ -56,6 +57,10 @@ export default async function MemberProfilePage({
 
   const singleOfWeekEnabled = await isFeatureEnabled(FEATURE_FLAG_KEYS.singleOfWeek, viewer);
   const activeFeaturedState = singleOfWeekEnabled ? await syncSingleOfWeekState() : null;
+  const [videoTrustAccess, featuredTrustAccess] = await Promise.all([
+    getHighRiskAccessState(prisma, viewer.id, HIGH_RISK_ACTIONS.VIDEO_REQUEST),
+    getHighRiskAccessState(prisma, viewer.id, HIGH_RISK_ACTIONS.FEATURED_REQUEST),
+  ]);
 
   const [user, sharedGroups, existingConversation, existingChatRequest, existingPhotoRequest, existingVideoConsent, photoGrant, existingBlock] = await Promise.all([
     prisma.user.findUnique({
@@ -305,9 +310,11 @@ export default async function MemberProfilePage({
                   <div className="rounded-2xl border p-4">
                     <p className="font-medium">Direct chat</p>
                     <p className="mt-1 text-muted-foreground">
-                      {featuredCapState?.blocked
-                        ? featuredCapState.reason
-                        : chatBlockedByPolicy
+                      {!featuredTrustAccess.allowed && activeFeatureForProfile
+                        ? `${featuredTrustAccess.reason} ${featuredTrustAccess.nextStep ?? ""}`.trim()
+                        : featuredCapState?.blocked
+                          ? featuredCapState.reason
+                          : chatBlockedByPolicy
                           ? "This member is not accepting chat requests right now."
                           : chatNeedsVerification
                             ? "Only fully verified members can send a chat request to this profile."
@@ -326,7 +333,7 @@ export default async function MemberProfilePage({
                         <span className="inline-flex rounded-full border px-4 py-2 font-medium">Chat request pending</span>
                       ) : isBlocked ? (
                         <span className="inline-flex rounded-full border px-4 py-2 font-medium">Chat unavailable</span>
-                      ) : featuredCapState?.blocked ? (
+                      ) : (!featuredTrustAccess.allowed && activeFeatureForProfile) || featuredCapState?.blocked ? (
                         <span className="inline-flex rounded-full border px-4 py-2 font-medium">Request unavailable</span>
                       ) : chatBlockedByPolicy || chatNeedsVerification ? (
                         <span className="inline-flex rounded-full border px-4 py-2 font-medium">Request unavailable</span>
@@ -376,9 +383,11 @@ export default async function MemberProfilePage({
                   <div className="rounded-2xl border p-4">
                     <p className="font-medium">Private video approval</p>
                     <p className="mt-1 text-muted-foreground">
-                      {!hasActiveConversation
-                        ? "Video calls require an active approved chat first."
-                        : "Video calls require separate approval and can be revoked at any time."}
+                      {!videoTrustAccess.allowed
+                        ? `${videoTrustAccess.reason} ${videoTrustAccess.nextStep ?? ""}`.trim()
+                        : !hasActiveConversation
+                          ? "Video calls require an active approved chat first."
+                          : "Video calls require separate approval and can be revoked at any time."}
                     </p>
                     <div className="mt-4">
                       {hasApprovedVideoConsent && existingConversation ? (
@@ -387,7 +396,7 @@ export default async function MemberProfilePage({
                         </Link>
                       ) : hasPendingVideoRequest ? (
                         <span className="inline-flex rounded-full border px-4 py-2 font-medium text-amber-700">Video request pending</span>
-                      ) : isBlocked || !hasActiveConversation ? (
+                      ) : isBlocked || !hasActiveConversation || !videoTrustAccess.allowed ? (
                         <span className="inline-flex rounded-full border px-4 py-2 font-medium">Video unavailable</span>
                       ) : (
                         <form action={requestVideoConsentAction}>

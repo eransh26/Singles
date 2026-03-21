@@ -7,6 +7,7 @@ import { isJoinableCallRecord } from "@/lib/livekit";
 import { requestVideoConsentAction, revokeChatConsentAction, revokeVideoConsentAction, reviewVideoConsentAction } from "../../actions";
 import { StartVideoCallButton } from "./start-video-call-button";
 import { ConversationThread } from "./conversation-thread";
+import { getHighRiskAccessState, HIGH_RISK_ACTIONS } from "@/lib/high-risk-access";
 
 export default async function ConversationPage({ params, searchParams }: { params: Promise<{ conversationId: string }>; searchParams?: Promise<{ saved?: string }> }) {
   const viewer = await requireUser();
@@ -85,6 +86,7 @@ export default async function ConversationPage({ params, searchParams }: { param
   }
 
   const otherUser = conversation.userOne.id === viewer.id ? conversation.userTwo : conversation.userOne;
+  const videoTrustAccess = await getHighRiskAccessState(prisma, viewer.id, HIGH_RISK_ACTIONS.VIDEO_REQUEST);
   const activeCallRecord = conversation.videoCallRecords[0] ?? null;
   const callMode = isJoinableCallRecord(activeCallRecord) ? "join" : "start";
   const [videoConsent, notificationSettings] = await Promise.all([
@@ -121,15 +123,15 @@ export default async function ConversationPage({ params, searchParams }: { param
             <p className="lux-body mt-4">A private thread for a slower, more direct exchange.</p>
           </div>
           <div className="flex flex-wrap gap-2 text-sm">
-            {videoConsent?.status === ConsentStatus.APPROVED ? <StartVideoCallButton conversationId={conversation.id} mode={callMode} /> : null}
+            {videoConsent?.status === ConsentStatus.APPROVED && videoTrustAccess.allowed ? <StartVideoCallButton conversationId={conversation.id} mode={callMode} /> : null}
             <Link className="lux-button-secondary" href="/chats">Back to chats</Link>
             <Link className="lux-button-subtle" href={`/users/${otherUser.id}`}>View profile</Link>
           </div>
         </div>
         <div className="mt-5 rounded-[1rem] border border-[color:var(--lux-border)] bg-white/80 p-4 text-sm text-[color:var(--lux-text-secondary)]">
-          <p className="font-medium text-[color:var(--lux-text)]">Video calls require separate approval and can be revoked at any time.</p>
+          <p className="font-medium text-[color:var(--lux-text)]">{videoTrustAccess.allowed ? "Video calls require separate approval and can be revoked at any time." : `${videoTrustAccess.reason} ${videoTrustAccess.nextStep ?? ""}`.trim()}</p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            {!videoConsent ? (
+            {!videoConsent && videoTrustAccess.allowed ? (
               <form action={requestVideoConsentAction}>
                 <input name="targetUserId" type="hidden" value={otherUser.id} />
                 <input name="sourcePath" type="hidden" value={`/chats/${conversation.id}`} />
@@ -161,7 +163,7 @@ export default async function ConversationPage({ params, searchParams }: { param
                 </form>
               </>
             ) : null}
-            {videoConsent && (videoConsent.status === ConsentStatus.DECLINED || videoConsent.status === ConsentStatus.REVOKED || videoConsent.status === ConsentStatus.CANCELED) ? (
+            {videoTrustAccess.allowed && videoConsent && (videoConsent.status === ConsentStatus.DECLINED || videoConsent.status === ConsentStatus.REVOKED || videoConsent.status === ConsentStatus.CANCELED) ? (
               <form action={requestVideoConsentAction}>
                 <input name="targetUserId" type="hidden" value={otherUser.id} />
                 <input name="sourcePath" type="hidden" value={`/chats/${conversation.id}`} />

@@ -6,6 +6,8 @@ import { z } from "zod";
 import { signIn, signOut } from "@/auth";
 import { prisma } from "@/lib/db/prisma";
 import { clearLocalSession, createLocalSession } from "@/lib/auth/local-session";
+import { FEATURE_FLAG_KEYS, isFeatureEnabled } from "@/lib/feature-flags";
+import { issueEmailVerificationForUser } from "@/lib/email-verification";
 import { AccountStatus, UserRole } from "@prisma/client";
 
 const registerSchema = z.object({
@@ -37,16 +39,29 @@ export async function registerAction(formData: FormData) {
 
   const passwordHash = await bcrypt.hash(parsed.data.password, 12);
 
-  await prisma.user.create({
+  const createdUser = await prisma.user.create({
     data: {
       email: parsed.data.email,
       displayName: parsed.data.displayName,
       passwordHash,
     },
+    select: { id: true },
   });
 
+  const emailVerificationEnabled = await isFeatureEnabled(FEATURE_FLAG_KEYS.emailVerification);
+  let redirectPath = "/home";
+
+  if (emailVerificationEnabled) {
+    try {
+      await issueEmailVerificationForUser(createdUser.id, { skipRateLimit: true });
+      redirectPath = "/settings?saved=email-verification-sent";
+    } catch {
+      redirectPath = "/settings?saved=email-verification-send-failed";
+    }
+  }
+
   await createLocalSession(parsed.data.email);
-  redirect("/home");
+  redirect(redirectPath);
 }
 
 export async function signInAction(formData: FormData) {

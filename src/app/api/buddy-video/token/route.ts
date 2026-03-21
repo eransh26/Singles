@@ -4,6 +4,7 @@ import { AccessToken } from "livekit-server-sdk";
 import { getCurrentUser } from "@/lib/auth/guards";
 import { prisma } from "@/lib/db/prisma";
 import { FEATURE_FLAG_KEYS, isFeatureEnabled } from "@/lib/feature-flags";
+import { getHighRiskAccessState, HIGH_RISK_ACTIONS } from "@/lib/high-risk-access";
 import { createOrJoinVideoCallRecord, getConversationRoomName, getVideoConversationById, isAuthorizedVideoParticipant } from "@/lib/livekit";
 
 export async function POST(request: Request) {
@@ -35,6 +36,11 @@ export async function POST(request: Request) {
 
   if (!isAuthorizedVideoParticipant(conversation, user.id)) {
     return NextResponse.json({ error: "Not authorized for this Buddy video call." }, { status: 403 });
+  }
+
+  const trustAccess = await getHighRiskAccessState(prisma, user.id, HIGH_RISK_ACTIONS.VIDEO_REQUEST);
+  if (!trustAccess.allowed) {
+    return NextResponse.json({ error: trustAccess.reason ?? "This action is not available right now." }, { status: 403 });
   }
 
   const videoConsent = await prisma.buddyVideoConsent.findUnique({

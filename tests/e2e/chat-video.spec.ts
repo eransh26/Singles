@@ -70,6 +70,30 @@ test("video calls require separate approval even for approved chats", async ({ p
   expect(responseStatus).toBe(403);
 });
 
+test("low-trust users cannot request or start video even when other prerequisites are satisfied", async ({ page }) => {
+  const seed = loadSeedData();
+
+  await loginAs(page, seed.users.lowTrust!.email, seed.password);
+  await page.goto(`/users/${seed.users.owner.id}`);
+  await expect(page.getByText(/video unavailable/i)).toBeVisible();
+
+  await page.goto(`/chats/${seed.conversations!.lowTrustApprovedConversation!.id}`);
+  await expect(page.getByText(/complete more trust requirements before using video/i)).toBeVisible();
+  await expect(page.getByTestId("start-video-call-button")).toHaveCount(0);
+
+  const responseStatus = await page.evaluate(async (activeConversationId) => {
+    const response = await fetch("/api/video/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ conversationId: activeConversationId }),
+    });
+
+    return response.status;
+  }, seed.conversations!.lowTrustApprovedConversation!.id);
+
+  expect(responseStatus).toBe(403);
+});
+
 test("video approval can be granted separately and chat revocation removes access", async ({ browser, page }) => {
   const seed = loadSeedData();
   const conversationId = seed.conversations.approvedConversation.id;

@@ -45,8 +45,17 @@ test("non-verified users are blocked from starting a Buddy application", async (
   await loginAs(page, seed.users.member.email, seed.password);
   await page.goto("/settings#buddy-setup");
 
-  await expect(page.getByText(/buddy applications require verified contact details/i)).toBeVisible();
   await expect(page.getByText(/finish verification first to start a buddy application/i)).toBeVisible();
+  await expect(page.getByRole("button", { name: /submit buddy application/i })).toHaveCount(0);
+});
+
+test("low-trust verified users are blocked from starting a Buddy application", async ({ page }) => {
+  const seed = loadSeedData();
+  await loginAs(page, seed.users.lowTrust!.email, seed.password);
+  await page.goto("/settings#buddy-setup");
+
+  await expect(page.getByText(/buddy applications require more established trust first/i)).toBeVisible();
+  await expect(page.getByText(/build more healthy activity before applying/i)).toBeVisible();
   await expect(page.getByRole("button", { name: /submit buddy application/i })).toHaveCount(0);
 });
 
@@ -116,6 +125,7 @@ test("admins can review Buddy application domains independently and inactive dom
   await loginAs(page, seed.users.admin.email, seed.password, /\/admin$/);
   await page.goto("/admin/buddy");
   await expect(page.getByTestId("admin-buddy-applications")).toContainText(seed.users.owner.displayName);
+  await expect(page.getByTestId("admin-buddy-applications")).toContainText(/Trust\s+(LOW|NORMAL|HIGH)/i);
   await expect(page.getByText(/pending_admin_review/i)).toHaveCount(2);
 
   const applicationCard = page.locator('[data-testid="admin-buddy-applications"] article').filter({ hasText: seed.users.owner.displayName }).first();

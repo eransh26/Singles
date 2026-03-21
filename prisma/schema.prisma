@@ -291,6 +291,12 @@ enum FeatureFlagRolloutType {
   PERCENTAGE
 }
 
+enum InternalTrustTier {
+  LOW
+  NORMAL
+  HIGH
+}
+
 enum ReportTargetType {
   USER
   POST
@@ -341,11 +347,16 @@ model User {
   role                 UserRole @default(USER)
   isTestUser           Boolean @default(false)
   image                String?
+  trustTier            InternalTrustTier @default(LOW)
+  trustScore           Int @default(0)
+  trustSummary         String?
+  trustUpdatedAt       DateTime?
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
   settings               UserSettings?
   profileImageAssets     UserProfileImageAsset[]
+  emailVerificationTokens EmailVerificationToken[]
   media                  UserProfileMedia[]
   buddyProfile           BuddyProfile?
   buddyApplications      BuddyApplication[] @relation("BuddyApplicationApplicant")
@@ -511,6 +522,21 @@ model UserProfileImageAsset {
   user             User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, moderationStatus, uploadedAt])
+}
+
+model EmailVerificationToken {
+  id         String   @id @default(cuid())
+  userId     String
+  email      String
+  tokenHash  String   @unique
+  expiresAt  DateTime
+  usedAt     DateTime?
+  createdAt  DateTime @default(now())
+
+  user       User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([email, expiresAt])
 }
 
 model VerificationRequest {

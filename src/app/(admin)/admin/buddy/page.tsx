@@ -7,6 +7,7 @@ import {
 } from "./actions";
 import { requireAdmin } from "@/lib/auth/guards";
 import { prisma } from "@/lib/db/prisma";
+import { formatTrustLabel, refreshUserTrustStates } from "@/lib/internal-trust";
 
 export default async function AdminBuddyPage({
   searchParams,
@@ -16,13 +17,31 @@ export default async function AdminBuddyPage({
   await requireAdmin();
   const resolvedSearchParams = await searchParams;
 
+  const applicationUserIds = await prisma.buddyApplication.findMany({
+    orderBy: { createdAt: "desc" },
+    select: {
+      applicantUserId: true,
+      domains: {
+        select: {
+          recommendations: {
+            where: { replacedAt: null },
+            select: { recommenderUserId: true },
+          },
+        },
+      },
+    },
+    take: 20,
+  });
+
+  await refreshUserTrustStates(prisma, applicationUserIds.flatMap((application) => [application.applicantUserId, ...application.domains.flatMap((domain) => domain.recommendations.map((recommendation) => recommendation.recommenderUserId))]));
+
   const [applications, domains, domainStats, buddyReports] = await Promise.all([
     prisma.buddyApplication.findMany({
       orderBy: { createdAt: "desc" },
       select: {
         id: true,
         createdAt: true,
-        applicant: { select: { id: true, displayName: true, email: true } },
+        applicant: { select: { id: true, displayName: true, email: true, trustTier: true, trustSummary: true } },
         domains: {
           orderBy: { createdAt: "asc" },
           select: {
@@ -37,7 +56,7 @@ export default async function AdminBuddyPage({
                 status: true,
                 note: true,
                 submittedAt: true,
-                recommender: { select: { displayName: true, email: true } },
+                recommender: { select: { displayName: true, email: true, trustTier: true, trustSummary: true } },
               },
             },
           },
@@ -156,6 +175,7 @@ export default async function AdminBuddyPage({
                 <div>
                   <p className="text-base font-semibold tracking-tight text-[#fff4ea]">{application.applicant.displayName}</p>
                   <p className="text-[#bbaea1]">{application.applicant.email}</p>
+                  <p className="mt-2 text-xs leading-5 text-[#d7c8bb]">Trust {formatTrustLabel(application.applicant.trustTier, application.applicant.trustSummary)}</p>
                 </div>
                 <span className="text-xs uppercase tracking-[0.16em] text-[#8f7f72]">{application.createdAt.toISOString().slice(0, 10)}</span>
               </div>
@@ -173,6 +193,7 @@ export default async function AdminBuddyPage({
                             <span className="text-[#fff4ea]">{recommendation.recommender.displayName}</span>
                             <span className="text-xs uppercase tracking-[0.14em] text-[#aa9788]">{recommendation.status}</span>
                           </div>
+                          <p className="mt-2 text-xs leading-5 text-[#d7c8bb]">Trust {formatTrustLabel(recommendation.recommender.trustTier, recommendation.recommender.trustSummary)}</p>
                           {recommendation.note ? <p className="mt-2 text-sm leading-6 text-[#bbaea1]">Admin note: {recommendation.note}</p> : <p className="mt-2 text-sm leading-6 text-[#8f7f72]">No admin-only note submitted.</p>}
                         </div>
                       ))}
