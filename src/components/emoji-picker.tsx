@@ -2,6 +2,8 @@
 
 import { Search, SmilePlus } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { PREMIUM_PANEL, PREMIUM_TOOL_CHIP } from "@/components/ui/premium-styles";
+import { useDismissibleLayer } from "@/components/ui/use-dismissible-layer";
 
 type EmojiEntry = {
   symbol: string;
@@ -12,6 +14,7 @@ type EmojiEntry = {
 type EmojiCategory = {
   key: string;
   label: string;
+  icon: string;
   emojis: EmojiEntry[];
 };
 
@@ -21,6 +24,7 @@ const EMOJI_CATEGORIES: EmojiCategory[] = [
   {
     key: "smileys",
     label: "Smileys",
+    icon: "😊",
     emojis: [
       { symbol: "😀", label: "grinning face", keywords: ["happy", "smile"] },
       { symbol: "🙂", label: "slight smile", keywords: ["happy", "warm"] },
@@ -39,6 +43,7 @@ const EMOJI_CATEGORIES: EmojiCategory[] = [
   {
     key: "hearts",
     label: "Hearts",
+    icon: "❤️",
     emojis: [
       { symbol: "❤️", label: "red heart", keywords: ["love", "heart"] },
       { symbol: "🩷", label: "pink heart", keywords: ["love", "heart"] },
@@ -57,6 +62,7 @@ const EMOJI_CATEGORIES: EmojiCategory[] = [
   {
     key: "gestures",
     label: "Gestures",
+    icon: "🙌",
     emojis: [
       { symbol: "👋", label: "wave", keywords: ["hello", "wave"] },
       { symbol: "🫶", label: "heart hands", keywords: ["love", "care"] },
@@ -73,6 +79,7 @@ const EMOJI_CATEGORIES: EmojiCategory[] = [
   {
     key: "people",
     label: "People",
+    icon: "🫂",
     emojis: [
       { symbol: "💃", label: "dance", keywords: ["dance", "joy"] },
       { symbol: "🕺", label: "dancing man", keywords: ["dance", "fun"] },
@@ -87,6 +94,7 @@ const EMOJI_CATEGORIES: EmojiCategory[] = [
   {
     key: "nature",
     label: "Nature",
+    icon: "✨",
     emojis: [
       { symbol: "🌙", label: "moon", keywords: ["night", "moon"] },
       { symbol: "⭐", label: "star", keywords: ["night", "star"] },
@@ -105,6 +113,7 @@ const EMOJI_CATEGORIES: EmojiCategory[] = [
   {
     key: "food",
     label: "Food",
+    icon: "🥂",
     emojis: [
       { symbol: "☕", label: "coffee", keywords: ["coffee", "warm"] },
       { symbol: "🍷", label: "wine", keywords: ["wine", "evening"] },
@@ -119,6 +128,7 @@ const EMOJI_CATEGORIES: EmojiCategory[] = [
   {
     key: "travel",
     label: "Travel",
+    icon: "✈️",
     emojis: [
       { symbol: "✈️", label: "airplane", keywords: ["travel", "flight"] },
       { symbol: "🚗", label: "car", keywords: ["travel", "drive"] },
@@ -133,6 +143,7 @@ const EMOJI_CATEGORIES: EmojiCategory[] = [
   {
     key: "activities",
     label: "Activities",
+    icon: "🎉",
     emojis: [
       { symbol: "🎶", label: "music", keywords: ["music", "song"] },
       { symbol: "🎵", label: "musical note", keywords: ["music", "note"] },
@@ -147,6 +158,7 @@ const EMOJI_CATEGORIES: EmojiCategory[] = [
   {
     key: "objects",
     label: "Objects",
+    icon: "💎",
     emojis: [
       { symbol: "📸", label: "camera", keywords: ["camera", "photo"] },
       { symbol: "📷", label: "camera flash", keywords: ["camera", "flash"] },
@@ -163,6 +175,7 @@ const EMOJI_CATEGORIES: EmojiCategory[] = [
   {
     key: "symbols",
     label: "Symbols",
+    icon: "💬",
     emojis: [
       { symbol: "💬", label: "speech balloon", keywords: ["chat", "talk"] },
       { symbol: "📣", label: "megaphone", keywords: ["share", "announce"] },
@@ -206,6 +219,8 @@ function saveRecentEmoji(symbol: string) {
 
 export function EmojiPicker({ onSelect }: { onSelect: (emoji: string) => void }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
   const [open, setOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState("recent");
   const [search, setSearch] = useState("");
@@ -217,19 +232,17 @@ export function EmojiPicker({ onSelect }: { onSelect: (emoji: string) => void })
     }
   }, [open]);
 
+  useDismissibleLayer({
+    open,
+    onDismiss: () => setOpen(false),
+    refs: [containerRef],
+    restoreFocusRef: triggerRef,
+  });
+
   useEffect(() => {
-    if (!open) {
-      return;
+    if (open) {
+      requestAnimationFrame(() => searchInputRef.current?.focus());
     }
-
-    function handlePointerDown(event: MouseEvent) {
-      if (!containerRef.current?.contains(event.target as Node)) {
-        setOpen(false);
-      }
-    }
-
-    document.addEventListener("mousedown", handlePointerDown);
-    return () => document.removeEventListener("mousedown", handlePointerDown);
   }, [open]);
 
   const allEmojiEntries = useMemo(() => EMOJI_CATEGORIES.flatMap((category) => category.emojis), []);
@@ -266,7 +279,8 @@ export function EmojiPicker({ onSelect }: { onSelect: (emoji: string) => void })
   return (
     <div className="relative" ref={containerRef}>
       <button
-        className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[color:var(--lux-border)] bg-white text-[color:var(--lux-text-muted)] transition hover:border-[color:var(--lux-accent)] hover:text-[color:var(--lux-accent-deep)]"
+        className={PREMIUM_TOOL_CHIP}
+        ref={triggerRef}
         onClick={() => setOpen((value) => !value)}
         title="Insert emoji"
         type="button"
@@ -275,44 +289,47 @@ export function EmojiPicker({ onSelect }: { onSelect: (emoji: string) => void })
       </button>
 
       {open ? (
-        <div className="absolute left-0 top-11 z-30 w-[22rem] rounded-[1rem] border border-[color:var(--lux-border)] bg-white p-3 shadow-[0_18px_38px_rgba(43,43,43,0.08)]">
-          <div className="flex items-center gap-2 rounded-[0.85rem] border border-[color:var(--lux-border)] bg-[color:var(--lux-secondary)] px-3 py-2">
-            <Search className="h-4 w-4 text-[color:var(--lux-text-muted)]" />
+        <div className={`absolute left-0 top-11 z-30 w-[21rem] p-2.5 ${PREMIUM_PANEL}`} data-testid="emoji-picker-panel">
+          <div className="flex items-center gap-2 rounded-[0.95rem] border border-[rgba(228,213,192,0.06)] bg-[rgba(32,25,21,0.42)] px-3 py-2">
+            <Search className="h-4 w-4 text-white/44" />
             <input
-              className="w-full bg-transparent text-sm text-[color:var(--lux-text)] outline-none placeholder:text-[color:var(--lux-text-muted)]"
+              className="w-full bg-transparent text-sm text-white outline-none placeholder:text-white/38"
+              ref={searchInputRef}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Search emoji"
               value={search}
             />
           </div>
 
-          <div className="mt-3 flex flex-wrap gap-1.5">
+          <div className="mt-2 flex flex-wrap gap-0.5" data-testid="emoji-picker-tabs">
             <button
-              className={`rounded-full px-3 py-1 text-[11px] font-medium uppercase tracking-[0.14em] ${activeCategory === "recent" && !search ? "bg-[color:var(--lux-accent)] text-white" : "bg-[color:var(--lux-secondary)] text-[color:var(--lux-text-secondary)]"}`}
+              aria-label="Recent emojis"
+              className={`inline-flex h-8 w-8 items-center justify-center rounded-full border text-[14px] transition duration-200 ${activeCategory === "recent" && !search ? "border-[rgba(189,151,100,0.16)] bg-[rgba(189,151,100,0.06)] text-[color:var(--lux-text-accent)]" : "border-[rgba(228,213,192,0.05)] bg-[rgba(255,255,255,0.018)] text-white/56 hover:border-[rgba(228,213,192,0.1)] hover:bg-[rgba(255,255,255,0.035)]"}`}
               onClick={() => setActiveCategory("recent")}
               type="button"
             >
-              Recent
+              <span aria-hidden="true">🕘</span>
             </button>
             {EMOJI_CATEGORIES.map((category) => (
               <button
-                className={`rounded-full px-3 py-1 text-[11px] font-medium uppercase tracking-[0.14em] ${activeCategory === category.key && !search ? "bg-[color:var(--lux-accent)] text-white" : "bg-[color:var(--lux-secondary)] text-[color:var(--lux-text-secondary)]"}`}
+                aria-label={category.label}
+                className={`inline-flex h-8 w-8 items-center justify-center rounded-full border text-[14px] transition duration-200 ${activeCategory === category.key && !search ? "border-[rgba(189,151,100,0.16)] bg-[rgba(189,151,100,0.06)] text-[color:var(--lux-text-accent)]" : "border-[rgba(228,213,192,0.05)] bg-[rgba(255,255,255,0.018)] text-white/56 hover:border-[rgba(228,213,192,0.1)] hover:bg-[rgba(255,255,255,0.035)]"}`}
                 key={category.key}
                 onClick={() => setActiveCategory(category.key)}
                 type="button"
               >
-                {category.label}
+                <span aria-hidden="true">{category.icon}</span>
               </button>
             ))}
           </div>
 
-          <div className="mt-3 grid max-h-72 grid-cols-8 gap-1 overflow-y-auto pr-1">
+          <div className="mt-2 grid max-h-72 grid-cols-8 gap-[2px] overflow-y-auto pr-1" data-testid="emoji-picker-grid">
             {showEmptySearchState ? (
-              <p className="col-span-8 py-4 text-center text-sm text-[color:var(--lux-text-muted)]">No emoji found.</p>
+              <p className="col-span-8 py-4 text-center text-sm text-white/54">No emoji found.</p>
             ) : (
               visibleEmojis.map((entry) => (
                 <button
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-[0.85rem] bg-[color:var(--lux-secondary)] text-xl transition hover:bg-[color:var(--lux-highlight)]"
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-[0.85rem] border border-[rgba(228,213,192,0.05)] bg-[rgba(255,255,255,0.022)] text-xl transition duration-200 hover:border-[rgba(189,151,100,0.12)] hover:bg-[rgba(189,151,100,0.06)]"
                   key={`${entry.symbol}-${entry.label}`}
                   onClick={() => handleSelect(entry.symbol)}
                   title={entry.label}
@@ -328,3 +345,6 @@ export function EmojiPicker({ onSelect }: { onSelect: (emoji: string) => void })
     </div>
   );
 }
+
+
+

@@ -32,6 +32,7 @@ export type SeedData = {
   };
   posts: {
     reportedPost: { id: string; contentText: string };
+    eventThreadPost?: { id: string; contentText: string };
   };
   reports: {
     postReport: { id: string };

@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { Ban, Flag, Images, MessageCircleMore, ShieldAlert, Video } from "lucide-react";
 import { blockUserAction, reportUserAction, requestVideoConsentAction, sendChatRequestAction, sendPhotoAccessRequestAction } from "@/app/(app)/actions";
+import { PREMIUM_PANEL, PREMIUM_TOOL_CHIP } from "@/components/ui/premium-styles";
+import { useDismissibleLayer } from "@/components/ui/use-dismissible-layer";
 
 type ChatState = "send" | "open" | "pending" | "incoming" | "blocked";
 type PhotoState = "request" | "approved" | "pending" | "blocked";
@@ -33,22 +35,11 @@ function iconTone(state: "idle" | "pending" | "confirmed" | "blocked") {
 
 export function PostAuthorActions({ targetUserId, sourcePath, chatState, photoState, videoState, conversationId }: PostAuthorActionsProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const dismissMenu = useCallback(() => setMenuOpen(false), []);
 
-  useEffect(() => {
-    if (!menuOpen) {
-      return;
-    }
-
-    function handlePointerDown(event: MouseEvent) {
-      if (!containerRef.current?.contains(event.target as Node)) {
-        setMenuOpen(false);
-      }
-    }
-
-    document.addEventListener("mousedown", handlePointerDown);
-    return () => document.removeEventListener("mousedown", handlePointerDown);
-  }, [menuOpen]);
+  useDismissibleLayer({ open: menuOpen, onDismiss: dismissMenu, refs: [containerRef], restoreFocusRef: triggerRef });
 
   const chatTone = chatState === "open" ? "confirmed" : chatState === "pending" || chatState === "incoming" ? "pending" : chatState === "blocked" ? "blocked" : "idle";
   const photoTone = photoState === "approved" ? "confirmed" : photoState === "pending" ? "pending" : photoState === "blocked" ? "blocked" : "idle";
@@ -110,16 +101,16 @@ export function PostAuthorActions({ targetUserId, sourcePath, chatState, photoSt
         </span>
       )}
 
-      <button className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[color:rgba(122,115,118,0.2)] bg-white text-[color:var(--lux-text-muted)] transition hover:border-[color:var(--lux-accent)] hover:text-[color:var(--lux-accent-deep)]" onClick={() => setMenuOpen((value) => !value)} title="Safety actions" type="button">
+      <button className={`${PREMIUM_TOOL_CHIP} h-8 w-8 px-0 text-white/62 hover:text-white`} onClick={() => setMenuOpen((value) => !value)} ref={triggerRef} title="Safety actions" type="button">
         <ShieldAlert className="h-4 w-4" />
       </button>
 
       {menuOpen ? (
-        <div className="absolute right-0 top-10 z-20 w-56 rounded-[1rem] border border-[color:var(--lux-border)] bg-white p-2 shadow-[0_18px_38px_rgba(43,43,43,0.08)]">
+        <div className={`absolute right-0 top-10 z-20 w-56 p-2 ${PREMIUM_PANEL}`}>
           <form action={blockUserAction}>
             <input name="blockedUserId" type="hidden" value={targetUserId} />
             <input name="sourcePath" type="hidden" value={sourcePath} />
-            <button className="flex w-full items-center gap-2 rounded-[0.85rem] px-3 py-2 text-left text-sm text-[color:var(--lux-text-secondary)] transition hover:bg-[color:var(--lux-highlight-soft)] hover:text-[color:var(--lux-text)]" type="submit">
+            <button className="flex w-full items-center gap-2 rounded-[0.85rem] px-3 py-2 text-left text-sm text-white/68 transition hover:bg-[rgba(255,255,255,0.06)] hover:text-white" type="submit">
               <Ban className="h-4 w-4" />
               Block user
             </button>
@@ -128,7 +119,7 @@ export function PostAuthorActions({ targetUserId, sourcePath, chatState, photoSt
             <input name="targetUserId" type="hidden" value={targetUserId} />
             <input name="sourcePath" type="hidden" value={sourcePath} />
             <input name="details" type="hidden" value="Reported from post header actions." />
-            <button className="flex w-full items-center gap-2 rounded-[0.85rem] px-3 py-2 text-left text-sm text-[color:var(--lux-text-secondary)] transition hover:bg-[color:var(--lux-highlight-soft)] hover:text-[color:var(--lux-text)]" type="submit">
+            <button className="flex w-full items-center gap-2 rounded-[0.85rem] px-3 py-2 text-left text-sm text-white/68 transition hover:bg-[rgba(255,255,255,0.06)] hover:text-white" type="submit">
               <Flag className="h-4 w-4" />
               Report user
             </button>

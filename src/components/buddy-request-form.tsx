@@ -13,11 +13,13 @@ type DomainOption = {
 type BuddyRequestFormProps = {
   action: (formData: FormData) => void | Promise<void>;
   domainOptions: DomainOption[];
+  initialDomainId?: string;
+  initialMessage?: string;
 };
 
-export function BuddyRequestForm({ action, domainOptions }: BuddyRequestFormProps) {
-  const [domainId, setDomainId] = useState("");
-  const [message, setMessage] = useState("");
+export function BuddyRequestForm({ action, domainOptions, initialDomainId = "", initialMessage = "" }: BuddyRequestFormProps) {
+  const [domainId, setDomainId] = useState(initialDomainId);
+  const [message, setMessage] = useState(initialMessage);
 
   const errors = useMemo(() => ({
     domain: domainId ? null : "Choose one support domain.",

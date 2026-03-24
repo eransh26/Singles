@@ -3,46 +3,57 @@
 @tailwind utilities;
 
 :root {
-  --background: 330 18% 98%;
-  --foreground: 0 0% 17%;
-  --card: 0 0% 100%;
-  --card-foreground: 0 0% 17%;
-  --border: 320 9% 89%;
-  --input: 320 9% 89%;
-  --ring: 322 26% 39%;
-  --primary: 322 26% 39%;
+  --background: 224 18% 9%;
+  --foreground: 0 0% 95%;
+  --card: 222 16% 12%;
+  --card-foreground: 0 0% 95%;
+  --border: 220 12% 22%;
+  --input: 220 12% 22%;
+  --ring: 40 55% 62%;
+  --primary: 40 55% 62%;
   --primary-foreground: 0 0% 100%;
-  --muted: 330 14% 96%;
-  --muted-foreground: 336 4% 47%;
+  --muted: 222 14% 14%;
+  --muted-foreground: 220 10% 68%;
   --radius: 0.875rem;
 
-  --lux-bg: #faf7f8;
-  --lux-secondary: #f5f2f4;
-  --lux-card: #ffffff;
-  --lux-elevated: #ffffff;
-  --lux-surface: #f8f4f6;
-  --lux-highlight-soft: rgba(124, 74, 110, 0.06);
-  --lux-highlight: rgba(124, 74, 110, 0.1);
-  --lux-text: #2b2b2b;
-  --lux-text-secondary: #5f585b;
-  --lux-text-muted: #7a7376;
-  --lux-border: #e6e1e4;
-  --lux-border-soft: #efebee;
-  --lux-divider: #e6e1e4;
-  --lux-accent: #7c4a6e;
-  --lux-accent-strong: #7c4a6e;
-  --lux-accent-deep: #5e3554;
-  --lux-accent-border: rgba(124, 74, 110, 0.18);
-  --lux-cta: #5e3554;
-  --lux-cta-text: #ffffff;
-  --lux-danger: #8a5964;
-  --lux-danger-bg: rgba(138, 89, 100, 0.1);
-  --lux-success: #5f725f;
-  --lux-success-bg: rgba(95, 114, 95, 0.12);
-  --lux-champagne: #cdb7c6;
-  --lux-gold: #7c4a6e;
-  --lux-taupe: #b9afb4;
-  --lux-mauve: #946681;
+  --lux-bg: #1a1512;
+  --lux-secondary: #241d19;
+  --lux-card: #2b221d;
+  --lux-elevated: #342923;
+  --lux-surface: #221b17;
+  --lux-bg-main: #1a1512;
+  --lux-bg-surface: #2b221d;
+  --lux-bg-elevated: #342923;
+  --lux-highlight-soft: rgba(198, 155, 97, 0.09);
+  --lux-highlight: rgba(198, 155, 97, 0.14);
+  --lux-text: #f2ece3;
+  --lux-text-primary: #f2ece3;
+  --lux-text-secondary: #d6c9ba;
+  --lux-text-muted: #a89b8f;
+  --lux-text-accent: #ecd2aa;
+  --lux-border: rgba(228, 213, 192, 0.12);
+  --lux-border-soft: rgba(228, 213, 192, 0.07);
+  --lux-border-subtle: rgba(228, 213, 192, 0.07);
+  --lux-border-default: rgba(228, 213, 192, 0.12);
+  --lux-border-strong: rgba(228, 213, 192, 0.18);
+  --lux-divider: rgba(228, 213, 192, 0.1);
+  --lux-accent: #bd9764;
+  --lux-accent-primary: #bd9764;
+  --lux-accent-strong: #cfac7d;
+  --lux-accent-primary-hover: #cfac7d;
+  --lux-accent-deep: #e5cfb0;
+  --lux-accent-soft: rgba(189, 151, 100, 0.12);
+  --lux-accent-border: rgba(189, 151, 100, 0.19);
+  --lux-cta: #d6b06a;
+  --lux-cta-text: #17181d;
+  --lux-danger: #e6a6ae;
+  --lux-danger-bg: rgba(170, 88, 103, 0.16);
+  --lux-success: #b8d2b5;
+  --lux-success-bg: rgba(104, 149, 111, 0.16);
+  --lux-champagne: #c8b79a;
+  --lux-gold: #d6b06a;
+  --lux-taupe: #857d76;
+  --lux-mauve: #8b6f75;
 }
 
 @layer base {
@@ -58,9 +69,9 @@
   body {
     min-height: 100vh;
     background:
-      radial-gradient(circle at top left, rgba(124, 74, 110, 0.04), transparent 22%),
-      radial-gradient(circle at 85% 6%, rgba(124, 74, 110, 0.05), transparent 18%),
-      linear-gradient(180deg, #fcfafb 0%, var(--lux-bg) 30%, #f8f4f6 100%);
+      radial-gradient(circle at top left, rgba(189, 151, 100, 0.11), transparent 24%),
+      radial-gradient(circle at 82% 7%, rgba(122, 88, 74, 0.12), transparent 22%),
+      linear-gradient(180deg, #302722 0%, #241d19 38%, #1c1714 100%);
     color: var(--lux-text);
     @apply antialiased;
   }
@@ -99,8 +110,8 @@
     overflow: hidden;
     border: 1px solid var(--lux-accent-border);
     border-radius: 1rem;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(250, 247, 248, 0.96));
-    box-shadow: 0 10px 24px rgba(44, 33, 40, 0.04);
+    background: linear-gradient(180deg, rgba(55, 43, 37, 0.96), rgba(40, 31, 26, 0.96));
+    box-shadow: 0 18px 40px rgba(18, 12, 9, 0.18);
     @apply p-5 md:p-6;
   }
 
@@ -109,7 +120,7 @@
     border: 1px solid var(--lux-border);
     border-radius: 0.875rem;
     background: var(--lux-card);
-    box-shadow: 0 8px 20px rgba(44, 33, 40, 0.035);
+    box-shadow: 0 14px 34px rgba(18, 12, 9, 0.16);
     @apply p-5 md:p-6;
   }
 
@@ -119,20 +130,20 @@
     inset: 0;
     border-radius: inherit;
     pointer-events: none;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
   }
 
   .lux-card-soft {
     border: 1px solid var(--lux-border);
     border-radius: 0.875rem;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(248, 244, 246, 0.9));
+    background: linear-gradient(180deg, rgba(50, 40, 34, 0.96), rgba(38, 30, 26, 0.92));
     @apply p-4;
   }
 
   .lux-panel {
     border: 1px solid var(--lux-border);
     border-radius: 0.875rem;
-    background: rgba(250, 247, 248, 0.78);
+    background: rgba(255, 255, 255, 0.04);
     @apply p-4;
   }
 
@@ -161,19 +172,19 @@
   .lux-chip {
     border: 1px solid var(--lux-border);
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.96);
+    background: rgba(255, 255, 255, 0.04);
     color: var(--lux-text-secondary);
     @apply inline-flex items-center gap-2 px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.16em];
   }
 
   .lux-chip-accent {
-    border-color: rgba(124, 74, 110, 0.18);
-    background: rgba(124, 74, 110, 0.08);
+    border-color: rgba(229, 181, 98, 0.22);
+    background: rgba(229, 181, 98, 0.12);
     color: var(--lux-accent-deep);
   }
 
   .lux-chip-muted {
-    background: rgba(124, 74, 110, 0.04);
+    background: rgba(255, 255, 255, 0.03);
   }
 
   .lux-divider {
@@ -186,7 +197,7 @@
     width: 100%;
     border: 1px solid var(--lux-border);
     border-radius: 0.875rem;
-    background: #ffffff;
+    background: var(--lux-card);
     color: var(--lux-text);
     transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
     @apply px-4 py-3;
@@ -195,8 +206,8 @@
   .lux-input:focus,
   .lux-textarea:focus,
   .lux-select:focus {
-    border-color: rgba(124, 74, 110, 0.36);
-    box-shadow: 0 0 0 4px rgba(124, 74, 110, 0.08);
+    border-color: rgba(229, 181, 98, 0.36);
+    box-shadow: 0 0 0 4px rgba(198, 155, 97, 0.12);
   }
 
   .lux-textarea {
@@ -215,7 +226,7 @@
   }
 
   .lux-button-primary {
-    background: linear-gradient(180deg, #7c4a6e 0%, #5e3554 100%);
+    background: linear-gradient(180deg, #f0d59c 0%, #d6b06a 100%);
     color: var(--lux-cta-text);
     border: 1px solid transparent;
   }
@@ -227,13 +238,13 @@
 
   .lux-button-secondary {
     border: 1px solid var(--lux-border);
-    background: #ffffff;
+    background: var(--lux-card);
     color: var(--lux-text);
   }
 
   .lux-button-subtle {
     border: 1px solid transparent;
-    background: rgba(124, 74, 110, 0.06);
+    background: rgba(255, 255, 255, 0.04);
     color: var(--lux-text-secondary);
   }
 
@@ -246,7 +257,7 @@
   .lux-empty {
     border: 1px dashed var(--lux-border);
     border-radius: 0.875rem;
-    background: rgba(255, 255, 255, 0.8);
+    background: rgba(255, 255, 255, 0.03);
     color: var(--lux-text-muted);
     @apply p-6 text-sm leading-6;
   }
@@ -266,21 +277,21 @@
 
   .admin-shell {
     background:
-      radial-gradient(circle at top left, rgba(124, 74, 110, 0.03), transparent 26%),
-      linear-gradient(180deg, #faf7f8 0%, #f6f2f4 100%);
+      radial-gradient(circle at top left, rgba(198, 155, 97, 0.08), transparent 24%),
+      linear-gradient(180deg, #241c18 0%, #1b1512 100%);
   }
 
   .admin-surface {
     border: 1px solid var(--lux-border);
     border-radius: 1rem;
-    background: #ffffff;
-    box-shadow: 0 10px 24px rgba(44, 33, 40, 0.05);
+    background: var(--lux-card);
+    box-shadow: 0 18px 42px rgba(7, 8, 10, 0.2);
   }
 
   .admin-card {
     border: 1px solid var(--lux-border);
     border-radius: 0.875rem;
-    background: #ffffff;
+    background: var(--lux-card);
     @apply p-5;
   }
 
@@ -293,8 +304,8 @@
   }
 
   .admin-sidebar-link-active {
-    border-color: rgba(124, 74, 110, 0.12);
-    background: rgba(124, 74, 110, 0.06);
+    border-color: rgba(198, 155, 97, 0.16);
+    background: rgba(255, 255, 255, 0.04);
     color: var(--lux-accent-deep);
   }
 
@@ -304,7 +315,7 @@
     width: 100%;
     border: 1px solid var(--lux-border);
     border-radius: 0.875rem;
-    background: #ffffff;
+    background: var(--lux-card);
     color: var(--lux-text);
     @apply px-4 py-3 text-sm;
   }
@@ -312,26 +323,26 @@
   .admin-input:focus,
   .admin-select:focus,
   .admin-textarea:focus {
-    border-color: rgba(124, 74, 110, 0.36);
-    box-shadow: 0 0 0 4px rgba(124, 74, 110, 0.08);
+    border-color: rgba(229, 181, 98, 0.36);
+    box-shadow: 0 0 0 4px rgba(198, 155, 97, 0.12);
   }
 
   .admin-button-primary {
     border: 1px solid transparent;
-    background: linear-gradient(180deg, #7c4a6e 0%, #5e3554 100%);
-    color: #ffffff;
+    background: linear-gradient(180deg, #f0d59c 0%, #d6b06a 100%);
+    color: var(--lux-cta-text);
   }
 
   .admin-button-secondary {
     border: 1px solid var(--lux-border);
-    background: #ffffff;
+    background: var(--lux-card);
     color: var(--lux-text);
   }
 
   .admin-pill {
-    border: 1px solid rgba(124, 74, 110, 0.12);
+    border: 1px solid rgba(198, 155, 97, 0.16);
     border-radius: 999px;
-    background: rgba(124, 74, 110, 0.06);
+    background: rgba(255, 255, 255, 0.04);
     color: var(--lux-accent-deep);
     @apply inline-flex items-center px-3 py-1 text-[11px] font-medium uppercase tracking-[0.16em];
   }
@@ -339,7 +350,7 @@
   .admin-empty {
     border: 1px dashed var(--lux-border);
     border-radius: 0.875rem;
-    background: rgba(255, 255, 255, 0.8);
+    background: rgba(255, 255, 255, 0.03);
     color: var(--lux-text-muted);
     @apply p-5 text-sm leading-6;
   }
@@ -350,7 +361,7 @@
   }
 
   .admin-table thead {
-    background: rgba(124, 74, 110, 0.04);
+    background: rgba(255, 255, 255, 0.03);
     color: var(--lux-text-muted);
   }
 
@@ -366,7 +377,7 @@
   }
 
   .admin-table tbody tr:hover {
-    background: rgba(124, 74, 110, 0.03);
+    background: rgba(255, 255, 255, 0.03);
   }
 
   .member-header-shell {
@@ -402,3 +413,6 @@
     padding-bottom: 0.45rem;
   }
 }
+
+
+

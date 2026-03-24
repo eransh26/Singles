@@ -109,7 +109,7 @@ export default async function ConversationPage({ params, searchParams }: { param
 
   return (
     <main className="mx-auto flex min-h-screen max-w-4xl flex-col gap-6 px-4 py-6 md:px-6 md:py-8">
-      {saveMessage ? <div className="rounded-[1rem] border border-[color:var(--lux-border)] bg-white px-4 py-3 text-sm text-[color:var(--lux-text-secondary)]">{saveMessage}</div> : null}
+      {saveMessage ? <div className="rounded-[1rem] border border-[color:var(--lux-border)] bg-[rgba(255,255,255,0.04)] px-4 py-3 text-sm text-[color:var(--lux-text-secondary)]">{saveMessage}</div> : null}
       <section className="lux-hero">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="max-w-2xl">
@@ -128,7 +128,7 @@ export default async function ConversationPage({ params, searchParams }: { param
             <Link className="lux-button-subtle" href={`/users/${otherUser.id}`}>View profile</Link>
           </div>
         </div>
-        <div className="mt-5 rounded-[1rem] border border-[color:var(--lux-border)] bg-white/80 p-4 text-sm text-[color:var(--lux-text-secondary)]">
+        <div className="mt-5 rounded-[1rem] border border-[color:var(--lux-border)] bg-[rgba(255,255,255,0.04)] p-4 text-sm text-[color:var(--lux-text-secondary)]">
           <p className="font-medium text-[color:var(--lux-text)]">{videoTrustAccess.allowed ? "Video calls require separate approval and can be revoked at any time." : `${videoTrustAccess.reason} ${videoTrustAccess.nextStep ?? ""}`.trim()}</p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             {!videoConsent && videoTrustAccess.allowed ? (

@@ -66,6 +66,29 @@ const TEST_USER_PASSWORD = "Test1234!";
 const VERIFIED_AT = new Date("2026-01-15T10:00:00.000Z");
 const IMAGE_DATA_URL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO7Z0nQAAAAASUVORK5CYII=";
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function normalizeUtcDate(value: Date) {
+  return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()));
+}
+
+function getCurrentWeekStart(value = new Date()) {
+  const normalized = normalizeUtcDate(value);
+  normalized.setUTCDate(normalized.getUTCDate() - normalized.getUTCDay());
+  return normalized;
+}
+
+const CURRENT_FEATURE_WEEK_OF = getCurrentWeekStart();
+const CURRENT_FEATURE_PUBLISH_AT = CURRENT_FEATURE_WEEK_OF;
+const CURRENT_FEATURE_NOTIFY_AT = new Date(CURRENT_FEATURE_PUBLISH_AT.getTime() - 2 * DAY_MS);
+const CURRENT_FEATURE_SELECTED_AT = new Date(CURRENT_FEATURE_PUBLISH_AT.getTime() - DAY_MS);
+const CURRENT_FEATURE_ACCEPTED_AT = new Date(CURRENT_FEATURE_NOTIFY_AT.getTime() + 10 * 60 * 60 * 1000);
+const CURRENT_FEATURE_PHOTO_UPLOADED_AT = new Date(CURRENT_FEATURE_SELECTED_AT.getTime() + 8 * 60 * 60 * 1000);
+const UPCOMING_LOCKED_PUBLISH_AT = new Date(Date.now() + 12 * 60 * 60 * 1000);
+const UPCOMING_LOCKED_WEEK_OF = normalizeUtcDate(UPCOMING_LOCKED_PUBLISH_AT);
+const UPCOMING_LOCKED_NOTIFY_AT = new Date(UPCOMING_LOCKED_PUBLISH_AT.getTime() - 2 * DAY_MS);
+const UPCOMING_LOCKED_SELECTED_AT = new Date(UPCOMING_LOCKED_PUBLISH_AT.getTime() - 18 * 60 * 60 * 1000);
+
 const DEFAULT_BUDDY_DOMAINS = [
   { slug: "divorce-support", name: "Divorce support" },
   { slug: "emotional-support", name: "Emotional support" },
@@ -592,14 +615,65 @@ async function main() {
     select: { id: true, name: true },
   });
 
+  await prisma.eventPromotion.create({
+    data: {
+      title: "Quiet rooftop gathering",
+      description: "A discreet plan for tonight. Area unlocks later and the thread is where the tone gets set first.",
+      externalLink: "https://example.com/events/quiet-rooftop",
+      status: "ACTIVE",
+      startsAt: new Date(Date.now() - 60 * 60 * 1000),
+      endsAt: new Date(Date.now() + 4 * 60 * 60 * 1000),
+      createdByUserId: admin.id,
+      placements: {
+        create: {
+          placementType: "HOME_FEED_CARD",
+          priority: 10,
+          isActive: true,
+        },
+      },
+    },
+    select: { id: true },
+  });
+
+  const eventThreadPost = await prisma.post.create({
+    data: {
+      authorUserId: owner.id,
+      contextType: PostContextType.GLOBAL_FEED,
+      contentText: "Quiet event thread for tonight. If this feels like your pace, say if you are interested or going so the room can coordinate softly.",
+      isAnonymous: false,
+      comments: {
+        create: {
+          authorUserId: verified.id,
+          contentText: "I am likely in. Keeping an eye on who else is going first.",
+        },
+      },
+      reactions: {
+        create: [
+          { userId: verified.id, reactionType: "SUPPORT" },
+          { userId: owner.id, reactionType: "CELEBRATE" },
+        ],
+      },
+    },
+    select: { id: true, contentText: true },
+  });
+
   const reportedPost = await prisma.post.create({
     data: {
       authorUserId: member.id,
       contextType: PostContextType.GLOBAL_FEED,
-      contentText: "Reportable post content that should disappear after moderation.",
+      contentText: "Reportable post content that should disappear after moderation and may need support.",
       isAnonymous: false,
     },
     select: { id: true, contentText: true },
+  });
+
+
+  await prisma.comment.create({
+    data: {
+      postId: reportedPost.id,
+      authorUserId: owner.id,
+      contentText: "Following this thread quietly. Let us know if you want this moved into a calmer conversation.",
+    },
   });
 
   await prisma.post.createMany({
@@ -773,13 +847,13 @@ async function main() {
       hobbies: "Travel, reading",
       relationshipIntent: "Intentional dating",
       preferredLocation: "Tel Aviv",
-      consentedAt: new Date("2026-03-10T10:00:00.000Z"),
+      consentedAt: CURRENT_FEATURE_NOTIFY_AT,
       status: "SELECTED",
-      submittedAt: new Date("2026-03-10T10:00:00.000Z"),
-      selectedAt: new Date("2026-03-14T10:00:00.000Z"),
+      submittedAt: CURRENT_FEATURE_NOTIFY_AT,
+      selectedAt: CURRENT_FEATURE_SELECTED_AT,
       photos: {
         create: [
-          { storageKey: IMAGE_DATA_URL, storageProvider: "LEGACY_INLINE", moderationStatus: "PENDING_REVIEW", uploadedAt: new Date("2026-03-20T10:00:00.000Z"), sortOrder: 0 },
+          { storageKey: IMAGE_DATA_URL, storageProvider: "LEGACY_INLINE", moderationStatus: "PENDING_REVIEW", uploadedAt: CURRENT_FEATURE_PHOTO_UPLOADED_AT, sortOrder: 0 },
         ],
       },
     },
@@ -790,13 +864,13 @@ async function main() {
     data: {
       applicationId: featuredApplication.id,
       featuredUserId: testMale2.id,
-      weekOf: new Date("2026-03-15T00:00:00.000Z"),
-      publishAt: new Date("2026-03-15T00:00:00.000Z"),
-      notifyAt: new Date("2026-03-13T00:00:00.000Z"),
+      weekOf: CURRENT_FEATURE_WEEK_OF,
+      publishAt: CURRENT_FEATURE_PUBLISH_AT,
+      notifyAt: CURRENT_FEATURE_NOTIFY_AT,
       status: "ACTIVE",
       selectedByAdminId: admin.id,
-      notifiedAt: new Date("2026-03-13T00:00:00.000Z"),
-      acceptedAt: new Date("2026-03-13T10:00:00.000Z"),
+      notifiedAt: CURRENT_FEATURE_NOTIFY_AT,
+      acceptedAt: CURRENT_FEATURE_ACCEPTED_AT,
     },
     select: { id: true },
   });
@@ -809,10 +883,10 @@ async function main() {
       hobbies: "Long walks",
       relationshipIntent: "Serious connection",
       preferredLocation: "Jerusalem",
-      consentedAt: new Date("2026-03-17T10:00:00.000Z"),
+      consentedAt: UPCOMING_LOCKED_SELECTED_AT,
       status: "SELECTED",
-      submittedAt: new Date("2026-03-17T10:00:00.000Z"),
-      selectedAt: new Date("2026-03-19T10:00:00.000Z"),
+      submittedAt: UPCOMING_LOCKED_SELECTED_AT,
+      selectedAt: UPCOMING_LOCKED_SELECTED_AT,
       photos: { create: [{ storageKey: IMAGE_DATA_URL, sortOrder: 0 }] },
     },
     select: { id: true },
@@ -822,12 +896,12 @@ async function main() {
     data: {
       applicationId: upcomingLockedApplication.id,
       featuredUserId: owner.id,
-      weekOf: new Date("2026-03-20T00:00:00.000Z"),
-      publishAt: new Date("2026-03-20T00:00:00.000Z"),
-      notifyAt: new Date("2026-03-18T00:00:00.000Z"),
+      weekOf: UPCOMING_LOCKED_WEEK_OF,
+      publishAt: UPCOMING_LOCKED_PUBLISH_AT,
+      notifyAt: UPCOMING_LOCKED_NOTIFY_AT,
       status: "AWAITING_RESPONSE",
       selectedByAdminId: admin.id,
-      notifiedAt: new Date("2026-03-20T00:00:00.000Z"),
+      notifiedAt: UPCOMING_LOCKED_NOTIFY_AT,
     },
   });
 
@@ -944,6 +1018,7 @@ async function main() {
       closedGroup,
     },
     posts: {
+      eventThreadPost,
       reportedPost,
     },
     reports: {
@@ -980,6 +1055,12 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
+
+
+
+
+
+
 
 
 

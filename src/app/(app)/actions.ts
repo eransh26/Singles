@@ -715,6 +715,7 @@ export async function createCommentAction(formData: FormData) {
   if (post.groupId) {
     revalidatePath(`/groups/${post.groupId}`);
   }
+  revalidatePath(`/posts/${postId}`);
   revalidatePath("/notifications");
 }
 
@@ -1635,6 +1636,10 @@ export async function updateNotificationPreferencesAction(formData: FormData) {
   revalidatePath("/notifications");
   redirect("/settings?saved=notifications");
 }
+
+
+
+
 
 
 

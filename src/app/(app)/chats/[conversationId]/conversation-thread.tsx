@@ -1,11 +1,13 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { AlertCircle, Camera, FileText, ImagePlus, Paperclip, Send, X } from "lucide-react";
 import { EmojiPicker } from "@/components/emoji-picker";
 import { RelativeTime } from "@/components/relative-time";
 import { ContextualPushPrompt } from "@/components/contextual-push-prompt";
+import { PREMIUM_ACTION_ACCENT, PREMIUM_COMPOSER_SHELL, PREMIUM_PANEL, PREMIUM_TOOL_CHIP } from "@/components/ui/premium-styles";
+import { useDismissibleLayer } from "@/components/ui/use-dismissible-layer";
 import {
   getChatAttachmentValidationMessage,
   isAllowedChatAttachmentMimeType,
@@ -109,6 +111,9 @@ export function ConversationThread({
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
   const sendLockedRef = useRef(false);
+  const moderationPanelRef = useRef<HTMLDivElement | null>(null);
+  const moderationTriggerRefs = useRef(new Map<string, HTMLButtonElement | null>());
+  const dismissModerationPanel = useCallback(() => setModerationTarget(null), []);
 
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -142,7 +147,17 @@ export function ConversationThread({
     return () => clearInterval(interval);
   }, [conversationId]);
 
+  useDismissibleLayer({
+    open: Boolean(moderationTarget),
+    onDismiss: dismissModerationPanel,
+    refs: [moderationPanelRef, { current: moderationTarget ? moderationTriggerRefs.current.get(`${moderationTarget.type}:${moderationTarget.id}`) ?? null : null }],
+  });
+
   const hasDraftContent = body.trim().length > 0 || attachments.length > 0;
+
+  function toggleModerationTarget(target: { type: ModerationTargetType; id: string }) {
+    setModerationTarget((current) => (current?.type === target.type && current.id === target.id ? null : target));
+  }
 
   async function appendFiles(fileList: FileList | File[] | null) {
     if (!fileList || fileList.length === 0) return;
@@ -237,11 +252,13 @@ export function ConversationThread({
         if (enablePushPrompt) {
           setShowPushPrompt(true);
         }
+        requestAnimationFrame(() => textareaRef.current?.focus());
       } catch (error) {
         const message = error instanceof Error ? error.message : "Message could not be sent.";
         setComposerError(message);
         setBody(submittedBody);
         setAttachments(submittedAttachments);
+        requestAnimationFrame(() => textareaRef.current?.focus());
         setMessages((current) => current.filter((item) => item.id !== optimisticId));
       } finally {
         sendLockedRef.current = false;
@@ -320,7 +337,7 @@ export function ConversationThread({
                     className={`max-w-[92%] space-y-2 rounded-[1.15rem] px-4 py-3 shadow-sm md:max-w-[82%] ${
                       isMine
                         ? "border border-[color:rgba(124,74,110,0.12)] bg-[linear-gradient(180deg,#7c4a6e_0%,#5e3554_100%)] text-white"
-                        : "border border-[color:var(--lux-border)] bg-white text-[color:var(--lux-text)]"
+                        : "border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)] text-white/88"
                     }`}
                   >
                     {isRemoved ? (
@@ -344,7 +361,8 @@ export function ConversationThread({
                                 {isMine ? (
                                   <button className={isMine ? "text-white/80" : "text-[color:var(--lux-text-muted)]"} onClick={() => void submitModeration("delete", "MESSAGE_ATTACHMENT", attachment.id)} type="button">Remove</button>
                                 ) : null}
-                                <button className={isMine ? "text-white/80" : "text-[color:var(--lux-text-muted)]"} onClick={() => setModerationTarget({ type: "MESSAGE_ATTACHMENT", id: attachment.id })} type="button">Report</button>
+                                <button className={isMine ? "text-white/80" : "text-[color:var(--lux-text-muted)]"} ref={(node) => { moderationTriggerRefs.current.set(`MESSAGE_ATTACHMENT:${attachment.id}`, node); }}
+                                onClick={() => toggleModerationTarget({ type: "MESSAGE_ATTACHMENT", id: attachment.id })} type="button">Report</button>
                               </div>
                             </div>
                           ) : (
@@ -366,7 +384,8 @@ export function ConversationThread({
                                 {isMine ? (
                                   <button className={isMine ? "text-white/80" : "text-[color:var(--lux-text-muted)]"} onClick={() => void submitModeration("delete", "MESSAGE_ATTACHMENT", attachment.id)} type="button">Remove</button>
                                 ) : null}
-                                <button className={isMine ? "text-white/80" : "text-[color:var(--lux-text-muted)]"} onClick={() => setModerationTarget({ type: "MESSAGE_ATTACHMENT", id: attachment.id })} type="button">Report</button>
+                                <button className={isMine ? "text-white/80" : "text-[color:var(--lux-text-muted)]"} ref={(node) => { moderationTriggerRefs.current.set(`MESSAGE_ATTACHMENT:${attachment.id}`, node); }}
+                                onClick={() => toggleModerationTarget({ type: "MESSAGE_ATTACHMENT", id: attachment.id })} type="button">Report</button>
                               </div>
                             </div>
                           ),
@@ -375,7 +394,8 @@ export function ConversationThread({
                     ) : null}
                     <div className={`flex items-center justify-between gap-2 text-[11px] uppercase tracking-[0.14em] ${isMine ? "text-white/70" : "text-[color:var(--lux-text-muted)]"}`}>
                       <div className="flex items-center gap-2">
-                        {!isRemoved ? <button className={isMine ? "text-white/80" : "text-[color:var(--lux-text-muted)]"} onClick={() => setModerationTarget({ type: "MESSAGE", id: message.id })} type="button">Report</button> : null}
+                        {!isRemoved ? <button className={isMine ? "text-white/80" : "text-[color:var(--lux-text-muted)]"} ref={(node) => { moderationTriggerRefs.current.set(`MESSAGE:${message.id}`, node); }}
+                        onClick={() => toggleModerationTarget({ type: "MESSAGE", id: message.id })} type="button">Report</button> : null}
                         {isMine && !isRemoved ? <button className={isMine ? "text-white/80" : "text-[color:var(--lux-text-muted)]"} onClick={() => void submitModeration("delete", "MESSAGE", message.id)} type="button">Remove</button> : null}
                       </div>
                       <div className="flex items-center gap-2">
@@ -400,19 +420,19 @@ export function ConversationThread({
             />
           ) : null}
           {moderationError ? <div className="mb-3 rounded-[0.9rem] border border-[color:rgba(138,89,100,0.18)] bg-[color:rgba(138,89,100,0.08)] px-3 py-3 text-sm text-[color:var(--lux-danger)]">{moderationError}</div> : null}
-          {moderationSuccess ? <div className="mb-3 rounded-[0.9rem] border border-[color:rgba(71,142,98,0.18)] bg-[rgba(71,142,98,0.08)] px-3 py-3 text-sm text-emerald-700">{moderationSuccess}</div> : null}
+          {moderationSuccess ? <div className="mb-3 rounded-[0.9rem] border border-[color:rgba(71,142,98,0.18)] bg-[rgba(71,142,98,0.08)] px-3 py-3 text-sm text-emerald-200">{moderationSuccess}</div> : null}
           {moderationTarget ? (
-            <div className="mb-3 rounded-[0.95rem] border border-[color:var(--lux-border)] bg-white px-4 py-4 shadow-[0_8px_20px_rgba(43,43,43,0.035)]">
-              <p className="text-sm font-medium text-[color:var(--lux-text)]">Report content</p>
+            <div className={`mb-3 px-4 py-4 ${PREMIUM_PANEL}`} ref={moderationPanelRef}>
+              <p className="text-sm font-medium text-white">Report content</p>
               <div className="mt-3 grid gap-3 md:grid-cols-[180px_minmax(0,1fr)_auto]">
-                <select className="rounded-[0.8rem] border border-[color:var(--lux-border)] bg-[color:var(--lux-secondary)] px-3 py-2 text-sm" onChange={(event) => setModerationReason(event.target.value as (typeof REPORT_REASONS)[number]["value"])} value={moderationReason}>
+                <select className="rounded-[0.8rem] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)] px-3 py-2 text-sm text-white/84" onChange={(event) => setModerationReason(event.target.value as (typeof REPORT_REASONS)[number]["value"])} value={moderationReason}>
                   {REPORT_REASONS.map((reason) => (
                     <option key={reason.value} value={reason.value}>{reason.label}</option>
                   ))}
                 </select>
-                <input className="rounded-[0.8rem] border border-[color:var(--lux-border)] bg-[color:var(--lux-secondary)] px-3 py-2 text-sm" onChange={(event) => setModerationDetails(event.target.value)} placeholder="Optional details" value={moderationDetails} />
+                <input className="rounded-[0.8rem] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)] px-3 py-2 text-sm text-white/84" onChange={(event) => setModerationDetails(event.target.value)} placeholder="Optional details" value={moderationDetails} />
                 <div className="flex gap-2">
-                  <button className="lux-button-secondary" onClick={() => setModerationTarget(null)} type="button">Cancel</button>
+                  <button className="lux-button-secondary" onClick={dismissModerationPanel} type="button">Cancel</button>
                   <button className="lux-button-primary" onClick={() => void submitModeration("report", moderationTarget.type, moderationTarget.id)} type="button">Submit</button>
                 </div>
               </div>
@@ -428,7 +448,7 @@ export function ConversationThread({
           {attachments.length > 0 ? (
             <div className="mb-3 flex flex-wrap gap-2">
               {attachments.map((attachment) => (
-                <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-[color:var(--lux-border)] bg-white px-3 py-2 text-xs text-[color:var(--lux-text-secondary)]" key={attachment.id}>
+                <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)] px-3 py-2 text-xs text-white/66" key={attachment.id}>
                   <span className="truncate max-w-[180px]">{attachment.fileName}</span>
                   <button onClick={() => removeAttachment(attachment.id)} type="button">
                     <X className="h-3.5 w-3.5" />
@@ -438,10 +458,10 @@ export function ConversationThread({
             </div>
           ) : null}
 
-          <div className="rounded-[1rem] border border-[color:var(--lux-border)] bg-white px-4 py-3 shadow-[0_8px_20px_rgba(43,43,43,0.035)]">
+          <div className={`${PREMIUM_COMPOSER_SHELL} px-4 py-3`}>
             <textarea
               ref={textareaRef}
-              className="min-h-[52px] w-full resize-none overflow-hidden bg-transparent text-sm leading-7 text-[color:var(--lux-text)] outline-none placeholder:text-[color:var(--lux-text-muted)]"
+              className="min-h-[52px] w-full resize-none overflow-hidden bg-transparent text-sm leading-7 text-white outline-none placeholder:text-white/40"
               onChange={(event) => setBody(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === "Enter" && !event.shiftKey) {
@@ -456,25 +476,25 @@ export function ConversationThread({
                   void appendFiles(files);
                 }
               }}
-              placeholder={`Write a message to ${otherUserName}`}
+              placeholder={`Message ${otherUserName}...`}
               rows={1}
               value={body}
             />
             <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-[color:var(--lux-border)] pt-3">
               <div className="flex flex-wrap items-center gap-2 text-[color:var(--lux-text-muted)]">
-                <button className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[color:var(--lux-border)] bg-white transition hover:border-[color:var(--lux-accent)] hover:text-[color:var(--lux-accent-deep)]" onClick={() => imageInputRef.current?.click()} type="button">
+                <button className={PREMIUM_TOOL_CHIP + " h-9 w-9 px-0 text-white/62 hover:text-white"} onClick={() => imageInputRef.current?.click()} type="button">
                   <ImagePlus className="h-4 w-4" />
                 </button>
-                <button className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[color:var(--lux-border)] bg-white transition hover:border-[color:var(--lux-accent)] hover:text-[color:var(--lux-accent-deep)]" onClick={() => fileInputRef.current?.click()} type="button">
+                <button className={PREMIUM_TOOL_CHIP + " h-9 w-9 px-0 text-white/62 hover:text-white"} onClick={() => fileInputRef.current?.click()} type="button">
                   <Paperclip className="h-4 w-4" />
                 </button>
-                <button className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[color:var(--lux-border)] bg-white transition hover:border-[color:var(--lux-accent)] hover:text-[color:var(--lux-accent-deep)]" onClick={() => cameraInputRef.current?.click()} type="button">
+                <button className={PREMIUM_TOOL_CHIP + " h-9 w-9 px-0 text-white/62 hover:text-white"} onClick={() => cameraInputRef.current?.click()} type="button">
                   <Camera className="h-4 w-4" />
                 </button>
                 <EmojiPicker onSelect={handleEmojiSelect} />
               </div>
 
-              <button className="lux-button-primary gap-2 shrink-0" disabled={!hasDraftContent || isPending} onClick={() => void handleSubmit()} type="button">
+              <button className={`${PREMIUM_ACTION_ACCENT} shrink-0`} disabled={!hasDraftContent || isPending} onClick={() => void handleSubmit()} type="button">
                 <Send className="h-4 w-4" />
                 {isPending ? "Sending..." : "Send"}
               </button>
@@ -489,3 +509,8 @@ export function ConversationThread({
     </section>
   );
 }
+
+
+
+
+

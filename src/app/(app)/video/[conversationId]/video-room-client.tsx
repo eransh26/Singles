@@ -51,7 +51,7 @@ function VideoRoomStatusBanner({ connectionError }: { connectionError: string | 
   }
 
   return (
-    <div className={`border-b border-[color:var(--lux-border)] bg-white/90 px-4 py-3 text-sm backdrop-blur-sm md:px-5 ${tone}`}>
+    <div className={`border-b border-[color:var(--lux-border)] bg-[rgba(18,19,24,0.9)] px-4 py-3 text-sm backdrop-blur-sm md:px-5 ${tone}`}>
       {text}
     </div>
   );
@@ -172,7 +172,7 @@ export function VideoRoomClient({ conversationId, otherUserName }: VideoRoomClie
           {helpText}
         </div>
       ) : null}
-      <div className="overflow-hidden rounded-[1rem] border border-[color:var(--lux-border)] bg-[color:#f3eef1] shadow-[0_12px_28px_rgba(43,43,43,0.06)]">
+      <div className="overflow-hidden rounded-[1rem] border border-[color:var(--lux-border)] bg-[rgba(18,19,24,0.92)] shadow-[0_12px_28px_rgba(43,43,43,0.06)]">
         <LiveKitRoom
           audio
           className="block"
@@ -190,7 +190,7 @@ export function VideoRoomClient({ conversationId, otherUserName }: VideoRoomClie
           video
         >
           <div className="flex min-h-[60vh] flex-col md:min-h-[72vh]">
-            <div className="border-b border-[color:var(--lux-border)] bg-white/80 px-4 py-4 backdrop-blur-sm md:px-5">
+            <div className="border-b border-[color:var(--lux-border)] bg-[rgba(255,255,255,0.04)] px-4 py-4 backdrop-blur-sm md:px-5">
               <p className="lux-overline">{tokenState.callMode === "join" ? "Joinable private call" : "Private video room"}</p>
               <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
                 <h2 className="text-lg font-semibold tracking-tight text-[color:var(--lux-text)] md:text-xl">Live call with {otherUserName}</h2>
@@ -199,7 +199,7 @@ export function VideoRoomClient({ conversationId, otherUserName }: VideoRoomClie
             </div>
             <VideoRoomStatusBanner connectionError={connectionError} />
             <div className="flex-1 overflow-hidden p-2 md:p-4">
-              <div className="h-full min-h-[46vh] overflow-hidden rounded-[0.95rem] bg-white/40">
+              <div className="h-full min-h-[46vh] overflow-hidden rounded-[0.95rem] bg-[rgba(255,255,255,0.04)]">
                 <VideoConference />
               </div>
             </div>
@@ -210,3 +210,4 @@ export function VideoRoomClient({ conversationId, otherUserName }: VideoRoomClie
     </div>
   );
 }
+

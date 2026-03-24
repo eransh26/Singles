@@ -328,6 +328,7 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ gr
                         postId={post.id}
                         reactionCount={post._count.reactions}
                         reactionType={post.reactions[0]?.reactionType ?? null}
+                        threadHref={`/posts/${post.id}`}
                         viewerId={viewer.id}
                       />
                     </div>
@@ -431,6 +432,10 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ gr
     </main>
   );
 }
+
+
+
+
 
 
 

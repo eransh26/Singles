@@ -276,7 +276,7 @@ export default async function SettingsPage({
                 )}
               </div>
 
-              <div className="rounded-[1.2rem] border border-[color:var(--lux-border)] bg-white p-4 text-sm text-[color:var(--lux-text-secondary)]">
+              <div className="rounded-[1.2rem] border border-[color:var(--lux-border)] bg-[rgba(255,255,255,0.04)] p-4 text-sm text-[color:var(--lux-text-secondary)]">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <p className="lux-overline">Email verification</p>
@@ -392,7 +392,7 @@ export default async function SettingsPage({
             <h3 className="mt-3 text-2xl font-semibold tracking-tight text-[color:var(--lux-text)]">Recommendations and admin review</h3>
             {activeBuddyApplication ? (
               <div className="mt-5 space-y-4">
-                <div className="rounded-[1.2rem] border border-[color:var(--lux-border)] bg-white p-4">
+                <div className="rounded-[1.2rem] border border-[color:var(--lux-border)] bg-[rgba(255,255,255,0.04)] p-4">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
                       <p className="text-base font-semibold tracking-tight text-[color:var(--lux-text)]">Active Buddy application</p>
@@ -405,7 +405,7 @@ export default async function SettingsPage({
                   </div>
                 </div>
                 {activeBuddyApplication.domains.map((domainEntry) => (
-                  <div className="rounded-[1.2rem] border border-[color:var(--lux-border)] bg-white p-4" key={domainEntry.id}>
+                  <div className="rounded-[1.2rem] border border-[color:var(--lux-border)] bg-[rgba(255,255,255,0.04)] p-4" key={domainEntry.id}>
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <p className="text-base font-semibold tracking-tight text-[color:var(--lux-text)]">{domainEntry.domain.name}</p>
                       <span className="lux-chip">{domainEntry.status}</span>

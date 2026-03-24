@@ -5,6 +5,14 @@ test.beforeEach(() => {
   resetE2EState();
 });
 
+
+test("admin shell keeps sign out clearly visible", async ({ page }) => {
+  const seed = loadSeedData();
+
+  await loginAs(page, seed.users.admin.email, seed.password, /\/admin$/);
+  await expect(page.getByRole("button", { name: /sign out as admin/i })).toBeVisible();
+});
+
 test("admin can approve and reject verification requests and each action is audited", async ({ page }) => {
   test.slow();
   const seed = loadSeedData();

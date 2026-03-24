@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Camera, ImagePlus, X } from "lucide-react";
 import { EmojiPicker } from "@/components/emoji-picker";
+import { PREMIUM_ACTION, PREMIUM_ACTION_ACCENT, PREMIUM_BODY, PREMIUM_CHIP, PREMIUM_COMPOSER_SHELL, PREMIUM_INPUT_SHELL, PREMIUM_TOOL_CHIP } from "@/components/ui/premium-styles";
+import { useDismissibleLayer } from "@/components/ui/use-dismissible-layer";
 
 type HiddenField = {
   name: string;
@@ -19,30 +21,23 @@ type MediaComposerProps = {
   textareaClassName?: string;
   formClassName?: string;
   allowSensitive?: boolean;
+  tone?: "light" | "dark";
 };
 
 function isMobileCapturePreferred() {
   if (typeof window === "undefined") {
     return false;
   }
-
   return window.matchMedia("(max-width: 767px)").matches || /Android|iPhone|iPad|iPod/i.test(window.navigator.userAgent);
 }
 
-export function MediaComposer({
-  action,
-  hiddenFields = [],
-  placeholder,
-  submitLabel,
-  allowAnonymous = false,
-  compact = false,
-  textareaClassName = "",
-  formClassName = "",
-  allowSensitive = false,
-}: MediaComposerProps) {
+export function MediaComposer({ action, hiddenFields = [], placeholder, submitLabel, allowAnonymous = false, compact = false, textareaClassName = "", formClassName = "", allowSensitive = false, tone = "light" }: MediaComposerProps) {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
+  const cameraTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const cameraCloseButtonRef = useRef<HTMLButtonElement | null>(null);
+  const cameraPanelRef = useRef<HTMLDivElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [contentText, setContentText] = useState("");
@@ -56,9 +51,8 @@ export function MediaComposer({
     if (!textarea) {
       return;
     }
-
     textarea.style.height = "0px";
-    textarea.style.height = `${Math.max(textarea.scrollHeight, compact ? 52 : 48)}px`;
+    textarea.style.height = `${Math.max(textarea.scrollHeight, compact ? 44 : 48)}px`;
   }, [compact, contentText]);
 
   useEffect(() => {
@@ -67,13 +61,11 @@ export function MediaComposer({
     }
 
     let active = true;
-
     async function startCamera() {
       if (!("mediaDevices" in navigator) || !navigator.mediaDevices.getUserMedia) {
         setCameraError("Camera capture is not supported here. Please choose an image instead.");
         return;
       }
-
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
         if (!active) {
@@ -91,12 +83,31 @@ export function MediaComposer({
     }
 
     startCamera();
-
     return () => {
       active = false;
       streamRef.current?.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     };
+  }, [cameraOpen]);
+
+  function closeCamera() {
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+    setCameraOpen(false);
+  }
+
+  useDismissibleLayer({
+    open: cameraOpen,
+    onDismiss: closeCamera,
+    refs: [cameraPanelRef],
+    restoreFocusRef: cameraTriggerRef,
+    lockScroll: true,
+  });
+
+  useEffect(() => {
+    if (cameraOpen) {
+      requestAnimationFrame(() => cameraCloseButtonRef.current?.focus());
+    }
   }, [cameraOpen]);
 
   function appendEmoji(emoji: string) {
@@ -108,7 +119,6 @@ export function MediaComposer({
     if (!input) {
       return;
     }
-
     const transfer = new DataTransfer();
     transfer.items.add(file);
     input.files = transfer.files;
@@ -122,7 +132,6 @@ export function MediaComposer({
       }
       return;
     }
-
     setSelectedCameraImage(null);
     if (cameraInputRef.current) {
       cameraInputRef.current.value = "";
@@ -143,12 +152,10 @@ export function MediaComposer({
       cameraInputRef.current?.click();
       return;
     }
-
     if (!("mediaDevices" in navigator) || !navigator.mediaDevices.getUserMedia) {
       cameraInputRef.current?.click();
       return;
     }
-
     setCameraError(null);
     setCameraOpen(true);
   }
@@ -158,7 +165,6 @@ export function MediaComposer({
     if (!video) {
       return;
     }
-
     const canvas = document.createElement("canvas");
     canvas.width = video.videoWidth || 1280;
     canvas.height = video.videoHeight || 720;
@@ -166,22 +172,14 @@ export function MediaComposer({
     if (!context) {
       return;
     }
-
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
     const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.92));
     if (!blob) {
       return;
     }
-
     const file = new File([blob], `capture-${Date.now()}.jpg`, { type: "image/jpeg" });
     assignFile(cameraInputRef.current, file);
     setSelectedCameraImage(file.name);
-    setCameraOpen(false);
-  }
-
-  function closeCamera() {
-    streamRef.current?.getTracks().forEach((track) => track.stop());
-    streamRef.current = null;
     setCameraOpen(false);
   }
 
@@ -190,8 +188,23 @@ export function MediaComposer({
       setContentText("");
       clearFile("image");
       clearFile("camera");
+      textareaRef.current?.focus();
     }, 0);
   }
+
+  const darkTone = tone === "dark";
+  const inputToneClass = darkTone
+    ? "border-transparent bg-[rgba(255,255,255,0.026)] text-white/92 placeholder:text-white/28"
+    : "border-[color:var(--lux-border)] bg-white text-[color:var(--lux-text)] placeholder:text-[color:var(--lux-text-muted)]";
+  const selectedFileChip = darkTone
+    ? `${PREMIUM_CHIP} normal-case tracking-[0.04em]`
+    : "inline-flex items-center gap-2 rounded-full border border-[color:var(--lux-border)] bg-white px-3 py-1.5 text-xs uppercase tracking-[0.14em] text-[color:var(--lux-text-muted)]";
+  const dividerClass = darkTone ? "border-[rgba(255,255,255,0.08)]" : "border-[color:var(--lux-border)]";
+  const iconButtonClass = darkTone ? PREMIUM_TOOL_CHIP : "inline-flex h-9 w-9 items-center justify-center rounded-full border border-[color:var(--lux-border)] bg-white transition hover:border-[color:var(--lux-accent)] hover:text-[color:var(--lux-accent-deep)]";
+  const toggleChipClass = darkTone
+    ? `${PREMIUM_CHIP} gap-2.5 py-2 normal-case tracking-[0.06em] text-[color:var(--lux-text-secondary)]`
+    : "inline-flex items-center justify-center gap-2.5 rounded-full border border-[color:var(--lux-border)] px-3 py-2 text-xs text-[color:var(--lux-text-secondary)]";
+  const submitClass = darkTone ? PREMIUM_ACTION_ACCENT : compact ? "lux-button-secondary px-4 py-2" : "lux-button-primary";
 
   return (
     <>
@@ -200,24 +213,26 @@ export function MediaComposer({
           <input key={field.name} name={field.name} type="hidden" value={field.value} />
         ))}
 
-        <textarea
-          ref={textareaRef}
-          className={`lux-textarea overflow-hidden resize-none border-[color:var(--lux-border)] bg-white ${compact ? "min-h-[52px]" : "min-h-[48px]"} ${textareaClassName}`.trim()}
-          name="contentText"
-          onChange={(event) => setContentText(event.target.value)}
-          placeholder={placeholder}
-          required
-          rows={1}
-          value={contentText}
-        />
+        <div className={PREMIUM_INPUT_SHELL}>
+          <textarea
+            ref={textareaRef}
+            className={`w-full resize-none bg-transparent text-[15px] leading-6 outline-none ${compact ? "min-h-[44px]" : "min-h-[48px]"} ${inputToneClass} ${textareaClassName}`.trim()}
+            name="contentText"
+            onChange={(event) => setContentText(event.target.value)}
+            placeholder={placeholder}
+            required
+            rows={1}
+            value={contentText}
+          />
+        </div>
 
         <input accept="image/*" className="hidden" name="imageAttachment" onChange={(event) => handleFileChange(event, "image")} ref={imageInputRef} type="file" />
         <input accept="image/*" capture="environment" className="hidden" name="cameraAttachment" onChange={(event) => handleFileChange(event, "camera")} ref={cameraInputRef} type="file" />
 
         {(selectedImage || selectedCameraImage) ? (
-          <div className="flex flex-wrap gap-2 text-xs uppercase tracking-[0.14em] text-[color:var(--lux-text-muted)]">
+          <div className="flex flex-wrap gap-2">
             {selectedImage ? (
-              <span className="inline-flex items-center gap-2 rounded-full border border-[color:var(--lux-border)] bg-white px-3 py-1.5">
+              <span className={selectedFileChip}>
                 {selectedImage}
                 <button onClick={() => clearFile("image")} type="button">
                   <X className="h-3.5 w-3.5" />
@@ -225,7 +240,7 @@ export function MediaComposer({
               </span>
             ) : null}
             {selectedCameraImage ? (
-              <span className="inline-flex items-center gap-2 rounded-full border border-[color:var(--lux-border)] bg-white px-3 py-1.5">
+              <span className={selectedFileChip}>
                 {selectedCameraImage}
                 <button onClick={() => clearFile("camera")} type="button">
                   <X className="h-3.5 w-3.5" />
@@ -235,12 +250,12 @@ export function MediaComposer({
           </div>
         ) : null}
 
-        <div className="flex flex-col gap-3 border-t border-[color:var(--lux-border)] pt-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2 text-[color:var(--lux-text-muted)]">
-            <button className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[color:var(--lux-border)] bg-white transition hover:border-[color:var(--lux-accent)] hover:text-[color:var(--lux-accent-deep)]" onClick={() => imageInputRef.current?.click()} title="Choose image" type="button">
+        <div className={`flex flex-col gap-3 border-t pt-2 sm:flex-row sm:items-center sm:justify-between ${dividerClass}`}>
+          <div className="flex items-center gap-2 text-white/52">
+            <button className={iconButtonClass} onClick={() => imageInputRef.current?.click()} title="Choose image" type="button">
               <ImagePlus className="h-4 w-4" />
             </button>
-            <button className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[color:var(--lux-border)] bg-white transition hover:border-[color:var(--lux-accent)] hover:text-[color:var(--lux-accent-deep)]" onClick={openCamera} title="Capture image" type="button">
+            <button className={iconButtonClass} onClick={openCamera} ref={cameraTriggerRef} title="Capture image" type="button">
               <Camera className="h-4 w-4" />
             </button>
             <EmojiPicker onSelect={appendEmoji} />
@@ -249,14 +264,14 @@ export function MediaComposer({
           {allowAnonymous || allowSensitive ? (
             <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
               {allowAnonymous ? (
-                <label className="inline-flex items-center justify-center gap-2 rounded-full border border-[color:var(--lux-border)] px-3 py-2 text-xs uppercase tracking-[0.14em] text-[color:var(--lux-text-secondary)]">
-                  <input className="size-4 accent-[color:var(--lux-accent)]" name="isAnonymous" type="checkbox" />
+                <label className={toggleChipClass}>
+                  <input className="size-4 shrink-0 accent-[color:var(--lux-accent)]" name="isAnonymous" type="checkbox" />
                   Anonymous
                 </label>
               ) : null}
               {allowSensitive ? (
-                <label className="inline-flex items-center justify-center gap-2 rounded-full border border-[color:var(--lux-border)] px-3 py-2 text-xs uppercase tracking-[0.14em] text-[color:var(--lux-text-secondary)]">
-                  <input className="size-4 accent-[color:var(--lux-accent)]" name="isSensitive" type="checkbox" />
+                <label className={toggleChipClass}>
+                  <input className="size-4 shrink-0 accent-[color:var(--lux-accent)]" name="isSensitive" type="checkbox" />
                   Sensitive image
                 </label>
               ) : null}
@@ -266,33 +281,33 @@ export function MediaComposer({
           )}
 
           <div className="flex justify-end sm:min-w-[120px]">
-            <button className={compact ? "lux-button-secondary px-4 py-2" : "lux-button-primary"} type="submit">{submitLabel}</button>
+            <button className={submitClass} type="submit">{submitLabel}</button>
           </div>
         </div>
       </form>
 
       {cameraOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(43,43,43,0.45)] p-4">
-          <div className="w-full max-w-md rounded-[1.2rem] bg-white p-4 shadow-[0_24px_60px_rgba(43,43,43,0.16)]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(7,8,10,0.52)] p-4">
+          <div className={`w-full max-w-md p-4 ${darkTone ? PREMIUM_COMPOSER_SHELL : PREMIUM_COMPOSER_SHELL.replace('bg-[rgba(18,19,24,0.88)] text-white', 'bg-white text-[color:var(--lux-text)]')}`} data-testid="media-camera-panel" ref={cameraPanelRef}>
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-sm font-semibold text-[color:var(--lux-text)]">Capture photo</p>
-                <p className="text-xs text-[color:var(--lux-text-muted)]">Use your camera or close this panel to upload instead.</p>
+                <p className="text-sm font-semibold">Capture photo</p>
+                <p className={`${PREMIUM_BODY} text-sm ${darkTone ? 'text-white/52' : 'text-[color:var(--lux-text-muted)]'}`}>Use your camera or close this panel to upload instead.</p>
               </div>
-              <button className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[color:var(--lux-border)]" onClick={closeCamera} type="button">
+              <button aria-label="Close camera panel" className={darkTone ? PREMIUM_TOOL_CHIP : PREMIUM_ACTION} onClick={closeCamera} ref={cameraCloseButtonRef} type="button">
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <div className="mt-4 overflow-hidden rounded-[1rem] border border-[color:var(--lux-border)] bg-[color:var(--lux-secondary)]">
+            <div className={`mt-4 overflow-hidden rounded-[1rem] border ${darkTone ? 'border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)]' : 'border-[color:var(--lux-border)] bg-[color:var(--lux-secondary)]'}`}>
               {cameraError ? (
-                <div className="flex min-h-[240px] items-center justify-center p-6 text-center text-sm text-[color:var(--lux-text-muted)]">{cameraError}</div>
+                <div className={`flex min-h-[240px] items-center justify-center p-6 text-center ${PREMIUM_BODY}`}>{cameraError}</div>
               ) : (
                 <video className="aspect-[4/3] w-full object-cover" muted playsInline ref={videoRef} />
               )}
             </div>
             <div className="mt-4 flex justify-end gap-2">
-              <button className="lux-button-secondary" onClick={() => { closeCamera(); cameraInputRef.current?.click(); }} type="button">Upload instead</button>
-              <button className="lux-button-primary" onClick={captureCameraFrame} type="button">Capture</button>
+              <button className={darkTone ? PREMIUM_ACTION : 'lux-button-secondary'} onClick={() => { closeCamera(); cameraInputRef.current?.click(); }} type="button">Upload instead</button>
+              <button className={darkTone ? PREMIUM_ACTION_ACCENT : 'lux-button-primary'} onClick={captureCameraFrame} type="button">Capture</button>
             </div>
           </div>
         </div>
@@ -300,6 +315,8 @@ export function MediaComposer({
     </>
   );
 }
+
+
 
 
 

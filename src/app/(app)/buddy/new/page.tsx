@@ -8,8 +8,15 @@ import { BuddyRequestForm } from "@/components/buddy-request-form";
 import { FeatureUnavailableCard } from "@/components/feature-unavailable-card";
 import { FEATURE_FLAG_KEYS, isFeatureEnabled } from "@/lib/feature-flags";
 
-export default async function NewBuddyRequestPage() {
+export default async function NewBuddyRequestPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ domainId?: string; message?: string }>;
+}) {
   const viewer = await requireActiveUser();
+  const resolvedSearchParams = (await searchParams) ?? {};
+  const initialDomainId = typeof resolvedSearchParams.domainId === "string" ? resolvedSearchParams.domainId : "";
+  const initialMessage = typeof resolvedSearchParams.message === "string" ? resolvedSearchParams.message : "";
   const featureEnabled = await isFeatureEnabled(FEATURE_FLAG_KEYS.buddy, viewer);
 
   if (!featureEnabled) {
@@ -71,7 +78,7 @@ export default async function NewBuddyRequestPage() {
           <p className="lux-overline">Buddy request</p>
           <h2 className="mt-3 text-2xl font-semibold tracking-tight text-[color:var(--lux-text)]">Peer support, not therapy or legal advice</h2>
         </div>
-        <BuddyRequestForm action={createBuddyRequestAction} domainOptions={domainOptions} />
+        <BuddyRequestForm action={createBuddyRequestAction} domainOptions={domainOptions} initialDomainId={initialDomainId} initialMessage={initialMessage} />
       </section>
     </main>
   );

@@ -12,16 +12,26 @@ test("approved private chats support send, multiline messages, and emoji picker 
   await loginAs(page, seed.users.owner.email, seed.password);
   await page.goto(`/chats/${conversationId}`);
 
-  const composer = page.getByPlaceholder(/Write a message to/i);
-  await composer.click();
-  await composer.type("First line");
+  const composer = page.getByPlaceholder(/message .*\.\.\./i);
+  await composer.fill("First line");
   await page.keyboard.down("Shift");
   await page.keyboard.press("Enter");
   await page.keyboard.up("Shift");
   await composer.type("Second line");
 
-  await page.getByTitle("Insert emoji").click();
+  const emojiTrigger = page.getByTitle("Insert emoji").last();
+  await expect(emojiTrigger).toBeVisible();
+  await emojiTrigger.click();
   await expect(page.getByPlaceholder("Search emoji")).toBeVisible();
+  await expect(page.getByPlaceholder("Search emoji")).toBeFocused();
+  await expect(page.getByTestId("emoji-picker-grid").locator("button").first()).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByPlaceholder("Search emoji")).toHaveCount(0);
+  await expect(emojiTrigger).toBeFocused();
+
+  await emojiTrigger.click();
+  await expect(page.getByPlaceholder("Search emoji")).toBeVisible();
+  await expect(page.getByTestId("emoji-picker-tabs")).toBeVisible();
   await page.mouse.click(8, 8);
   await expect(page.getByPlaceholder("Search emoji")).toHaveCount(0);
 
@@ -45,6 +55,39 @@ test("chat attachments reject unsupported files cleanly", async ({ page }) => {
   });
 
   await expect(page.getByText(/not a supported file type/i)).toBeVisible();
+});
+
+test("message report panel toggles closed and dismisses on escape", async ({ page }) => {
+  const seed = loadSeedData();
+  const conversationId = seed.conversations.approvedConversation.id;
+
+  await loginAs(page, seed.users.verified.email, seed.password);
+  await page.goto(`/chats/${conversationId}`);
+
+  const reportButton = page.getByRole("button", { name: /^Report$/ }).first();
+  await reportButton.click();
+  await expect(page.getByText(/report content/i)).toBeVisible();
+
+  await reportButton.click();
+  await expect(page.getByText(/report content/i)).toHaveCount(0);
+
+  await reportButton.click();
+  await expect(page.getByText(/report content/i)).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByText(/report content/i)).toHaveCount(0);
+});
+
+test("post reactions toggle closed on repeat click", async ({ page }) => {
+  const seed = loadSeedData();
+
+  await loginAs(page, seed.users.owner.email, seed.password);
+  await page.goto("/home");
+
+  const reactionButton = page.locator('[data-testid="home-feed-card"] button').filter({ hasText: /^\d+$/ }).first();
+  await reactionButton.click();
+  await expect(page.getByTitle(/love/i).first()).toBeVisible();
+  await reactionButton.click();
+  await expect(page.getByTitle(/love/i)).toHaveCount(0);
 });
 
 test("video calls require separate approval even for approved chats", async ({ page }) => {

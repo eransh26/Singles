@@ -25,7 +25,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <div className="admin-shell min-h-screen text-[color:var(--lux-text)]">
       <div className="mx-auto flex min-h-screen max-w-[1600px] flex-col lg:flex-row lg:gap-6 lg:px-4 lg:py-4">
-        <aside className="border-b border-[color:var(--lux-border)] bg-[rgba(250,247,244,0.86)] px-4 py-5 backdrop-blur-xl lg:sticky lg:top-4 lg:h-[calc(100vh-2rem)] lg:w-80 lg:flex-none lg:rounded-[2rem] lg:border lg:px-5 lg:py-6">
+        <aside className="border-b border-[color:var(--lux-border-default)] bg-[rgba(46,36,30,0.86)] px-4 py-5 backdrop-blur-xl lg:sticky lg:top-4 lg:h-[calc(100vh-2rem)] lg:w-80 lg:flex-none lg:rounded-[2rem] lg:border lg:px-5 lg:py-6">
           <div className="flex h-full flex-col gap-6">
             <div className="space-y-4">
               <div>
@@ -44,8 +44,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             <AdminSidebarNav items={adminNavigation} />
 
             <form action={signOutAction} className="mt-auto">
-              <button className="admin-button-secondary w-full" type="submit">
-                Sign out
+              <button className="admin-button-primary w-full" type="submit">
+                Sign out as admin
               </button>
             </form>
           </div>
