@@ -165,22 +165,22 @@ test("sensitive posts keep text visible and gate image reveal through the valida
   await loginAs(page, seed.users.owner.email, seed.password);
   await page.goto("/home");
 
-  await page.getByPlaceholder(/what would you like to share/i).fill("Sensitive post text should stay readable in the feed.");
+  await page.locator("textarea[name='contentText']").first().fill("Sensitive post text should stay readable in the feed.");
   await page.getByLabel(/sensitive image/i).check();
   await page.locator('input[name="imageAttachment"]').setInputFiles({
     name: "sensitive.png",
     mimeType: "image/png",
     buffer: PNG_BUFFER,
   });
-  await page.getByRole("button", { name: /^post$/i }).click();
+  await page.getByRole("button", { name: /^share$/i }).click();
 
   await expect(page.getByText(/sensitive post text should stay readable in the feed/i)).toBeVisible();
   const sensitiveLink = page.locator('a[href*="/validation/sensitive-content"]').first();
   await expect(sensitiveLink).toBeVisible();
-  await expect(sensitiveLink.getByText(/sensitive image/i)).toBeVisible();
-  await expect(sensitiveLink.locator("img")).toHaveClass(/blur-xl/);
+  await expect(sensitiveLink.locator("img")).toHaveClass(/blur-(xl|2xl)/);
 
   await sensitiveLink.click();
   await expect(page).toHaveURL(/\/validation\/sensitive-content\?postId=/);
   await expect(page.getByText(/verification is required before viewing sensitive images/i)).toBeVisible();
 });
+

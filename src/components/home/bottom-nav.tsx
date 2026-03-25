@@ -4,7 +4,7 @@ import { Compass, Home, UserRound } from "lucide-react";
 export function HomeBottomNav() {
   return (
     <nav
-      className="fixed inset-x-4 bottom-4 z-30 rounded-[1.4rem] border border-[rgba(255,255,255,0.08)] bg-[rgba(18,19,24,0.88)] px-3 py-2 text-white shadow-[0_18px_38px_rgba(7,8,10,0.34)] backdrop-blur md:hidden"
+      className="fixed inset-x-4 bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] z-30 rounded-[1.4rem] border border-[rgba(255,255,255,0.08)] bg-[rgba(18,19,24,0.88)] px-3 py-2 text-white shadow-[0_18px_38px_rgba(7,8,10,0.34)] backdrop-blur md:hidden"
       data-testid="home-bottom-nav"
     >
       <div className="grid grid-cols-3 gap-2">

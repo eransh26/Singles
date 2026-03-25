@@ -7,16 +7,21 @@ import { AccountStatus, ProfileVisibility, UserRole, VerificationStatus } from "
 
 export function isFullyVerifiedUser(user: {
   emailVerified: Date | null;
+  phoneVerified?: boolean;
   phoneVerifiedAt: Date | null;
+  kycVerified?: boolean;
   ageVerified: boolean;
   verificationStatus: VerificationStatus;
 }) {
   return Boolean(
     user.emailVerified &&
-      user.phoneVerifiedAt &&
-      user.ageVerified &&
-      user.verificationStatus === VerificationStatus.APPROVED,
+      (user.phoneVerified || user.phoneVerifiedAt) &&
+      (user.kycVerified || (user.ageVerified && user.verificationStatus === VerificationStatus.APPROVED)),
   );
+}
+
+export function isEmailVerifiedUser(user: { emailVerified: Date | null }) {
+  return Boolean(user.emailVerified);
 }
 
 export function hasMinimalProfileVisibility(targetProfileVisibility: ProfileVisibility, isOwner = false) {
@@ -69,7 +74,9 @@ export async function getCurrentUser() {
       displayName: true,
       accountStatus: true,
       emailVerified: true,
+      phoneVerified: true,
       phoneVerifiedAt: true,
+      kycVerified: true,
       ageVerified: true,
       verificationStatus: true,
     },
@@ -102,6 +109,16 @@ export async function requireMemberUser() {
 
 export async function requireActiveUser() {
   return requireMemberUser();
+}
+
+export async function requireEmailVerifiedUser() {
+  const user = await requireMemberUser();
+
+  if (!isEmailVerifiedUser(user)) {
+    redirect("/onboarding?step=3");
+  }
+
+  return user;
 }
 
 export async function requireAdmin() {

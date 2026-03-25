@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { ConversationKind, VerificationStatus } from "@prisma/client";
+import { ConversationKind } from "@prisma/client";
 import { reviewChatRequestAction } from "../actions";
 import { requireUser } from "@/lib/auth/guards";
 import { prisma } from "@/lib/db/prisma";
 import { RelativeTime } from "@/components/relative-time";
+import { HomeTrustBadge } from "@/components/home/trust-badge";
 
 export default async function ChatsPage({
   searchParams,
@@ -29,16 +30,22 @@ export default async function ChatsPage({
           select: {
             id: true,
             displayName: true,
+            emailVerified: true,
+            phoneVerifiedAt: true,
             verificationStatus: true,
-            verifiedBadgeVisible: true,
+            kycVerified: true,
+            buddyProfile: { select: { domains: { select: { id: true }, take: 1 } } },
           },
         },
         userOne: {
           select: {
             id: true,
             displayName: true,
+            emailVerified: true,
+            phoneVerifiedAt: true,
             verificationStatus: true,
-            verifiedBadgeVisible: true,
+            kycVerified: true,
+            buddyProfile: { select: { domains: { select: { id: true }, take: 1 } } },
           },
         },
         messages: {
@@ -62,8 +69,11 @@ export default async function ChatsPage({
           select: {
             id: true,
             displayName: true,
+            emailVerified: true,
+            phoneVerifiedAt: true,
             verificationStatus: true,
-            verifiedBadgeVisible: true,
+            kycVerified: true,
+            buddyProfile: { select: { domains: { select: { id: true }, take: 1 } } },
           },
         },
       },
@@ -139,9 +149,14 @@ export default async function ChatsPage({
                       <div>
                         <div className="flex flex-wrap items-center gap-2.5">
                           <p className="text-base font-semibold tracking-tight text-[color:var(--lux-text)]">{otherUser.displayName}</p>
-                          {otherUser.verificationStatus === VerificationStatus.APPROVED && otherUser.verifiedBadgeVisible ? (
-                            <span className="lux-chip lux-chip-accent">Verified</span>
-                          ) : null}
+                          <HomeTrustBadge
+                            compact
+                            emailVerified={Boolean(otherUser.emailVerified)}
+                            isBuddyApproved={Boolean(otherUser.buddyProfile?.domains?.length)}
+                            kycVerified={Boolean(otherUser.kycVerified)}
+                            phoneVerified={Boolean(otherUser.phoneVerifiedAt)}
+                            verificationStatus={otherUser.verificationStatus}
+                          />
                         </div>
                         <RelativeTime className="mt-3 block text-xs uppercase tracking-[0.16em] text-[color:var(--lux-text-muted)]" value={(lastMessage ? lastMessage.createdAt : conversation.updatedAt).toISOString()} />
                       </div>
@@ -179,7 +194,14 @@ export default async function ChatsPage({
                           <RelativeTime value={request.createdAt.toISOString()} />
                         </div>
                       </div>
-                      <span className="lux-chip">{request.fromUser.verificationStatus}</span>
+                      <HomeTrustBadge
+                        compact
+                        emailVerified={Boolean(request.fromUser.emailVerified)}
+                        isBuddyApproved={Boolean(request.fromUser.buddyProfile?.domains?.length)}
+                        kycVerified={Boolean(request.fromUser.kycVerified)}
+                        phoneVerified={Boolean(request.fromUser.phoneVerifiedAt)}
+                        verificationStatus={request.fromUser.verificationStatus}
+                      />
                     </div>
                     <div className="mt-4 flex flex-wrap gap-2">
                       <Link className="lux-button-secondary" href={`/users/${request.fromUser.id}`}>
@@ -239,4 +261,3 @@ export default async function ChatsPage({
     </main>
   );
 }
-

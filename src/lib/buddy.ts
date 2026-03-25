@@ -12,8 +12,10 @@ import {
   NotificationType,
   Prisma,
   UserRole,
+  VerificationStatus,
 } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
+import { canUserHoldBuddyRole } from "@/lib/trust-ladder";
 import { createNotificationRecord, deliverNotifications } from "@/lib/notifications";
 
 export const BUDDY_REQUEST_WINDOW_HOURS = 48;
@@ -39,10 +41,16 @@ export const BUDDY_SUPPORT_MODE_OPTIONS: Array<{ value: BuddySupportMode; label:
   { value: BuddySupportMode.EITHER, label: "Either" },
 ];
 
-export function isBuddyVerifiedUser(user: { emailVerified: Date | null; phoneVerifiedAt: Date | null }) {
-  return Boolean(user.emailVerified && user.phoneVerifiedAt);
+export function isBuddyVerifiedUser(user: {
+  emailVerified: Date | null;
+  phoneVerified?: boolean | null;
+  phoneVerifiedAt?: Date | null;
+  kycVerified?: boolean | null;
+  ageVerified?: boolean | null;
+  verificationStatus?: VerificationStatus | null;
+}) {
+  return canUserHoldBuddyRole(user);
 }
-
 export function getBuddyRequestDeadline(base = new Date()) {
   return new Date(base.getTime() + BUDDY_REQUEST_WINDOW_HOURS * 60 * 60 * 1000);
 }
@@ -520,3 +528,7 @@ export async function refreshBuddyStateForUser(userId: string) {
     await deliverNotifications(notificationIds);
   }
 }
+
+
+
+

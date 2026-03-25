@@ -6,6 +6,7 @@ export const savedMessages: Record<string, string> = {
   event: "Promoted event saved.",
   report: "Report review saved.",
   user: "User management update saved.",
+  "user-verification": "Verification override saved.",
   verification: "Verification review saved.",
   "admin-created": "Admin user created.",
   "buddy-domain": "Buddy domain saved.",
@@ -223,8 +224,26 @@ export async function getUsersByTab(tab: "members" | "operators") {
       role: true,
       accountStatus: true,
       verificationStatus: true,
+      emailVerified: true,
+      phoneVerified: true,
+      phoneVerifiedAt: true,
       isTestUser: true,
       createdAt: true,
+      trustScore: true,
+      trustTier: true,
+      trustSummary: true,
+      trustUpdatedAt: true,
+      trustScoreEvents: {
+        orderBy: { createdAt: "desc" },
+        take: 4,
+        select: {
+          id: true,
+          delta: true,
+          reason: true,
+          eventType: true,
+          createdAt: true,
+        },
+      },
     },
   });
 }
@@ -335,6 +354,7 @@ export function AdminQuickLink({ href, label, hint }: { href: string; label: str
     </Link>
   );
 }
+
 
 
 

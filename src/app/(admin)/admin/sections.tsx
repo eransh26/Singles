@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import { getTrustScoreBand } from "@/lib/trust-score";
 import { AccountStatus, EventPromotionStatus, PlacementType, UserRole } from "@prisma/client";
 import {
   createAdminUserAction,
@@ -21,6 +22,29 @@ import {
 } from "./lib";
 
 const adminRoleOptions = [UserRole.ADMIN, UserRole.SUPER_ADMIN];
+
+function verificationSummaryLabel(user: { emailVerified: Date | null; phoneVerified: boolean; phoneVerifiedAt: Date | null }) {
+  const email = Boolean(user.emailVerified);
+  const phone = Boolean(user.phoneVerified || user.phoneVerifiedAt);
+
+  if (email && phone) {
+    return "Email + phone";
+  }
+
+  if (email) {
+    return "Email";
+  }
+
+  if (phone) {
+    return "Phone only";
+  }
+
+  return "Unverified";
+}
+
+function trustBandLabel(score: number) {
+  return getTrustScoreBand(score).toLowerCase();
+}
 
 export async function AdminUsersSection({
   tab,
@@ -101,6 +125,7 @@ export async function AdminUsersSection({
               <th className="px-4 py-3">Role</th>
               <th className="px-4 py-3">Status</th>
               <th className="px-4 py-3">Verification</th>
+              <th className="px-4 py-3">Trust</th>
               <th className="px-4 py-3">Test user</th>
               <th className="px-4 py-3">Created</th>
               <th className="px-4 py-3 text-right">Details</th>
@@ -109,7 +134,7 @@ export async function AdminUsersSection({
           <tbody>
             {users.length === 0 ? (
               <tr>
-                <td className="px-4 py-8 text-center text-sm text-[#aa9788]" colSpan={8}>
+                <td className="px-4 py-8 text-center text-sm text-[#aa9788]" colSpan={9}>
                   No users in this section yet.
                 </td>
               </tr>
@@ -125,7 +150,13 @@ export async function AdminUsersSection({
                       <td className="px-4 py-4 text-[#d7c8bb]">{user.email}</td>
                       <td className="px-4 py-4 text-[#d7c8bb]">{user.role}</td>
                       <td className="px-4 py-4 text-[#d7c8bb]">{user.accountStatus}</td>
-                      <td className="px-4 py-4 text-[#d7c8bb]">{user.verificationStatus}</td>
+                      <td className="px-4 py-4 text-[#d7c8bb]">{verificationSummaryLabel(user)}</td>
+                      <td className="px-4 py-4 text-[#d7c8bb]" data-testid={`admin-user-trust-${user.id}`}>
+                        <div className="space-y-1">
+                          <p>{user.trustScore} · {trustBandLabel(user.trustScore)}</p>
+                          <p className="text-xs text-[#8f7f72]">{user.trustTier}</p>
+                        </div>
+                      </td>
                       <td className="px-4 py-4 text-[#d7c8bb]">{user.isTestUser ? "Yes" : "No"}</td>
                       <td className="px-4 py-4 text-[#aa9788]">{formatDateTime(user.createdAt)}</td>
                       <td className="px-4 py-4 text-right">
@@ -136,7 +167,7 @@ export async function AdminUsersSection({
                     </tr>
                     {isExpanded ? (
                       <tr data-testid={`admin-user-${user.id}`}>
-                        <td className="bg-[rgba(24,20,17,0.72)] px-4 py-4" colSpan={8}>
+                        <td className="bg-[rgba(24,20,17,0.72)] px-4 py-4" colSpan={9}>
                           <form action={updateAdminUserAction} className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-end">
                             <input name="targetUserId" type="hidden" value={user.id} />
                             <input name="currentSection" type="hidden" value={currentSection} />
@@ -166,6 +197,70 @@ export async function AdminUsersSection({
                             <div className="flex justify-end">
                               <button className="admin-button-primary" type="submit">Save user</button>
                             </div>
+
+                            <div className="grid gap-4 lg:col-span-4">
+                              <div className="rounded-[1.15rem] border border-[rgba(90,76,66,0.38)] bg-[rgba(24,20,17,0.52)] p-4 text-sm text-[#d7c8bb]" data-testid={`admin-user-verification-${user.id}`}>
+                                <div className="flex flex-wrap items-start justify-between gap-3">
+                                  <div>
+                                    <p className="font-medium text-[#fff4ea]">Manual admin verification override</p>
+                                    <p className="mt-2 max-w-2xl text-xs leading-6 text-[#aa9788]">Use only when verification was confirmed externally. Trust badges and gating update immediately after save.</p>
+                                  </div>
+                                  <span className="admin-pill">{verificationSummaryLabel(user)}</span>
+                                </div>
+                                <div className="mt-4 grid gap-3 md:grid-cols-2">
+                                  <label className="flex items-center gap-3 rounded-[1.05rem] border border-[rgba(90,76,66,0.32)] bg-[rgba(18,15,13,0.38)] px-4 py-3 text-[#fff4ea]">
+                                    <input aria-label="Email verified" className="h-4 w-4 accent-[#c9a76e]" defaultChecked={Boolean(user.emailVerified)} name="emailVerified" type="checkbox" />
+                                    <span>Email verified</span>
+                                  </label>
+                                  <label className="flex items-center gap-3 rounded-[1.05rem] border border-[rgba(90,76,66,0.32)] bg-[rgba(18,15,13,0.38)] px-4 py-3 text-[#fff4ea]">
+                                    <input aria-label="Phone verified" className="h-4 w-4 accent-[#c9a76e]" defaultChecked={Boolean(user.phoneVerified || user.phoneVerifiedAt)} name="phoneVerified" type="checkbox" />
+                                    <span>Phone verified</span>
+                                  </label>
+                                </div>
+                              </div>
+
+                              <div className="rounded-[1.15rem] border border-[rgba(90,76,66,0.38)] bg-[rgba(24,20,17,0.52)] p-4 text-sm text-[#d7c8bb]" data-testid={`admin-user-trust-panel-${user.id}`}>
+                                <div className="flex flex-wrap items-start justify-between gap-3">
+                                  <div>
+                                    <p className="font-medium text-[#fff4ea]">Internal trust score</p>
+                                    <p className="mt-2 max-w-2xl text-xs leading-6 text-[#aa9788]">This score is internal only. It helps with eligibility, prioritization, and softer abuse control.</p>
+                                  </div>
+                                  <span className="admin-pill">{user.trustScore} · {trustBandLabel(user.trustScore)}</span>
+                                </div>
+                                <div className="mt-4 grid gap-3 md:grid-cols-3">
+                                  <div className="rounded-[1rem] border border-[rgba(90,76,66,0.32)] bg-[rgba(18,15,13,0.38)] px-4 py-3">
+                                    <p className="text-xs uppercase tracking-[0.14em] text-[#8f7f72]">Band</p>
+                                    <p className="mt-2 text-[#fff4ea]">{trustBandLabel(user.trustScore)}</p>
+                                  </div>
+                                  <div className="rounded-[1rem] border border-[rgba(90,76,66,0.32)] bg-[rgba(18,15,13,0.38)] px-4 py-3">
+                                    <p className="text-xs uppercase tracking-[0.14em] text-[#8f7f72]">Tier bridge</p>
+                                    <p className="mt-2 text-[#fff4ea]">{user.trustTier}</p>
+                                  </div>
+                                  <div className="rounded-[1rem] border border-[rgba(90,76,66,0.32)] bg-[rgba(18,15,13,0.38)] px-4 py-3">
+                                    <p className="text-xs uppercase tracking-[0.14em] text-[#8f7f72]">Updated</p>
+                                    <p className="mt-2 text-[#fff4ea]">{formatDateTime(user.trustUpdatedAt)}</p>
+                                  </div>
+                                </div>
+                                <div className="mt-4">
+                                  <p className="text-xs uppercase tracking-[0.14em] text-[#8f7f72]">Recent trust events</p>
+                                  <div className="mt-3 space-y-2">
+                                    {user.trustScoreEvents.length === 0 ? (
+                                      <p className="rounded-[1rem] border border-[rgba(90,76,66,0.32)] bg-[rgba(18,15,13,0.38)] px-4 py-3 text-[#aa9788]">No score changes recorded yet.</p>
+                                    ) : (
+                                      user.trustScoreEvents.map((event) => (
+                                        <div className="rounded-[1rem] border border-[rgba(90,76,66,0.32)] bg-[rgba(18,15,13,0.38)] px-4 py-3" key={event.id}>
+                                          <div className="flex flex-wrap items-center justify-between gap-2">
+                                            <p className="font-medium text-[#fff4ea]">{event.delta > 0 ? `+${event.delta}` : event.delta} · {event.eventType}</p>
+                                            <span className="text-xs uppercase tracking-[0.14em] text-[#8f7f72]">{formatDateTime(event.createdAt)}</span>
+                                          </div>
+                                          <p className="mt-2 text-[#bbaea1]">{event.reason}</p>
+                                        </div>
+                                      ))
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
                           </form>
                         </td>
                       </tr>
@@ -180,7 +275,6 @@ export async function AdminUsersSection({
     </section>
   );
 }
-
 export async function AdminVerificationsSection() {
   const pendingVerificationRequests = await getPendingVerificationRequests();
 
@@ -507,3 +601,6 @@ export async function AdminAuditLogsSection() {
     </section>
   );
 }
+
+
+

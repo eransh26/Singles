@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { VerificationStatus } from "@prisma/client";
 import { ArrowRight } from "lucide-react";
 import { HomeTrustBadge } from "@/components/home/trust-badge";
 import { ContextChips } from "@/components/discovery/context-chips";
@@ -14,11 +15,14 @@ type DiscoveryMemberCardProps = {
   trustTier: "LOW" | "NORMAL" | "HIGH" | null;
   emailVerified?: boolean;
   phoneVerified?: boolean;
+  kycVerified?: boolean;
+  verificationStatus?: VerificationStatus | null;
+  isBuddyApproved?: boolean;
   chips: string[];
   meta?: string | null;
 };
 
-export function DiscoveryMemberCard({ href, title, subtitle, body, imageUrl, initial, trustTier, emailVerified = false, phoneVerified = false, chips, meta }: DiscoveryMemberCardProps) {
+export function DiscoveryMemberCard({ href, title, subtitle, body, imageUrl, initial, trustTier, emailVerified = false, phoneVerified = false, kycVerified = false, verificationStatus = null, isBuddyApproved = false, chips, meta }: DiscoveryMemberCardProps) {
   return (
     <article className={`${PREMIUM_SURFACE} p-4 hover:-translate-y-0.5 hover:border-[rgba(195,145,88,0.18)]`} data-testid="explore-member-card">
       <div className="flex items-start gap-3">
@@ -28,7 +32,7 @@ export function DiscoveryMemberCard({ href, title, subtitle, body, imageUrl, ini
         <div className="min-w-0 flex-1 space-y-2">
           <div className="flex flex-wrap items-center gap-2.5">
             <h3 className={`truncate ${PREMIUM_TITLE}`}>{title}</h3>
-            <HomeTrustBadge compact emailVerified={emailVerified} phoneVerified={phoneVerified} tier={trustTier as never} />
+            <HomeTrustBadge compact emailVerified={emailVerified} isBuddyApproved={isBuddyApproved} kycVerified={kycVerified} phoneVerified={phoneVerified} tier={trustTier as never} verificationStatus={verificationStatus} />
           </div>
           <p className={PREMIUM_META}>{subtitle}</p>
           <p className={PREMIUM_BODY}>{body}</p>

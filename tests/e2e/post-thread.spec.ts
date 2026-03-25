@@ -8,7 +8,7 @@ test.beforeEach(() => {
 test("post thread opens from the home feed", async ({ page }) => {
   const seed = loadSeedData();
 
-  await loginAs(page, seed.users.member.email, seed.password);
+  await loginAs(page, seed.users.verified.email, seed.password);
   await page.goto("/home");
 
   const openThreadLink = page.getByTestId("home-feed").getByRole("link", { name: /open thread/i }).first();
@@ -21,7 +21,7 @@ test("post thread opens from the home feed", async ({ page }) => {
 test("support-oriented thread shows buddy handoff and thread-native buddy action", async ({ page }) => {
   const seed = loadSeedData();
 
-  await loginAs(page, seed.users.member.email, seed.password);
+  await loginAs(page, seed.users.verified.email, seed.password);
   await page.goto(`/posts/${seed.posts.reportedPost.id}`);
 
   await expect(page.getByTestId("post-thread-card")).toContainText(/reportable post content/i);
@@ -39,7 +39,7 @@ test("support-oriented thread shows buddy handoff and thread-native buddy action
 test("buddy handoff opens the existing buddy flow with thread context prefilled", async ({ page }) => {
   const seed = loadSeedData();
 
-  await loginAs(page, seed.users.member.email, seed.password);
+  await loginAs(page, seed.users.verified.email, seed.password);
   await page.goto(`/posts/${seed.posts.reportedPost.id}`);
 
   await page.getByTestId("thread-buddy-handoff").getByRole("link", { name: /send buddy request|open buddy/i }).click();
@@ -53,7 +53,7 @@ test("thread reply composer expands and sends a reply", async ({ page }) => {
   const seed = loadSeedData();
   const replyText = `Thread reply ${Date.now()}`;
 
-  await loginAs(page, seed.users.member.email, seed.password);
+  await loginAs(page, seed.users.verified.email, seed.password);
   await page.goto(`/posts/${seed.posts.reportedPost.id}`);
 
   const composer = page.getByTestId("thread-reply-composer");
@@ -102,13 +102,14 @@ test("mobile post thread keeps the composer and sticky action bar visible", asyn
   const seed = loadSeedData();
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await loginAs(page, seed.users.member.email, seed.password);
+  await loginAs(page, seed.users.verified.email, seed.password);
   await page.goto(`/posts/${seed.posts.reportedPost.id}`);
 
   await expect(page.getByTestId("post-thread-page")).toBeVisible();
   await expect(page.getByTestId("thread-reply-composer")).toBeVisible();
   await expect(page.getByTestId("thread-action-bar")).toBeVisible();
 });
+
 
 
 

@@ -1,8 +1,9 @@
 import Link from "next/link";
+import { VerificationStatus } from "@prisma/client";
 import { RelativeTime } from "@/components/relative-time";
+import { HomeTrustBadge } from "./trust-badge";
 import { PostEngagement } from "@/components/post-engagement";
 import { HomeBlurredMedia } from "./blurred-media";
-import { HomeTrustBadge } from "./trust-badge";
 import { PREMIUM_BODY, PREMIUM_META, PREMIUM_SURFACE_STRONG } from "@/components/ui/premium-styles";
 
 type ReactionType = "LOVE" | "SUPPORT" | "THUMBS_UP" | "CELEBRATE" | null;
@@ -33,6 +34,9 @@ type HomeFeedCardProps = {
     trustTier: "LOW" | "NORMAL" | "HIGH" | null;
     emailVerified: boolean;
     phoneVerified: boolean;
+    kycVerified?: boolean;
+    verificationStatus?: VerificationStatus | null;
+    isBuddyApproved?: boolean;
     trustSummary?: string | null;
     visibilityNote?: string | null;
     canOpenAuthorProfile: boolean;
@@ -44,42 +48,45 @@ type HomeFeedCardProps = {
   viewerId: string;
   commentAction: (formData: FormData) => void | Promise<void>;
   authorActions?: React.ReactNode;
+  requiresEmailVerification?: boolean;
 };
 
-export function HomeFeedCard({ post, viewerId, commentAction, authorActions }: HomeFeedCardProps) {
+export function HomeFeedCard({ post, viewerId, commentAction, authorActions, requiresEmailVerification = false }: HomeFeedCardProps) {
   const isSensitive = post.sensitivityStatus !== "NORMAL";
 
   return (
     <article className={`${PREMIUM_SURFACE_STRONG} p-4 md:p-5 hover:-translate-y-0.5`} data-testid="home-feed-card">
-      <div className="flex flex-col gap-4.5">
+      <div className="flex flex-col gap-4">
         <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 flex items-start gap-3">
-            <div className="flex h-11 w-11 flex-none items-center justify-center rounded-full border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.05)] text-sm font-semibold text-white/88">
+          <div className="min-w-0 flex items-start gap-3.5">
+            <div className="flex h-11 w-11 flex-none items-center justify-center rounded-[1.1rem] border border-[rgba(255,255,255,0.06)] bg-[radial-gradient(circle_at_top,rgba(212,176,123,0.12),rgba(255,255,255,0.03)_72%)] text-sm font-semibold text-white/84 shadow-[0_8px_18px_rgba(18,12,9,0.08)]">
               {post.authorInitial}
             </div>
             <div className="min-w-0 space-y-1.5">
               <div className="flex flex-wrap items-center gap-2.5">
                 {post.authorHref && post.canOpenAuthorProfile ? (
-                  <Link className="truncate text-[1rem] font-semibold tracking-tight text-white underline-offset-4 hover:underline" href={post.authorHref}>
+                  <Link className="truncate text-[1rem] font-semibold tracking-tight text-white/92 underline-offset-4 hover:text-white hover:underline" href={post.authorHref}>
                     {post.authorLabel}
                   </Link>
                 ) : (
-                  <p className="truncate text-[1rem] font-semibold tracking-tight text-white">{post.authorLabel}</p>
+                  <p className="truncate text-[1rem] font-semibold tracking-tight text-white/90">{post.authorLabel}</p>
                 )}
-                <HomeTrustBadge compact emailVerified={post.emailVerified} phoneVerified={post.phoneVerified} tier={post.trustTier as never} />
+                <HomeTrustBadge compact emailVerified={post.emailVerified} isBuddyApproved={post.isBuddyApproved} kycVerified={post.kycVerified} phoneVerified={post.phoneVerified} tier={post.trustTier as never} verificationStatus={post.verificationStatus} />
               </div>
               <div className={`flex flex-wrap items-center gap-2 ${PREMIUM_META}`}>
                 <span>{post.group ? post.group.name : "Community pulse"}</span>
-                <span className="h-1 w-1 rounded-full bg-white/20" />
-                <RelativeTime className="tracking-[0.08em] text-white/38" value={post.createdAt} />
+                <span className="h-1 w-1 rounded-full bg-white/16" />
+                <RelativeTime className="tracking-[0.08em] text-white/34" value={post.createdAt} />
               </div>
-              {post.visibilityNote ? <p className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--lux-text-muted)]">{post.visibilityNote}</p> : null}
+              {post.visibilityNote ? <p className="text-[11px] tracking-[0.12em] text-[color:var(--lux-text-muted)]">{post.visibilityNote}</p> : null}
             </div>
           </div>
-          {authorActions ? <div className="flex flex-none items-center gap-2">{authorActions}</div> : null}
+          {authorActions ? <div className="flex flex-none items-center gap-2 pt-0.5">{authorActions}</div> : null}
         </div>
 
-        <p className={`${PREMIUM_BODY} whitespace-pre-wrap text-[15px] leading-7 text-white/84`}>{post.contentText}</p>
+        <div className="space-y-3">
+          <p className={`${PREMIUM_BODY} whitespace-pre-wrap text-[15px] leading-7 text-white/84`}>{post.contentText}</p>
+        </div>
 
         {post.media.length > 0 ? (
           <div className="space-y-3">
@@ -98,7 +105,7 @@ export function HomeFeedCard({ post, viewerId, commentAction, authorActions }: H
         <PostEngagement
           commentAction={commentAction}
           commentCount={post.commentCount}
-          commentPlaceholder="Reply discreetly..."
+          commentPlaceholder="Reply with something small..."
           commentSubmitLabel="Reply"
           comments={post.comments}
           groupHref={post.group ? `/groups/${post.group.id}` : undefined}
@@ -107,6 +114,7 @@ export function HomeFeedCard({ post, viewerId, commentAction, authorActions }: H
           reactionType={post.reactionType}
           threadHref={`/posts/${post.id}`}
           viewerId={viewerId}
+          requiresEmailVerification={requiresEmailVerification}
         />
       </div>
     </article>

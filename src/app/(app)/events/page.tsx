@@ -315,7 +315,7 @@ export default async function EventsPage({
   };
 
   return (
-    <main className="mx-auto min-h-screen max-w-6xl px-3 pb-28 pt-4 md:px-5 md:pb-14 md:pt-6" data-testid="events-page">
+    <main className="mx-auto min-h-screen max-w-6xl px-3 pb-[calc(var(--member-shell-bottom-offset)+1rem)] pt-[calc(var(--member-shell-top-offset)+0.6rem)] md:px-5 md:pb-14 md:pt-[calc(var(--member-shell-top-offset-md)+0.75rem)]" data-testid="events-page">
       <HomeTopBar notificationCount={notificationCount} viewerInitial={viewer.displayName.slice(0, 1).toUpperCase()} />
 
       <section className="mt-4 rounded-[2rem] border border-[rgba(255,255,255,0.06)] bg-[radial-gradient(circle_at_top,rgba(94,67,60,0.14),transparent_24%),linear-gradient(180deg,#17181c_0%,#111218_100%)] px-4 py-5 text-white shadow-[0_28px_74px_rgba(7,8,10,0.24)] md:px-6 md:py-6">
@@ -421,3 +421,8 @@ export default async function EventsPage({
     </main>
   );
 }
+
+
+
+
+

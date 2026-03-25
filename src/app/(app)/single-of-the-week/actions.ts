@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { ChatRequestOriginType, ChatRequestPolicy, ChatRequestStatus, ConversationStatus, SingleOfWeekApplicationStatus, SingleOfWeekFeatureStatus } from "@prisma/client";
-import { hasMinimalProfileVisibility, requireActiveUser } from "@/lib/auth/guards";
+import { hasMinimalProfileVisibility, isEmailVerifiedUser, requireActiveUser } from "@/lib/auth/guards";
 import { prisma } from "@/lib/db/prisma";
 import { createNotificationWithDelivery } from "@/lib/notifications";
 import { FEATURE_FLAG_KEYS, isFeatureEnabled } from "@/lib/feature-flags";
@@ -20,6 +20,7 @@ import {
 import { uploadSingleOfWeekImageToR2 } from "@/lib/r2-media";
 import { userPairKey } from "@/lib/interaction-consent";
 import { HIGH_RISK_ACTIONS, assertHighRiskAccess } from "@/lib/high-risk-access";
+import { getEmailVerificationBlockedReason } from "@/lib/email-verification-gating";
 
 const LEGACY_PHOTO_ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 const PHOTO_MAX_BYTES = 5 * 1024 * 1024;
@@ -241,6 +242,9 @@ export async function respondToSingleOfWeekSelectionAction(formData: FormData) {
 
 export async function sendSingleOfWeekChatRequestAction(formData: FormData) {
   const user = await requireActiveUser();
+  if (!isEmailVerifiedUser(user)) {
+    throw new Error(getEmailVerificationBlockedReason("send featured chat requests"));
+  }
   await assertSingleOfWeekEnabled(user);
   const featureId = textValue(formData, "featureId");
   const sourcePath = optionalTextValue(formData, "sourcePath") ?? "/home";

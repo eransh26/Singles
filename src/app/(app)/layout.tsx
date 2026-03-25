@@ -26,10 +26,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   ];
 
   return (
-    <div className="min-h-screen bg-background text-foreground pt-[4.9rem] md:pt-[5rem]">
+    <div className="min-h-screen bg-background text-foreground pt-[var(--member-shell-top-offset)] md:pt-[var(--member-shell-top-offset-md)]">
       <NotificationActivityClient />
       <MemberHeaderFrame>
-        <header className="fixed inset-x-0 top-0 z-40 border-b border-transparent bg-[linear-gradient(180deg,rgba(37,29,24,0.78),rgba(30,24,20,0.52))] text-[color:var(--lux-text)] shadow-[0_8px_20px_rgba(18,12,9,0.1)] backdrop-blur-xl">
+        <header className="fixed inset-x-0 top-0 z-40 border-b border-transparent bg-[linear-gradient(180deg,rgba(37,29,24,0.78),rgba(30,24,20,0.52))] text-[color:var(--lux-text)] shadow-[0_8px_20px_rgba(18,12,9,0.1)] backdrop-blur-xl" data-testid="member-shell-header">
           <div className="mx-auto max-w-6xl px-4 md:px-6">
             <div className="member-header-bar flex min-h-[4.85rem] items-center gap-4 whitespace-nowrap md:gap-6">
               <div className="flex min-w-[160px] flex-none items-center">

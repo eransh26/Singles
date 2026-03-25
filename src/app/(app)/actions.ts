@@ -26,7 +26,7 @@ import {
   ReactionType,
   VerificationStatus,
 } from "@prisma/client";
-import { hasMinimalProfileVisibility, isFullyVerifiedUser, requireActiveUser, requireUser } from "@/lib/auth/guards";
+import { hasMinimalProfileVisibility, isEmailVerifiedUser, isFullyVerifiedUser, requireActiveUser, requireUser } from "@/lib/auth/guards";
 import { prisma } from "@/lib/db/prisma";
 import { createLocalSession } from "@/lib/auth/local-session";
 import { invalidatePairInteractionsByBlock, revokeChatConversationByPair, revokeVideoConsentForPair, userPairKey } from "@/lib/interaction-consent";
@@ -46,6 +46,7 @@ import {
 import { refreshUserTrustStates } from "@/lib/internal-trust";
 import { HIGH_RISK_ACTIONS, assertHighRiskAccess } from "@/lib/high-risk-access";
 import { uploadProfileImageToR2 } from "@/lib/r2-media";
+import { getEmailVerificationBlockedReason, isEmailVerificationCooldownError, isEmailVerificationDailyCapError } from "@/lib/email-verification-gating";
 
 function textValue(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -66,6 +67,28 @@ function slugify(value: string) {
 
 function withSavedParam(path: string, saved: string) {
   return path.includes("?") ? `${path}&saved=${saved}` : `${path}?saved=${saved}`;
+}
+
+function withQueryParams(path: string, params: Record<string, string | null | undefined>) {
+  const [basePath, existingQuery = ""] = path.split("?", 2);
+  const searchParams = new URLSearchParams(existingQuery);
+
+  for (const [key, value] of Object.entries(params)) {
+    if (value == null || value.length === 0) {
+      searchParams.delete(key);
+      continue;
+    }
+    searchParams.set(key, value);
+  }
+
+  const query = searchParams.toString();
+  return query ? `${basePath}?${query}` : basePath;
+}
+
+function assertEmailVerifiedCapability(user: { emailVerified: Date | null }, actionLabel: string) {
+  if (!isEmailVerifiedUser(user)) {
+    throw new Error(getEmailVerificationBlockedReason(actionLabel));
+  }
 }
 
 const PROFILE_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
@@ -357,39 +380,54 @@ export async function reportUserAction(formData: FormData) {
 export async function requestEmailVerificationAction(formData: FormData) {
   const user = await requireUser();
   const sourcePath = optionalTextValue(formData, "sourcePath") ?? "/settings";
+  const nextPath = optionalTextValue(formData, "nextPath") ?? sourcePath;
 
   const emailVerificationEnabled = await isFeatureEnabled(FEATURE_FLAG_KEYS.emailVerification, user);
   if (!emailVerificationEnabled) {
-    throw new Error("Email verification is currently unavailable.");
+    redirect(withSavedParam(sourcePath, "email-verification-unavailable"));
   }
 
+  let saved = "email-verification-sent";
+
   try {
-    const result = await issueEmailVerificationForUser(user.id);
-    const saved = result.alreadyVerified ? "email-already-verified" : "email-verification-sent";
-    revalidatePath("/settings");
-    revalidatePath(`/users/${user.id}`);
-    redirect(withSavedParam(sourcePath, saved));
+    const result = await issueEmailVerificationForUser(user.id, { nextPath });
+    saved = result.alreadyVerified ? "email-already-verified" : "email-verification-sent";
   } catch (error) {
     const message = error instanceof Error ? error.message : "Verification email could not be sent.";
-    throw new Error(message);
+    saved = isEmailVerificationCooldownError(message)
+      ? "email-verification-cooldown"
+      : isEmailVerificationDailyCapError(message)
+        ? "email-verification-limit"
+        : "email-verification-send-failed";
+    redirect(withQueryParams(sourcePath, {
+      saved,
+      error: saved === "email-verification-send-failed" ? message : null,
+    }));
   }
+
+  revalidatePath("/settings");
+  revalidatePath("/onboarding");
+  revalidatePath(`/users/${user.id}`);
+  redirect(withSavedParam(sourcePath, saved));
 }
 
 export async function updateEmailAddressAction(formData: FormData) {
   const user = await requireUser();
+  const sourcePath = optionalTextValue(formData, "sourcePath") ?? "/settings";
+  const nextPath = optionalTextValue(formData, "nextPath") ?? sourcePath;
   const nextEmail = normalizeEmailAddress(textValue(formData, "email"));
 
   const emailVerificationEnabled = await isFeatureEnabled(FEATURE_FLAG_KEYS.emailVerification, user);
   if (!emailVerificationEnabled) {
-    throw new Error("Email verification is currently unavailable.");
+    redirect(withSavedParam(sourcePath, "email-verification-unavailable"));
   }
 
   if (!nextEmail || !nextEmail.includes("@")) {
-    throw new Error("Enter a valid email address.");
+    redirect(withQueryParams(sourcePath, { saved: "email-invalid" }));
   }
 
   if (nextEmail === user.email) {
-    redirect("/settings?saved=email-unchanged");
+    redirect(withSavedParam(sourcePath, "email-unchanged"));
   }
 
   const existingUser = await prisma.user.findUnique({
@@ -398,7 +436,7 @@ export async function updateEmailAddressAction(formData: FormData) {
   });
 
   if (existingUser && existingUser.id !== user.id) {
-    throw new Error("Email is already in use.");
+    redirect(withQueryParams(sourcePath, { saved: "email-in-use" }));
   }
 
   const invalidatedAt = new Date();
@@ -423,14 +461,16 @@ export async function updateEmailAddressAction(formData: FormData) {
   await createLocalSession(nextEmail);
 
   try {
-    await issueEmailVerificationForUser(user.id, { skipRateLimit: true });
+    await issueEmailVerificationForUser(user.id, { skipRateLimit: true, nextPath });
     revalidatePath("/settings");
+    revalidatePath("/onboarding");
     revalidatePath(`/users/${user.id}`);
-    redirect("/settings?saved=email-changed");
+    redirect(withSavedParam(sourcePath, "email-changed"));
   } catch {
     revalidatePath("/settings");
+    revalidatePath("/onboarding");
     revalidatePath(`/users/${user.id}`);
-    redirect("/settings?saved=email-changed-send-failed");
+    redirect(withSavedParam(sourcePath, "email-changed-send-failed"));
   }
 }
 
@@ -603,12 +643,15 @@ export async function deleteProfileMediaAction(formData: FormData) {
 
 export async function createPostAction(formData: FormData) {
   const user = await requireUser();
+  assertEmailVerifiedCapability(user, "post in the circle");
   const contentText = textValue(formData, "contentText");
   if (contentText.length < 2) {
     throw new Error("Post text must be at least 2 characters.");
   }
 
   const groupId = textValue(formData, "groupId");
+  const sourcePath = optionalTextValue(formData, "sourcePath") ?? (groupId ? `/groups/${groupId}` : "/home");
+  const previousPostCount = await prisma.post.count({ where: { authorUserId: user.id } });
   const isSensitive = formData.get("isSensitive") === "on";
   const uploadedMedia = await parsePostMediaFromForm(formData);
   let contextType: PostContextType = PostContextType.GLOBAL_FEED;
@@ -669,10 +712,15 @@ export async function createPostAction(formData: FormData) {
   if (groupId) {
     revalidatePath(`/groups/${groupId}`);
   }
+
+  if (!groupId && previousPostCount === 0) {
+    redirect(withSavedParam(sourcePath, "first-post"));
+  }
 }
 
 export async function createCommentAction(formData: FormData) {
   const user = await requireUser();
+  assertEmailVerifiedCapability(user, "reply in the thread");
   const postId = textValue(formData, "postId");
   const contentText = textValue(formData, "contentText");
 
@@ -952,6 +1000,7 @@ export async function reviewGroupJoinRequestAction(formData: FormData) {
 
 export async function sendChatRequestAction(formData: FormData) {
   const user = await requireActiveUser();
+  assertEmailVerifiedCapability(user, "message other members");
   const targetUserId = textValue(formData, "targetUserId");
   const sourcePath = optionalTextValue(formData, "sourcePath") ?? "/home";
 
@@ -1149,6 +1198,7 @@ export async function reviewChatRequestAction(formData: FormData) {
 
 export async function requestVideoConsentAction(formData: FormData) {
   const user = await requireActiveUser();
+  assertEmailVerifiedCapability(user, "request video access");
   const targetUserId = textValue(formData, "targetUserId");
   const sourcePath = optionalTextValue(formData, "sourcePath") ?? "/chats";
 
@@ -1524,6 +1574,7 @@ export async function revokePhotoAccessGrantAction(formData: FormData) {
 
 export async function sendMessageAction(formData: FormData) {
   const user = await requireUser();
+  assertEmailVerifiedCapability(user, "send messages");
   const conversationId = textValue(formData, "conversationId");
   const body = textValue(formData, "body");
 

@@ -63,6 +63,11 @@ test("resend rate limiting blocks rapid repeats and daily spam", () => {
   assert.equal(allowed.blocked, false);
 });
 
+test("verification links can preserve a return path back into onboarding", () => {
+  const url = buildEmailVerificationUrl("raw-token", "http://localhost:3000", "/onboarding?step=3");
+  assert.equal(url, "http://localhost:3000/verify-email?token=raw-token&next=%2Fonboarding%3Fstep%3D3");
+});
+
 test("console delivery mode logs the verification link for dev use", async () => {
   const previousMode = process.env.EMAIL_DELIVERY_MODE;
   process.env.EMAIL_DELIVERY_MODE = "console";

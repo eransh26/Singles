@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, MessageCircleMore, SendHorizonal, Sparkles } from "lucide-react";
@@ -9,11 +10,12 @@ type ThreadReplyComposerProps = {
   action: (formData: FormData) => void | Promise<void>;
   postId: string;
   viewerName: string;
+  requiresEmailVerification?: boolean;
 };
 
 const PLACEHOLDERS = ["Reply to the circle...", "Join the conversation...", "Say something..."];
 
-export function ThreadReplyComposer({ action, postId, viewerName }: ThreadReplyComposerProps) {
+export function ThreadReplyComposer({ action, postId, viewerName, requiresEmailVerification = false }: ThreadReplyComposerProps) {
   const router = useRouter();
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [content, setContent] = useState("");
@@ -44,7 +46,7 @@ export function ThreadReplyComposer({ action, postId, viewerName }: ThreadReplyC
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const trimmed = content.trim();
-    if (!trimmed || sending) {
+    if (!trimmed || sending || requiresEmailVerification) {
       return;
     }
 
@@ -92,46 +94,59 @@ export function ThreadReplyComposer({ action, postId, viewerName }: ThreadReplyC
             </div>
           </div>
 
-          <div className={PREMIUM_INPUT_SHELL}>
-            <textarea
-              ref={textareaRef}
-              className="min-h-[44px] w-full resize-none bg-transparent text-[15px] leading-6 text-white outline-none placeholder:text-white/38"
-              data-testid="thread-reply-input"
-              name="contentText"
-              onChange={(event) => setContent(event.target.value)}
-              onFocus={() => setExpanded(true)}
-              placeholder={placeholder}
-              rows={1}
-              value={content}
-            />
-          </div>
-
-          <div className={`grid transition-all duration-200 ${expanded || error || feedback ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
-            <div className="overflow-hidden">
-              <div className="flex flex-col gap-3 pt-1 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.16em] text-white/52">
-                  <span className={PREMIUM_CHIP}>
-                    <MessageCircleMore className="h-3.5 w-3.5" />
-                    Keep it human
-                  </span>
-                  <span className={PREMIUM_CHIP}>
-                    <Sparkles className="h-3.5 w-3.5" />
-                    Short replies land best
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between gap-3 sm:justify-end">
-                  <div className="min-h-[20px] text-xs text-white/58" data-testid="thread-reply-status">
-                    {sending ? "Sending..." : error ?? feedback}
-                  </div>
-                  <button className={PREMIUM_ACTION_ACCENT} data-testid="thread-reply-submit" disabled={!content.trim() || sending} type="submit">
-                    {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <SendHorizonal className="h-4 w-4" />}
-                    {sending ? "Sending" : "Send"}
-                  </button>
-                </div>
+          {requiresEmailVerification ? (
+            <div className="rounded-[1.05rem] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-4 py-3.5 text-sm text-white/68">
+              <p className="font-medium text-white/86">Verify your email before replying.</p>
+              <p className="mt-2 leading-6 text-white/58">You can keep reading the thread now and unlock replies as soon as your email is confirmed.</p>
+              <div className="mt-4 flex flex-wrap gap-3">
+                <Link className="lux-button-primary" href="/onboarding?step=3">Verify email</Link>
+                <Link className="lux-button-secondary" href="/home">Keep browsing</Link>
               </div>
             </div>
-          </div>
+          ) : (
+            <>
+              <div className={PREMIUM_INPUT_SHELL}>
+                <textarea
+                  ref={textareaRef}
+                  className="min-h-[44px] w-full resize-none bg-transparent text-[15px] leading-6 text-white outline-none placeholder:text-white/38"
+                  data-testid="thread-reply-input"
+                  name="contentText"
+                  onChange={(event) => setContent(event.target.value)}
+                  onFocus={() => setExpanded(true)}
+                  placeholder={placeholder}
+                  rows={1}
+                  value={content}
+                />
+              </div>
+
+              <div className={`grid transition-all duration-200 ${expanded || error || feedback ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
+                <div className="overflow-hidden">
+                  <div className="flex flex-col gap-3 pt-1 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.16em] text-white/52">
+                      <span className={PREMIUM_CHIP}>
+                        <MessageCircleMore className="h-3.5 w-3.5" />
+                        Keep it human
+                      </span>
+                      <span className={PREMIUM_CHIP}>
+                        <Sparkles className="h-3.5 w-3.5" />
+                        Short replies land best
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-3 sm:justify-end">
+                      <div className="min-h-[20px] text-xs text-white/58" data-testid="thread-reply-status">
+                        {sending ? "Sending..." : error ?? feedback}
+                      </div>
+                      <button className={PREMIUM_ACTION_ACCENT} data-testid="thread-reply-submit" disabled={!content.trim() || sending} type="submit">
+                        {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <SendHorizonal className="h-4 w-4" />}
+                        {sending ? "Sending" : "Send"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </form>

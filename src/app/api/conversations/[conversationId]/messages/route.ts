@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { AccountStatus, ConversationStatus, NotificationType, UserRole } from "@prisma/client";
-import { getCurrentUser } from "@/lib/auth/guards";
+import { getCurrentUser, isEmailVerifiedUser } from "@/lib/auth/guards";
 import { prisma } from "@/lib/db/prisma";
 import { createNotificationWithDelivery } from "@/lib/notifications";
+import { getEmailVerificationBlockedReason } from "@/lib/email-verification-gating";
 import {
   getChatAttachmentValidationMessage,
   MAX_CHAT_ATTACHMENTS,
@@ -141,6 +142,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ con
   const conversation = await getAuthorizedConversation(conversationId, auth.user.id);
   if (!conversation) {
     return NextResponse.json({ error: "Conversation not found." }, { status: 404 });
+  }
+
+  if (!isEmailVerifiedUser(auth.user)) {
+    return NextResponse.json({ error: getEmailVerificationBlockedReason("send messages") }, { status: 403 });
   }
 
   const payload = await request.json().catch(() => null);

@@ -289,14 +289,14 @@ export function EmojiPicker({ onSelect }: { onSelect: (emoji: string) => void })
       </button>
 
       {open ? (
-        <div className={`absolute left-0 top-11 z-30 w-[21rem] p-2.5 ${PREMIUM_PANEL}`} data-testid="emoji-picker-panel">
-          <div className="flex items-center gap-2 rounded-[0.95rem] border border-[rgba(228,213,192,0.06)] bg-[rgba(32,25,21,0.42)] px-3 py-2">
+        <div className={`absolute left-0 top-11 z-30 w-[21rem] p-2 ${PREMIUM_PANEL}`} data-testid="emoji-picker-panel">
+          <div className="flex items-center gap-2 rounded-[0.95rem] border border-[rgba(228,213,192,0.05)] bg-[rgba(255,255,255,0.02)] px-3 py-2">
             <Search className="h-4 w-4 text-white/44" />
             <input
               className="w-full bg-transparent text-sm text-white outline-none placeholder:text-white/38"
               ref={searchInputRef}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search emoji"
+              placeholder="Search or pick"
               value={search}
             />
           </div>
@@ -304,7 +304,7 @@ export function EmojiPicker({ onSelect }: { onSelect: (emoji: string) => void })
           <div className="mt-2 flex flex-wrap gap-0.5" data-testid="emoji-picker-tabs">
             <button
               aria-label="Recent emojis"
-              className={`inline-flex h-8 w-8 items-center justify-center rounded-full border text-[14px] transition duration-200 ${activeCategory === "recent" && !search ? "border-[rgba(189,151,100,0.16)] bg-[rgba(189,151,100,0.06)] text-[color:var(--lux-text-accent)]" : "border-[rgba(228,213,192,0.05)] bg-[rgba(255,255,255,0.018)] text-white/56 hover:border-[rgba(228,213,192,0.1)] hover:bg-[rgba(255,255,255,0.035)]"}`}
+              className={`inline-flex h-7 w-7 items-center justify-center rounded-full border text-[12px] transition duration-200 ${activeCategory === "recent" && !search ? "border-[rgba(189,151,100,0.12)] bg-[rgba(189,151,100,0.045)] text-[color:var(--lux-text-accent)]" : "border-[rgba(228,213,192,0.045)] bg-[rgba(255,255,255,0.015)] text-white/50 hover:border-[rgba(228,213,192,0.08)] hover:bg-[rgba(255,255,255,0.028)]"}`}
               onClick={() => setActiveCategory("recent")}
               type="button"
             >
@@ -313,7 +313,7 @@ export function EmojiPicker({ onSelect }: { onSelect: (emoji: string) => void })
             {EMOJI_CATEGORIES.map((category) => (
               <button
                 aria-label={category.label}
-                className={`inline-flex h-8 w-8 items-center justify-center rounded-full border text-[14px] transition duration-200 ${activeCategory === category.key && !search ? "border-[rgba(189,151,100,0.16)] bg-[rgba(189,151,100,0.06)] text-[color:var(--lux-text-accent)]" : "border-[rgba(228,213,192,0.05)] bg-[rgba(255,255,255,0.018)] text-white/56 hover:border-[rgba(228,213,192,0.1)] hover:bg-[rgba(255,255,255,0.035)]"}`}
+                className={`inline-flex h-7 w-7 items-center justify-center rounded-full border text-[12px] transition duration-200 ${activeCategory === category.key && !search ? "border-[rgba(189,151,100,0.12)] bg-[rgba(189,151,100,0.045)] text-[color:var(--lux-text-accent)]" : "border-[rgba(228,213,192,0.045)] bg-[rgba(255,255,255,0.015)] text-white/50 hover:border-[rgba(228,213,192,0.08)] hover:bg-[rgba(255,255,255,0.028)]"}`}
                 key={category.key}
                 onClick={() => setActiveCategory(category.key)}
                 type="button"
@@ -323,13 +323,13 @@ export function EmojiPicker({ onSelect }: { onSelect: (emoji: string) => void })
             ))}
           </div>
 
-          <div className="mt-2 grid max-h-72 grid-cols-8 gap-[2px] overflow-y-auto pr-1" data-testid="emoji-picker-grid">
+          <div className="mt-2 grid max-h-72 grid-cols-8 gap-[1px] overflow-y-auto pr-1" data-testid="emoji-picker-grid">
             {showEmptySearchState ? (
               <p className="col-span-8 py-4 text-center text-sm text-white/54">No emoji found.</p>
             ) : (
               visibleEmojis.map((entry) => (
                 <button
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-[0.85rem] border border-[rgba(228,213,192,0.05)] bg-[rgba(255,255,255,0.022)] text-xl transition duration-200 hover:border-[rgba(189,151,100,0.12)] hover:bg-[rgba(189,151,100,0.06)]"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-[0.85rem] border border-[rgba(228,213,192,0.045)] bg-[rgba(255,255,255,0.018)] text-[18px] transition duration-200 hover:border-[rgba(189,151,100,0.1)] hover:bg-[rgba(189,151,100,0.05)]"
                   key={`${entry.symbol}-${entry.label}`}
                   onClick={() => handleSelect(entry.symbol)}
                   title={entry.label}
@@ -345,6 +345,8 @@ export function EmojiPicker({ onSelect }: { onSelect: (emoji: string) => void })
     </div>
   );
 }
+
+
 
 
 

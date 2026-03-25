@@ -36,11 +36,17 @@ const saveMessages: Record<string, string> = {
   privacy: "Privacy preferences saved.",
   verification: "Verification request submitted.",
   "email-verification-sent": "Verification email sent.",
-  "email-verification-send-failed": "Your email changed, but the verification email could not be sent yet.",
+  "email-verification-send-failed": "Verification email could not be sent yet.",
   "email-already-verified": "Your email is already verified.",
   "email-changed": "Email updated. Please verify your new address.",
   "email-changed-send-failed": "Email updated, but sending the verification email failed. You can resend it below.",
+  "email-verification-cooldown": "Please wait a few minutes before requesting another verification email.",
+  "email-verification-limit": "You reached the verification email limit for today.",
+  "email-verification-unavailable": "Email verification is unavailable right now.",
   "email-unchanged": "Your email address is unchanged.",
+  "email-invalid": "Enter a valid email address.",
+  "email-in-use": "That email is already in use.",
+  "email-verified": "Your email is verified.",
   photoReview: "Photo access request reviewed.",
   "photo-review": "Photo access request reviewed.",
   "photo-revoked": "Gallery access revoked.",
@@ -289,6 +295,7 @@ export default async function SettingsPage({
                   {emailVerificationEnabled && !user.emailVerified ? (
                     <form action={requestEmailVerificationAction}>
                       <input name="sourcePath" type="hidden" value="/settings" />
+                      <input name="nextPath" type="hidden" value="/settings" />
                       <button className="lux-button-secondary" type="submit">Send verification email</button>
                     </form>
                   ) : null}
@@ -300,6 +307,8 @@ export default async function SettingsPage({
                       <span className="font-medium text-[color:var(--lux-text)]">Change email</span>
                       <input className="lux-input" defaultValue={user.email} name="email" placeholder="Email" required type="email" />
                     </label>
+                    <input name="sourcePath" type="hidden" value="/settings" />
+                    <input name="nextPath" type="hidden" value="/settings" />
                     <button className="lux-button-primary" type="submit">Update email</button>
                   </form>
                 ) : null}

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { VerificationStatus } from "@prisma/client";
 import { RelativeTime } from "@/components/relative-time";
 import { HomeBlurredMedia } from "@/components/home/blurred-media";
 import { HomeTrustBadge } from "@/components/home/trust-badge";
@@ -23,6 +24,9 @@ type PostThreadCardProps = {
     trustTier: "LOW" | "NORMAL" | "HIGH" | null;
     emailVerified: boolean;
     phoneVerified: boolean;
+    kycVerified?: boolean;
+    verificationStatus?: VerificationStatus | null;
+    isBuddyApproved?: boolean;
     trustSummary?: string | null;
     visibilityNote?: string | null;
     commentCount: number;
@@ -50,7 +54,7 @@ export function PostThreadCard({ post, authorActions }: PostThreadCardProps) {
               ) : (
                 <p className="truncate text-[1.125rem] font-semibold tracking-tight text-white">{post.authorLabel}</p>
               )}
-              <HomeTrustBadge compact emailVerified={post.emailVerified} phoneVerified={post.phoneVerified} tier={post.trustTier as never} />
+              <HomeTrustBadge compact emailVerified={post.emailVerified} isBuddyApproved={post.isBuddyApproved} kycVerified={post.kycVerified} phoneVerified={post.phoneVerified} tier={post.trustTier as never} verificationStatus={post.verificationStatus} />
             </div>
             <div className={`flex flex-wrap items-center gap-2 ${PREMIUM_META}`}>
               <span>{post.group ? post.group.name : "Community pulse"}</span>

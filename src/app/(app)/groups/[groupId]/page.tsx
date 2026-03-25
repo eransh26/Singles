@@ -17,6 +17,7 @@ function userPairKey(firstUserId: string, secondUserId: string) {
 
 export default async function GroupDetailPage({ params }: { params: Promise<{ groupId: string }> }) {
   const viewer = await requireUser();
+  const viewerEmailVerified = Boolean(viewer.emailVerified);
   const viewerIsVerified = isFullyVerifiedUser(viewer);
   const { groupId } = await params;
 
@@ -229,13 +230,24 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ gr
                 <h2 className="mt-3 text-2xl font-semibold tracking-tight text-[color:var(--lux-text)]">Share with members only</h2>
                 <p className="lux-body mt-3">Posts inside groups are shown with your name here.</p>
               </div>
-              <MediaComposer
-                action={createPostAction}
-                formClassName="mt-5 flex flex-col gap-4"
-                hiddenFields={[{ name: "groupId", value: group.id }]}
-                placeholder="Share something relevant with this group"
-                submitLabel="Publish to group"
-              />
+              {viewerEmailVerified ? (
+                <MediaComposer
+                  action={createPostAction}
+                  formClassName="mt-5 flex flex-col gap-4"
+                  hiddenFields={[{ name: "groupId", value: group.id }]}
+                  placeholder="Share something relevant with this group"
+                  submitLabel="Publish to group"
+                />
+              ) : (
+                <div className="mt-5 rounded-[1.2rem] border border-[color:var(--lux-border)] bg-[color:var(--lux-secondary)] p-4 text-sm text-[color:var(--lux-text-secondary)]">
+                  <p className="font-medium text-[color:var(--lux-text)]">Verify your email before posting here.</p>
+                  <p className="mt-2 leading-6">Browsing the room stays open, but group posts unlock after email verification.</p>
+                  <div className="mt-4 flex flex-wrap gap-3">
+                    <Link className="lux-button-primary" href="/onboarding?step=3">Verify email</Link>
+                    <Link className="lux-button-secondary" href="/home">Keep browsing</Link>
+                  </div>
+                </div>
+              )}
             </section>
           ) : null}
 
@@ -268,11 +280,13 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ gr
                       ? "pending"
                       : isBlocked || !hasMinimalProfileVisibility(post.author.profileVisibility)
                         ? "blocked"
-                        : post.author.chatRequestPolicy === "NOBODY"
+                        : !viewerEmailVerified
                           ? "blocked"
-                          : post.author.chatRequestPolicy === "VERIFIED_ONLY" && !viewerIsVerified
+                          : post.author.chatRequestPolicy === "NOBODY"
                             ? "blocked"
-                            : "send";
+                            : post.author.chatRequestPolicy === "VERIFIED_ONLY" && !viewerIsVerified
+                              ? "blocked"
+                              : "send";
                 const photoState = hasApprovedPhotoGrant
                   ? "approved"
                   : existingPhotoRequest?.requesterUserId === viewer.id
@@ -285,7 +299,7 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ gr
                     ? "approved"
                     : existingConversation?.status === "ACTIVE" && existingVideoConsent?.status === ConsentStatus.PENDING
                       ? "pending"
-                      : existingConversation?.status === "ACTIVE" && !isBlocked
+                      : existingConversation?.status === "ACTIVE" && !isBlocked && viewerEmailVerified
                         ? "request"
                         : "blocked";
 
@@ -330,6 +344,7 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ gr
                         reactionType={post.reactions[0]?.reactionType ?? null}
                         threadHref={`/posts/${post.id}`}
                         viewerId={viewer.id}
+                        requiresEmailVerification={!viewerEmailVerified}
                       />
                     </div>
                   </article>

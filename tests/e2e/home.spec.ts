@@ -8,7 +8,7 @@ test.beforeEach(() => {
 test("home renders the new premium feed sections on desktop", async ({ page }) => {
   const seed = loadSeedData();
 
-  await loginAs(page, seed.users.member.email, seed.password);
+  await loginAs(page, seed.users.verified.email, seed.password);
   await page.goto("/home");
 
   await expect(page.getByTestId("home-top-bar")).toBeVisible();
@@ -30,7 +30,7 @@ test("home keeps a mobile-first structure with bottom nav and embedded signals",
   const seed = loadSeedData();
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await loginAs(page, seed.users.member.email, seed.password);
+  await loginAs(page, seed.users.verified.email, seed.password);
   await page.goto("/home");
 
   await expect(page.getByTestId("home-top-bar")).toBeVisible();
@@ -46,7 +46,7 @@ test("home keeps a mobile-first structure with bottom nav and embedded signals",
 test("home composer emoji picker opens with visible emojis and does not break layout", async ({ page }) => {
   const seed = loadSeedData();
 
-  await loginAs(page, seed.users.member.email, seed.password);
+  await loginAs(page, seed.users.verified.email, seed.password);
   await page.goto("/home");
 
   const composer = page.getByTestId("home-composer");
@@ -68,7 +68,7 @@ test("home composer emoji picker opens with visible emojis and does not break la
 test("home composer camera panel dismisses consistently, shows a clear close control, and returns focus", async ({ page }) => {
   const seed = loadSeedData();
 
-  await loginAs(page, seed.users.member.email, seed.password);
+  await loginAs(page, seed.users.verified.email, seed.password);
   await page.goto("/home");
 
   const captureButton = page.getByTestId("home-composer").getByTitle("Capture image");
@@ -84,4 +84,5 @@ test("home composer camera panel dismisses consistently, shows a clear close con
   await page.mouse.click(8, 8);
   await expect(page.getByTestId("media-camera-panel")).toHaveCount(0);
 });
+
 

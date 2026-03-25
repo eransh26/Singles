@@ -373,7 +373,7 @@ export default async function SearchPage({
 
         where: { id: featuredMember.featuredUserId },
 
-        select: { trustTier: true, emailVerified: true, phoneVerifiedAt: true },
+        select: { trustTier: true, emailVerified: true, phoneVerifiedAt: true, verificationStatus: true, kycVerified: true, buddyProfile: { select: { domains: { select: { id: true }, take: 1 } } } },
 
       })
 
@@ -399,7 +399,7 @@ export default async function SearchPage({
 
   return (
 
-    <main className="mx-auto min-h-screen max-w-6xl px-3 pb-28 pt-4 md:px-5 md:pb-14 md:pt-6" data-testid="explore-page">
+    <main className="mx-auto min-h-screen max-w-6xl px-3 pb-[calc(var(--member-shell-bottom-offset)+1rem)] pt-[calc(var(--member-shell-top-offset)+0.6rem)] md:px-5 md:pb-14 md:pt-[calc(var(--member-shell-top-offset-md)+0.75rem)]" data-testid="explore-page">
 
       <HomeTopBar notificationCount={notificationCount} viewerInitial={viewer.displayName.slice(0, 1).toUpperCase()} />
 
@@ -832,6 +832,8 @@ export default async function SearchPage({
   );
 
 }
+
+
 
 
 

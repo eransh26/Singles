@@ -1,17 +1,19 @@
 import Link from "next/link";
-import { ConsentStatus, ConversationKind, VerificationStatus } from "@prisma/client";
+import { ConsentStatus, ConversationKind } from "@prisma/client";
 import { requireUser } from "@/lib/auth/guards";
 import { prisma } from "@/lib/db/prisma";
 import { notFound } from "next/navigation";
 import { isJoinableCallRecord } from "@/lib/livekit";
 import { requestVideoConsentAction, revokeChatConsentAction, revokeVideoConsentAction, reviewVideoConsentAction } from "../../actions";
 import { StartVideoCallButton } from "./start-video-call-button";
+import { HomeTrustBadge } from "@/components/home/trust-badge";
 import { ConversationThread } from "./conversation-thread";
 import { getHighRiskAccessState, HIGH_RISK_ACTIONS } from "@/lib/high-risk-access";
 
 export default async function ConversationPage({ params, searchParams }: { params: Promise<{ conversationId: string }>; searchParams?: Promise<{ saved?: string }> }) {
   const viewer = await requireUser();
   const { conversationId } = await params;
+  const viewerEmailVerified = Boolean(viewer.emailVerified);
   const resolvedSearchParams = await searchParams;
 
   const conversation = await prisma.conversation.findUnique({
@@ -27,16 +29,34 @@ export default async function ConversationPage({ params, searchParams }: { param
         select: {
           id: true,
           displayName: true,
+          emailVerified: true,
+          phoneVerified: true,
+          phoneVerifiedAt: true,
+          kycVerified: true,
+          ageVerified: true,
           verificationStatus: true,
-          verifiedBadgeVisible: true,
+          buddyProfile: {
+            select: {
+              isAvailable: true,
+            },
+          },
         },
       },
       userTwo: {
         select: {
           id: true,
           displayName: true,
+          emailVerified: true,
+          phoneVerified: true,
+          phoneVerifiedAt: true,
+          kycVerified: true,
+          ageVerified: true,
           verificationStatus: true,
-          verifiedBadgeVisible: true,
+          buddyProfile: {
+            select: {
+              isAvailable: true,
+            },
+          },
         },
       },
       videoCallRecords: {
@@ -116,9 +136,16 @@ export default async function ConversationPage({ params, searchParams }: { param
             <p className="lux-overline">Conversation</p>
             <div className="mt-3 flex flex-wrap items-center gap-3">
               <h1 className="lux-title !text-[2.3rem] md:!text-[2.8rem]">{otherUser.displayName}</h1>
-              {otherUser.verificationStatus === VerificationStatus.APPROVED && otherUser.verifiedBadgeVisible ? (
-                <span className="lux-chip lux-chip-accent">Verified</span>
-              ) : null}
+              <HomeTrustBadge
+                compact={false}
+                emailVerified={Boolean(otherUser.emailVerified)}
+                phoneVerified={Boolean(otherUser.phoneVerified)}
+                phoneVerifiedAt={otherUser.phoneVerifiedAt}
+                kycVerified={Boolean(otherUser.kycVerified)}
+                ageVerified={Boolean(otherUser.ageVerified)}
+                verificationStatus={otherUser.verificationStatus}
+                isBuddyApproved={Boolean(otherUser.buddyProfile?.isAvailable)}
+              />
             </div>
             <p className="lux-body mt-4">A private thread for a slower, more direct exchange.</p>
           </div>
@@ -129,9 +156,9 @@ export default async function ConversationPage({ params, searchParams }: { param
           </div>
         </div>
         <div className="mt-5 rounded-[1rem] border border-[color:var(--lux-border)] bg-[rgba(255,255,255,0.04)] p-4 text-sm text-[color:var(--lux-text-secondary)]">
-          <p className="font-medium text-[color:var(--lux-text)]">{videoTrustAccess.allowed ? "Video calls require separate approval and can be revoked at any time." : `${videoTrustAccess.reason} ${videoTrustAccess.nextStep ?? ""}`.trim()}</p>
+          <p className="font-medium text-[color:var(--lux-text)]">{!viewerEmailVerified ? "Verify your email before requesting video approval or sending messages." : videoTrustAccess.allowed ? "Video calls require separate approval and can be revoked at any time." : `${videoTrustAccess.reason} ${videoTrustAccess.nextStep ?? ""}`.trim()}</p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            {!videoConsent && videoTrustAccess.allowed ? (
+            {!videoConsent && viewerEmailVerified && videoTrustAccess.allowed ? (
               <form action={requestVideoConsentAction}>
                 <input name="targetUserId" type="hidden" value={otherUser.id} />
                 <input name="sourcePath" type="hidden" value={`/chats/${conversation.id}`} />
@@ -163,7 +190,7 @@ export default async function ConversationPage({ params, searchParams }: { param
                 </form>
               </>
             ) : null}
-            {videoTrustAccess.allowed && videoConsent && (videoConsent.status === ConsentStatus.DECLINED || videoConsent.status === ConsentStatus.REVOKED || videoConsent.status === ConsentStatus.CANCELED) ? (
+            {viewerEmailVerified && videoTrustAccess.allowed && videoConsent && (videoConsent.status === ConsentStatus.DECLINED || videoConsent.status === ConsentStatus.REVOKED || videoConsent.status === ConsentStatus.CANCELED) ? (
               <form action={requestVideoConsentAction}>
                 <input name="targetUserId" type="hidden" value={otherUser.id} />
                 <input name="sourcePath" type="hidden" value={`/chats/${conversation.id}`} />
@@ -194,7 +221,13 @@ export default async function ConversationPage({ params, searchParams }: { param
         viewerId={viewer.id}
         enablePushPrompt={!(notificationSettings?.webPushEnabled ?? false) && !notificationSettings?.pushPromptDismissedAt}
         pushPromptVariant="messages"
+        composerDisabledReason={!viewerEmailVerified ? "Verify your email before sending messages." : null}
       />
     </main>
   );
 }
+
+
+
+
+

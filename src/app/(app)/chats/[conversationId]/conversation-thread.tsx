@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { AlertCircle, Camera, FileText, ImagePlus, Paperclip, Send, X } from "lucide-react";
@@ -85,6 +86,7 @@ export function ConversationThread({
   viewerId,
   enablePushPrompt = false,
   pushPromptVariant = "messages",
+  composerDisabledReason = null,
 }: {
   conversationId: string;
   initialMessages: ChatMessage[];
@@ -92,6 +94,7 @@ export function ConversationThread({
   viewerId: string;
   enablePushPrompt?: boolean;
   pushPromptVariant?: "messages" | "buddy";
+  composerDisabledReason?: string | null;
 }) {
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [body, setBody] = useState("");
@@ -154,6 +157,7 @@ export function ConversationThread({
   });
 
   const hasDraftContent = body.trim().length > 0 || attachments.length > 0;
+  const composerDisabled = Boolean(composerDisabledReason);
 
   function toggleModerationTarget(target: { type: ModerationTargetType; id: string }) {
     setModerationTarget((current) => (current?.type === target.type && current.id === target.id ? null : target));
@@ -204,7 +208,7 @@ export function ConversationThread({
   }
 
   async function handleSubmit() {
-    if (!hasDraftContent || isPending || sendLockedRef.current) {
+    if (composerDisabled || !hasDraftContent || isPending || sendLockedRef.current) {
       return;
     }
 
@@ -319,14 +323,14 @@ export function ConversationThread({
       <div className="flex items-center justify-between gap-3 border-b lux-divider pb-4">
         <div>
           <p className="lux-overline">Private messages</p>
-          <p className="mt-2 text-sm text-[color:var(--lux-text-secondary)]">{isRefreshing ? "Refreshing conversation..." : `Direct messages with ${otherUserName}`}</p>
+          <p className="mt-2 text-sm text-[color:var(--lux-text-secondary)]">{isRefreshing ? "Refreshing conversation..." : `A quieter conversation with ${otherUserName}`}</p>
         </div>
       </div>
 
       <div className="mt-5 flex max-h-[72vh] min-h-[48vh] flex-col">
         <div className="flex-1 space-y-4 overflow-y-auto pr-1">
           {orderedMessages.length === 0 ? (
-            <div className="lux-empty">No messages yet. Start the conversation below.</div>
+            <div className="lux-empty"><p className="font-medium text-white/84">Nothing has been said here yet</p><p className="mt-2 text-white/62">A small first message is enough. This room is meant to feel private, not performative.</p></div>
           ) : (
             orderedMessages.map((message) => {
               const isMine = message.senderUserId === viewerId;
@@ -445,70 +449,83 @@ export function ConversationThread({
             </div>
           ) : null}
 
-          {attachments.length > 0 ? (
-            <div className="mb-3 flex flex-wrap gap-2">
-              {attachments.map((attachment) => (
-                <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)] px-3 py-2 text-xs text-white/66" key={attachment.id}>
-                  <span className="truncate max-w-[180px]">{attachment.fileName}</span>
-                  <button onClick={() => removeAttachment(attachment.id)} type="button">
-                    <X className="h-3.5 w-3.5" />
+          {composerDisabled ? (
+            <div className="rounded-[1rem] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-4 py-4 text-sm text-white/68" data-testid="chat-composer-blocked">
+              <p className="font-medium text-white/86">{composerDisabledReason}</p>
+              <p className="mt-2 leading-6 text-white/58">You can stay with the conversation for now. Sending unlocks as soon as your email is verified.</p>
+              <div className="mt-4">
+                <Link className="lux-button-primary" href="/onboarding?step=3">Verify email</Link>
+              </div>
+            </div>
+          ) : (
+            <>
+              {attachments.length > 0 ? (
+                <div className="mb-3 flex flex-wrap gap-2">
+                  {attachments.map((attachment) => (
+                    <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)] px-3 py-2 text-xs text-white/66" key={attachment.id}>
+                      <span className="truncate max-w-[180px]">{attachment.fileName}</span>
+                      <button onClick={() => removeAttachment(attachment.id)} type="button">
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+
+              <div className={`${PREMIUM_COMPOSER_SHELL} px-4 py-3`}>
+                <textarea
+                  ref={textareaRef}
+                  className="min-h-[52px] w-full resize-none overflow-hidden bg-transparent text-sm leading-7 text-white outline-none placeholder:text-white/40"
+                  onChange={(event) => setBody(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" && !event.shiftKey) {
+                      event.preventDefault();
+                      void handleSubmit();
+                    }
+                  }}
+                  onPaste={(event) => {
+                    const files = Array.from(event.clipboardData.files ?? []);
+                    if (files.length > 0) {
+                      event.preventDefault();
+                      void appendFiles(files);
+                    }
+                  }}
+                  placeholder={`Say something to ${otherUserName}...`}
+                  rows={1}
+                  value={body}
+                />
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-[color:var(--lux-border)] pt-3">
+                  <div className="flex flex-wrap items-center gap-2 text-[color:var(--lux-text-muted)]">
+                    <button className={PREMIUM_TOOL_CHIP + " h-9 w-9 px-0 text-white/62 hover:text-white"} onClick={() => imageInputRef.current?.click()} type="button">
+                      <ImagePlus className="h-4 w-4" />
+                    </button>
+                    <button className={PREMIUM_TOOL_CHIP + " h-9 w-9 px-0 text-white/62 hover:text-white"} onClick={() => fileInputRef.current?.click()} type="button">
+                      <Paperclip className="h-4 w-4" />
+                    </button>
+                    <button className={PREMIUM_TOOL_CHIP + " h-9 w-9 px-0 text-white/62 hover:text-white"} onClick={() => cameraInputRef.current?.click()} type="button">
+                      <Camera className="h-4 w-4" />
+                    </button>
+                    <EmojiPicker onSelect={handleEmojiSelect} />
+                  </div>
+
+                  <button className={`${PREMIUM_ACTION_ACCENT} shrink-0`} disabled={!hasDraftContent || isPending} onClick={() => void handleSubmit()} type="button">
+                    <Send className="h-4 w-4" />
+                    {isPending ? "Sending..." : "Send"}
                   </button>
                 </div>
-              ))}
-            </div>
-          ) : null}
-
-          <div className={`${PREMIUM_COMPOSER_SHELL} px-4 py-3`}>
-            <textarea
-              ref={textareaRef}
-              className="min-h-[52px] w-full resize-none overflow-hidden bg-transparent text-sm leading-7 text-white outline-none placeholder:text-white/40"
-              onChange={(event) => setBody(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" && !event.shiftKey) {
-                  event.preventDefault();
-                  void handleSubmit();
-                }
-              }}
-              onPaste={(event) => {
-                const files = Array.from(event.clipboardData.files ?? []);
-                if (files.length > 0) {
-                  event.preventDefault();
-                  void appendFiles(files);
-                }
-              }}
-              placeholder={`Message ${otherUserName}...`}
-              rows={1}
-              value={body}
-            />
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-[color:var(--lux-border)] pt-3">
-              <div className="flex flex-wrap items-center gap-2 text-[color:var(--lux-text-muted)]">
-                <button className={PREMIUM_TOOL_CHIP + " h-9 w-9 px-0 text-white/62 hover:text-white"} onClick={() => imageInputRef.current?.click()} type="button">
-                  <ImagePlus className="h-4 w-4" />
-                </button>
-                <button className={PREMIUM_TOOL_CHIP + " h-9 w-9 px-0 text-white/62 hover:text-white"} onClick={() => fileInputRef.current?.click()} type="button">
-                  <Paperclip className="h-4 w-4" />
-                </button>
-                <button className={PREMIUM_TOOL_CHIP + " h-9 w-9 px-0 text-white/62 hover:text-white"} onClick={() => cameraInputRef.current?.click()} type="button">
-                  <Camera className="h-4 w-4" />
-                </button>
-                <EmojiPicker onSelect={handleEmojiSelect} />
               </div>
 
-              <button className={`${PREMIUM_ACTION_ACCENT} shrink-0`} disabled={!hasDraftContent || isPending} onClick={() => void handleSubmit()} type="button">
-                <Send className="h-4 w-4" />
-                {isPending ? "Sending..." : "Send"}
-              </button>
-            </div>
-          </div>
-
-          <input accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif" className="hidden" multiple onChange={(event) => void appendFiles(event.target.files)} ref={imageInputRef} type="file" />
-          <input accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,application/pdf,text/plain,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" className="hidden" multiple onChange={(event) => void appendFiles(event.target.files)} ref={fileInputRef} type="file" />
-          <input accept="image/*" capture="environment" className="hidden" onChange={(event) => void appendFiles(event.target.files)} ref={cameraInputRef} type="file" />
+              <input accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif" className="hidden" multiple onChange={(event) => void appendFiles(event.target.files)} ref={imageInputRef} type="file" />
+              <input accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,application/pdf,text/plain,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" className="hidden" multiple onChange={(event) => void appendFiles(event.target.files)} ref={fileInputRef} type="file" />
+              <input accept="image/*" capture="environment" className="hidden" onChange={(event) => void appendFiles(event.target.files)} ref={cameraInputRef} type="file" />
+            </>
+          )}
         </div>
       </div>
     </section>
   );
 }
+
 
 
 

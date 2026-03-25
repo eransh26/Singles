@@ -11,9 +11,9 @@ export function ContextChips({ chips, testId }: ContextChipsProps) {
   }
 
   return (
-    <div className="flex flex-wrap gap-2" data-testid={testId}>
+    <div className="flex flex-wrap gap-2.5" data-testid={testId}>
       {chips.map((chip) => (
-        <span className={PREMIUM_CHIP} key={chip}>
+        <span className={`${PREMIUM_CHIP} shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`} key={chip}>
           {chip}
         </span>
       ))}

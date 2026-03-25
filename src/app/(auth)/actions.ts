@@ -53,10 +53,10 @@ export async function registerAction(formData: FormData) {
 
   if (emailVerificationEnabled) {
     try {
-      await issueEmailVerificationForUser(createdUser.id, { skipRateLimit: true });
-      redirectPath = "/settings?saved=email-verification-sent";
+      await issueEmailVerificationForUser(createdUser.id, { skipRateLimit: true, nextPath: "/onboarding?step=3" });
+      redirectPath = "/onboarding?step=3&saved=email-verification-sent";
     } catch {
-      redirectPath = "/settings?saved=email-verification-send-failed";
+      redirectPath = "/onboarding?step=3&saved=email-verification-send-failed";
     }
   }
 
@@ -75,6 +75,7 @@ export async function signInAction(formData: FormData) {
       passwordHash: true,
       accountStatus: true,
       role: true,
+      emailVerified: true,
     },
   });
 

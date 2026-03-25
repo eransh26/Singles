@@ -108,6 +108,7 @@ function buildBuddyPrefillHref(domainId: string | null, message: string) {
 export default async function PostThreadPage({ params }: { params: Promise<{ postId: string }> }) {
   const viewer = await requireUser();
   const { postId } = await params;
+  const viewerEmailVerified = Boolean(viewer.emailVerified);
   const viewerIsVerified = isFullyVerifiedUser(viewer);
 
   await ensureDefaultFeatureFlags();
@@ -239,11 +240,13 @@ export default async function PostThreadPage({ params }: { params: Promise<{ pos
           ? "pending"
           : pairBlock || !hasMinimalProfileVisibility(post.author.profileVisibility)
             ? "blocked"
-            : post.author.chatRequestPolicy === "NOBODY"
+            : !viewerEmailVerified
               ? "blocked"
-              : post.author.chatRequestPolicy === "VERIFIED_ONLY" && !viewerIsVerified
+              : post.author.chatRequestPolicy === "NOBODY"
                 ? "blocked"
-                : "send";
+                : post.author.chatRequestPolicy === "VERIFIED_ONLY" && !viewerIsVerified
+                  ? "blocked"
+                  : "send";
 
   const photoState = post.authorUserId === viewer.id
     ? "blocked"
@@ -261,7 +264,7 @@ export default async function PostThreadPage({ params }: { params: Promise<{ pos
       ? "approved"
       : existingConversation?.status === "ACTIVE" && existingVideoConsent?.status === ConsentStatus.PENDING
         ? "pending"
-        : existingConversation?.status === "ACTIVE" && !pairBlock
+        : existingConversation?.status === "ACTIVE" && !pairBlock && viewerEmailVerified
           ? "request"
           : "blocked";
 
@@ -365,24 +368,30 @@ export default async function PostThreadPage({ params }: { params: Promise<{ pos
     [post.contentText, ...post.comments.map((comment) => comment.contentText)].join(" "),
   );
   const buddyPrefillMessage = `Coming from this thread: ${post.contentText.slice(0, 180)}`;
-  const buddyHref = activeBuddyRequest
-    ? "/buddy"
-    : buildBuddyPrefillHref(preferredBuddyDomain?.value ?? null, buddyPrefillMessage);
-  const buddyStatusLabel = activeBuddyRequest?.status === BuddyRequestStatus.ASSIGNED
-    ? "Connected"
+  const buddyHref = !viewerEmailVerified
+    ? "/onboarding?step=3"
     : activeBuddyRequest
-      ? "Buddy request sent"
-      : "Open to connect";
-  const buddyBody = activeBuddyRequest?.status === BuddyRequestStatus.ASSIGNED
-    ? "A Buddy connection is already active. You can continue it without leaving the thread."
-    : activeBuddyRequest
-      ? "You already have a Buddy request moving in the background, so the quieter handoff is already in progress."
-      : "If this moment needs steadier support, you can hand it off into Buddy without leaving the thread.";
-  const buddyActionLabel = activeBuddyRequest ? "Open Buddy" : "Send buddy request";
+      ? "/buddy"
+      : buildBuddyPrefillHref(preferredBuddyDomain?.value ?? null, buddyPrefillMessage);
+  const buddyStatusLabel = !viewerEmailVerified
+    ? "Verify email first"
+    : activeBuddyRequest?.status === BuddyRequestStatus.ASSIGNED
+      ? "Connected"
+      : activeBuddyRequest
+        ? "Buddy request sent"
+        : "Open to connect";
+  const buddyBody = !viewerEmailVerified
+    ? "Verify your email before moving this thread into a Buddy request."
+    : activeBuddyRequest?.status === BuddyRequestStatus.ASSIGNED
+      ? "A Buddy connection is already active. You can continue it without leaving the thread."
+      : activeBuddyRequest
+        ? "You already have a Buddy request moving in the background, so the quieter handoff is already in progress."
+        : "If this moment needs steadier support, you can hand it off into Buddy without leaving the thread.";
+  const buddyActionLabel = !viewerEmailVerified ? "Verify email" : activeBuddyRequest ? "Open Buddy" : "Send buddy request";
   const showBuddyHandoff = buddyContextRelevant;
 
   const threadBody = (
-    <main className="mx-auto min-h-screen max-w-3xl px-3 pb-28 pt-4 md:px-5 md:pb-16 md:pt-6" data-testid="post-thread-page">
+    <main className="mx-auto min-h-screen max-w-3xl px-3 pb-[calc(var(--member-shell-bottom-offset)+1rem)] pt-[calc(var(--member-shell-top-offset)+0.6rem)] md:px-5 md:pb-16 md:pt-[calc(var(--member-shell-top-offset-md)+0.75rem)]" data-testid="post-thread-page">
       <div className="rounded-[2rem] border border-[rgba(255,255,255,0.06)] bg-[radial-gradient(circle_at_top,rgba(97,69,66,0.16),transparent_24%),linear-gradient(180deg,#17181c_0%,#121319_46%,#0f1015_100%)] px-4 py-4 text-white shadow-[0_30px_80px_rgba(7,8,10,0.24)] md:px-6 md:py-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -544,6 +553,7 @@ export default async function PostThreadPage({ params }: { params: Promise<{ pos
             <ThreadReplyComposer
               action={createCommentAction}
               postId={post.id}
+              requiresEmailVerification={!viewerEmailVerified}
               viewerName={viewer.displayName}
             />
           </section>
@@ -581,3 +591,5 @@ export default async function PostThreadPage({ params }: { params: Promise<{ pos
     </ThreadEventParticipationProvider>
   );
 }
+
+

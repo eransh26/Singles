@@ -34,9 +34,18 @@ export function createEmailVerificationTokenPayload(userId: string, email: strin
   };
 }
 
-export function buildEmailVerificationUrl(token: string, baseUrl = process.env.APP_BASE_URL ?? process.env.AUTH_URL ?? "http://localhost:3000") {
+export function buildEmailVerificationUrl(
+  token: string,
+  baseUrl = process.env.APP_BASE_URL ?? process.env.AUTH_URL ?? "http://localhost:3000",
+  nextPath?: string | null,
+) {
   const normalizedBaseUrl = baseUrl.replace(/\/$/, "");
-  return `${normalizedBaseUrl}/verify-email?token=${encodeURIComponent(token)}`;
+  const url = new URL(`${normalizedBaseUrl}/verify-email`);
+  url.searchParams.set("token", token);
+  if (nextPath) {
+    url.searchParams.set("next", nextPath);
+  }
+  return url.toString();
 }
 
 export function getEmailDeliveryMode(): EmailDeliveryMode {
@@ -154,7 +163,7 @@ export async function sendVerificationEmail(input: {
   return { deliveryMode, previewUrl: null };
 }
 
-export async function issueEmailVerificationForUser(userId: string, options?: { skipRateLimit?: boolean }) {
+export async function issueEmailVerificationForUser(userId: string, options?: { skipRateLimit?: boolean; nextPath?: string | null }) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { id: true, email: true, emailVerified: true },
@@ -220,7 +229,7 @@ export async function issueEmailVerificationForUser(userId: string, options?: { 
     });
   });
 
-  const verificationUrl = buildEmailVerificationUrl(tokenPayload.rawToken);
+  const verificationUrl = buildEmailVerificationUrl(tokenPayload.rawToken, undefined, options?.nextPath);
   const delivery = await sendVerificationEmail({
     toEmail: user.email,
     verificationUrl,

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { VerificationStatus } from "@prisma/client";
 import { RelativeTime } from "@/components/relative-time";
 import { HomeTrustBadge } from "@/components/home/trust-badge";
 import { PREMIUM_BODY, PREMIUM_META, PREMIUM_SURFACE } from "@/components/ui/premium-styles";
@@ -12,15 +13,18 @@ type ProfileActivityCardProps = {
   trustTier: "LOW" | "NORMAL" | "HIGH" | null;
   emailVerified?: boolean;
   phoneVerified?: boolean;
+  kycVerified?: boolean;
+  verificationStatus?: VerificationStatus | null;
+  isBuddyApproved?: boolean;
   countsLabel: string;
 };
 
-export function ProfileActivityCard({ href, title, body, meta, createdAt, trustTier, emailVerified = false, phoneVerified = false, countsLabel }: ProfileActivityCardProps) {
+export function ProfileActivityCard({ href, title, body, meta, createdAt, trustTier, emailVerified = false, phoneVerified = false, kycVerified = false, verificationStatus = null, isBuddyApproved = false, countsLabel }: ProfileActivityCardProps) {
   return (
     <Link className={`block ${PREMIUM_SURFACE} p-4 hover:-translate-y-0.5 hover:border-[rgba(195,145,88,0.18)]`} data-testid="profile-activity-card" href={href}>
       <div className="flex flex-wrap items-center gap-2.5">
         <span className={PREMIUM_META}>{title}</span>
-        <HomeTrustBadge compact emailVerified={emailVerified} phoneVerified={phoneVerified} tier={trustTier as never} />
+        <HomeTrustBadge compact emailVerified={emailVerified} isBuddyApproved={isBuddyApproved} kycVerified={kycVerified} phoneVerified={phoneVerified} tier={trustTier as never} verificationStatus={verificationStatus} />
       </div>
       <p className={`mt-3 line-clamp-3 ${PREMIUM_BODY}`}>{body}</p>
       <div className={`mt-4 flex flex-wrap items-center gap-2 ${PREMIUM_META}`}>

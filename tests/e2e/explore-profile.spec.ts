@@ -8,7 +8,7 @@ test.beforeEach(() => {
 test("explore renders core discovery sections and trust-aware cards", async ({ page }) => {
   const seed = loadSeedData();
 
-  await loginAs(page, seed.users.member.email, seed.password);
+  await loginAs(page, seed.users.verified.email, seed.password);
   await page.goto("/search");
 
   await expect(page.getByTestId("explore-page")).toBeVisible();
@@ -24,7 +24,7 @@ test("explore renders core discovery sections and trust-aware cards", async ({ p
 test("explore filter tabs switch to people view cleanly", async ({ page }) => {
   const seed = loadSeedData();
 
-  await loginAs(page, seed.users.member.email, seed.password);
+  await loginAs(page, seed.users.verified.email, seed.password);
   await page.goto("/search");
 
   await page.getByTestId("explore-filter-people").click();
@@ -37,7 +37,7 @@ test("explore filter tabs switch to people view cleanly", async ({ page }) => {
 test("explore opens profile and profile shows identity trust actions and activity", async ({ page }) => {
   const seed = loadSeedData();
 
-  await loginAs(page, seed.users.member.email, seed.password);
+  await loginAs(page, seed.users.verified.email, seed.password);
   await page.goto("/search");
 
   await page.locator('[data-testid="explore-member-card"] a', { hasText: 'View' }).first().click();
@@ -53,7 +53,7 @@ test("profile mobile layout keeps identity and actions close together", async ({
   const seed = loadSeedData();
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await loginAs(page, seed.users.member.email, seed.password);
+  await loginAs(page, seed.users.verified.email, seed.password);
   await page.goto(`/users/${seed.users.owner.id}`);
 
   await expect(page.getByTestId("profile-page")).toBeVisible();

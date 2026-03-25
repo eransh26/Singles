@@ -34,7 +34,7 @@ const DEFAULT_FEATURE_FLAGS = [
   },
   {
     key: FEATURE_FLAG_KEYS.emailVerification,
-    enabled: false,
+    enabled: true,
     description: "Controls provider-backed email verification sending, verification links, and resend flow.",
     rolloutType: FeatureFlagRolloutType.GLOBAL,
     rolloutValue: null,

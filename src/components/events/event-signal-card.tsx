@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { VerificationStatus } from "@prisma/client";
 import { useOptimistic, useTransition } from "react";
 import { ArrowRight, CalendarDays, Loader2, Lock, Sparkles, Users } from "lucide-react";
 import { togglePostReactionAction } from "@/app/(app)/actions";
@@ -21,6 +22,9 @@ type EventSignalCardProps = {
   interestedCount: number;
   overline: string;
   phoneVerified?: boolean;
+  kycVerified?: boolean;
+  verificationStatus?: VerificationStatus | null;
+  isBuddyApproved?: boolean;
   postId?: string | null;
   privacyLabel: string;
   reactionType: EventReactionType;
@@ -76,7 +80,7 @@ function ActionButton({ active, count, disabled, label, onClick }: { active: boo
   );
 }
 
-export function EventSignalCard({ body, chips, ctaHref, ctaLabel, emailVerified = false, goingCount, groupId, interestedCount, overline, phoneVerified = false, postId, privacyLabel, reactionType, scopeLabel, signals = [], statusNote, timingLabel, title, trustTier = null }: EventSignalCardProps) {
+export function EventSignalCard({ body, chips, ctaHref, ctaLabel, emailVerified = false, goingCount, groupId, interestedCount, overline, phoneVerified = false, kycVerified = false, verificationStatus = null, isBuddyApproved = false, postId, privacyLabel, reactionType, scopeLabel, signals = [], statusNote, timingLabel, title, trustTier = null }: EventSignalCardProps) {
   const [isPending, startTransition] = useTransition();
   const [state, updateState] = useOptimistic<CardState, Exclude<EventReactionType, null>>({ interestedCount, goingCount, reactionType }, reducer);
 
@@ -105,7 +109,7 @@ export function EventSignalCard({ body, chips, ctaHref, ctaLabel, emailVerified 
               <CalendarDays className="h-3.5 w-3.5" />
               {overline}
             </span>
-            {trustTier ? <HomeTrustBadge compact emailVerified={emailVerified} phoneVerified={phoneVerified} tier={trustTier as never} /> : null}
+            {trustTier ? <HomeTrustBadge compact emailVerified={emailVerified} isBuddyApproved={isBuddyApproved} kycVerified={kycVerified} phoneVerified={phoneVerified} tier={trustTier as never} verificationStatus={verificationStatus} /> : null}
           </div>
           <div className="space-y-2">
             <h3 className={PREMIUM_TITLE}>{title}</h3>

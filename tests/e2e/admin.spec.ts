@@ -276,3 +276,42 @@ test("admin action center is the default landing and dashboard remains accessibl
 });
 
 
+
+
+test("admin can manually override email and phone verification and trust updates immediately", async ({ browser, page }) => {
+  test.slow();
+  const seed = loadSeedData();
+
+  await loginAs(page, seed.users.admin.email, seed.password, /\/admin$/);
+  await page.goto("/admin/users");
+  await page.getByTestId(`admin-user-toggle-${seed.users.member.id}`).click();
+
+  const userCard = page.getByTestId(`admin-user-${seed.users.member.id}`);
+  const verificationCard = page.getByTestId(`admin-user-verification-${seed.users.member.id}`);
+  const trustPanel = page.getByTestId(`admin-user-trust-panel-${seed.users.member.id}`);
+
+  await expect(trustPanel).toContainText("Internal trust score");
+
+  await verificationCard.getByRole("checkbox", { name: "Email verified" }).check();
+  await userCard.getByRole("button", { name: "Save user" }).click();
+  await expect(page.getByText("Verification override saved.")).toBeVisible();
+  await expect(page.getByTestId(`admin-user-row-${seed.users.member.id}`)).toContainText("Email");
+  await expect(trustPanel).toContainText("Recent trust events");
+
+  await verificationCard.getByRole("checkbox", { name: "Phone verified" }).check();
+  await userCard.getByRole("button", { name: "Save user" }).click();
+  await expect(page.getByText("Verification override saved.")).toBeVisible();
+  await expect(page.getByTestId(`admin-user-row-${seed.users.member.id}`)).toContainText("Email + phone");
+
+  await page.goto("/admin/audit-logs");
+  await expect(page.getByTestId("admin-audit-log").getByText("admin.user.verification_override").first()).toBeVisible();
+
+  const memberContext = await browser.newContext();
+  const memberPage = await memberContext.newPage();
+  await loginAs(memberPage, seed.users.verified.email, seed.password);
+  await memberPage.goto(`/users/${seed.users.member.id}`);
+  await expect(memberPage.getByTestId("trust-badge-connected").first()).toBeVisible();
+  await memberContext.close();
+});
+
+

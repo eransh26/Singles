@@ -17,6 +17,7 @@ import {
 } from "@prisma/client";
 import { requireAdmin } from "@/lib/auth/guards";
 import { prisma } from "@/lib/db/prisma";
+import { refreshUserTrustStates } from "@/lib/internal-trust";
 
 function textValue(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -157,10 +158,20 @@ export async function updateAdminUserAction(formData: FormData) {
   const role = textValue(formData, "role") as UserRole;
   const currentSection = textValue(formData, "currentSection");
   const isTestUser = booleanValue(formData, "isTestUser");
+  const emailVerified = booleanValue(formData, "emailVerified");
+  const phoneVerified = booleanValue(formData, "phoneVerified");
 
   const targetUser = await prisma.user.findUnique({
     where: { id: targetUserId },
-    select: { id: true, role: true, accountStatus: true, isTestUser: true },
+    select: {
+      id: true,
+      role: true,
+      accountStatus: true,
+      isTestUser: true,
+      emailVerified: true,
+      phoneVerified: true,
+      phoneVerifiedAt: true,
+    },
   });
 
   if (!targetUser) {
@@ -174,6 +185,17 @@ export async function updateAdminUserAction(formData: FormData) {
     throw new Error("You cannot remove your own admin access or suspend yourself.");
   }
 
+  const nextEmailVerifiedAt = emailVerified ? targetUser.emailVerified ?? new Date() : null;
+  const nextPhoneVerifiedAt = phoneVerified ? targetUser.phoneVerifiedAt ?? new Date() : null;
+  const verificationChanges = [
+    Boolean(targetUser.emailVerified) !== emailVerified
+      ? { field: "emailVerified", oldValue: Boolean(targetUser.emailVerified), newValue: emailVerified }
+      : null,
+    Boolean(targetUser.phoneVerified || targetUser.phoneVerifiedAt) !== phoneVerified
+      ? { field: "phoneVerified", oldValue: Boolean(targetUser.phoneVerified || targetUser.phoneVerifiedAt), newValue: phoneVerified }
+      : null,
+  ].filter((value): value is { field: string; oldValue: boolean; newValue: boolean } => Boolean(value));
+
   await prisma.$transaction(async (tx) => {
     await tx.user.update({
       where: { id: targetUser.id },
@@ -181,26 +203,55 @@ export async function updateAdminUserAction(formData: FormData) {
         accountStatus,
         role,
         isTestUser,
+        emailVerified: nextEmailVerifiedAt,
+        phoneVerified,
+        phoneVerifiedAt: nextPhoneVerifiedAt,
       },
     });
 
-    await tx.auditLog.create({
-      data: {
-        actorUserId: admin.id,
-        action: "admin.user.updated",
-        targetType: "User",
-        targetId: targetUser.id,
-        metadataJson: {
-          previousRole: targetUser.role,
-          nextRole: role,
-          previousAccountStatus: targetUser.accountStatus,
-          nextAccountStatus: accountStatus,
-          previousIsTestUser: targetUser.isTestUser,
-          nextIsTestUser: isTestUser,
+    if (
+      targetUser.role !== role ||
+      targetUser.accountStatus !== accountStatus ||
+      targetUser.isTestUser !== isTestUser
+    ) {
+      await tx.auditLog.create({
+        data: {
+          actorUserId: admin.id,
+          action: "admin.user.updated",
+          targetType: "User",
+          targetId: targetUser.id,
+          metadataJson: {
+            previousRole: targetUser.role,
+            nextRole: role,
+            previousAccountStatus: targetUser.accountStatus,
+            nextAccountStatus: accountStatus,
+            previousIsTestUser: targetUser.isTestUser,
+            nextIsTestUser: isTestUser,
+          },
         },
-      },
-    });
+      });
+    }
+
+    if (verificationChanges.length > 0) {
+      await tx.auditLog.create({
+        data: {
+          actorUserId: admin.id,
+          action: "admin.user.verification_override",
+          targetType: "User",
+          targetId: targetUser.id,
+          metadataJson: {
+            changes: verificationChanges,
+            previousEmailVerifiedAt: targetUser.emailVerified?.toISOString() ?? null,
+            nextEmailVerifiedAt: nextEmailVerifiedAt?.toISOString() ?? null,
+            previousPhoneVerifiedAt: targetUser.phoneVerifiedAt?.toISOString() ?? null,
+            nextPhoneVerifiedAt: nextPhoneVerifiedAt?.toISOString() ?? null,
+          },
+        },
+      });
+    }
   });
+
+  await refreshUserTrustStates(prisma, [targetUser.id]);
 
   const destinationSection =
     role === UserRole.ADMIN || role === UserRole.SUPER_ADMIN
@@ -214,7 +265,9 @@ export async function updateAdminUserAction(formData: FormData) {
   revalidatePath("/admin/operators");
   revalidatePath("/admin/audit-logs");
   revalidatePath("/home");
-  redirect(`/admin/${destinationSection}?expanded=${targetUser.id}&saved=user`);
+  revalidatePath("/search");
+  revalidatePath(`/users/${targetUser.id}`);
+  redirect(`/admin/${destinationSection}?expanded=${targetUser.id}&saved=${verificationChanges.length > 0 ? "user-verification" : "user"}`);
 }
 
 export async function reviewVerificationRequestAdminAction(formData: FormData) {
@@ -310,8 +363,8 @@ export async function resolveReportAdminAction(formData: FormData) {
       targetMessageId: true,
       targetGroupId: true,
       status: true,
-      targetPost: { select: { id: true, groupId: true, contentText: true } },
-      targetComment: { select: { id: true, postId: true, contentText: true } },
+      targetPost: { select: { id: true, groupId: true, contentText: true, authorUserId: true } },
+      targetComment: { select: { id: true, postId: true, contentText: true, authorUserId: true } },
       targetMessage: { select: { id: true, conversationId: true, body: true } },
       targetGroup: { select: { id: true, name: true } },
       targetUser: { select: { id: true, email: true, displayName: true } },
@@ -418,13 +471,21 @@ export async function resolveReportAdminAction(formData: FormData) {
     });
   });
 
-  revalidatePath("/admin");
-  revalidatePath("/admin/reports");
-  revalidatePath("/admin/audit-logs");
-  revalidatePath("/home");
-  revalidatePath("/groups");
-  revalidatePath("/chats");
-  redirect("/admin/reports?saved=report");
+  const trustUserIds = [report.targetUserId, report.targetPost?.authorUserId, report.targetComment?.authorUserId].filter(
+  (value): value is string => Boolean(value),
+);
+
+if (trustUserIds.length > 0) {
+  await refreshUserTrustStates(prisma, trustUserIds);
+}
+
+revalidatePath("/admin");
+revalidatePath("/admin/reports");
+revalidatePath("/admin/audit-logs");
+revalidatePath("/home");
+revalidatePath("/groups");
+revalidatePath("/chats");
+redirect("/admin/reports?saved=report");
 }
 
 export async function savePromotedEventAction(formData: FormData) {
@@ -531,4 +592,6 @@ export async function savePromotedEventAction(formData: FormData) {
   }
   redirect(`/admin/events?saved=event&eventId=${savedEvent.id}`);
 }
+
+
 

@@ -38,13 +38,14 @@ function statusCopy(status: string | null) {
 export default async function VerifyEmailPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ token?: string; status?: string }>;
+  searchParams?: Promise<{ token?: string; status?: string; next?: string }>;
 }) {
   const viewer = await getCurrentUser();
   const enabled = await isFeatureEnabled(FEATURE_FLAG_KEYS.emailVerification, viewer);
   const resolvedSearchParams = await searchParams;
   const rawToken = typeof resolvedSearchParams?.token === "string" ? resolvedSearchParams.token : "";
   const statusParam = typeof resolvedSearchParams?.status === "string" ? resolvedSearchParams.status : null;
+  const nextParam = typeof resolvedSearchParams?.next === "string" ? resolvedSearchParams.next : null;
 
   if (!enabled) {
     return (
@@ -63,11 +64,16 @@ export default async function VerifyEmailPage({
 
   if (rawToken && !statusParam) {
     const result = await consumeEmailVerificationToken(rawToken);
-    redirect(`/verify-email?status=${result.status}`);
+    const nextQuery = nextParam ? `&next=${encodeURIComponent(nextParam)}` : "";
+    redirect(`/verify-email?status=${result.status}${nextQuery}`);
   }
 
   const status = statusParam ?? "invalid";
   const copy = statusCopy(status);
+
+  if (status === "verified" && viewer && nextParam) {
+    redirect(nextParam.includes("saved=") ? nextParam : (nextParam.includes("?") ? `${nextParam}&saved=email-verified` : `${nextParam}?saved=email-verified`));
+  }
 
   return (
     <main className="lux-shell">
@@ -79,7 +85,8 @@ export default async function VerifyEmailPage({
           <Link className="lux-button-secondary" href={viewer ? "/settings" : "/login"}>{viewer ? "Open settings" : "Sign in"}</Link>
           {viewer && status !== "verified" ? (
             <form action={requestEmailVerificationAction}>
-              <input name="sourcePath" type="hidden" value="/verify-email" />
+              <input name="sourcePath" type="hidden" value={nextParam ?? "/verify-email"} />
+              <input name="nextPath" type="hidden" value={nextParam ?? "/verify-email"} />
               <button className="lux-button-primary" type="submit">Send a new verification email</button>
             </form>
           ) : null}

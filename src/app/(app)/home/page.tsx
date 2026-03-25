@@ -19,6 +19,7 @@ import { ensureDefaultFeatureFlags, FEATURE_FLAG_KEYS, getFeatureAvailability } 
 import { getPromotedPlacement } from "@/lib/promotions";
 import { getUnreadNotificationCounts } from "@/lib/notifications";
 import { resolveSingleOfWeekPhotoUrl } from "@/lib/media-display";
+import { getViewerEngagementState } from "@/lib/engagement-loop";
 import { HomeComposer } from "./home-composer";
 import { PostAuthorActions } from "@/components/post-author-actions";
 import { SingleOfWeekViewBeacon } from "@/components/single-of-week-view-beacon";
@@ -32,14 +33,29 @@ function userPairKey(firstUserId: string, secondUserId: string) {
   return [firstUserId, secondUserId].sort().join(":");
 }
 
-export default async function HomePage() {
+const homeSaveMessages: Record<string, { title: string; hint?: string }> = {
+  "first-post": {
+    title: "You’re now part of the circle",
+    hint: "You’ll start seeing responses here when someone notices your post.",
+  },
+};
+
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ saved?: string; compose?: string; firstPost?: string }>;
+}) {
   const viewer = await requireUser();
+  const resolvedSearchParams = (await searchParams) ?? {};
 
   await ensureDefaultFeatureFlags();
   const features = await getFeatureAvailability([FEATURE_FLAG_KEYS.buddy, FEATURE_FLAG_KEYS.singleOfWeek], viewer);
   const buddyEnabled = features[FEATURE_FLAG_KEYS.buddy];
   const singleOfWeekEnabled = features[FEATURE_FLAG_KEYS.singleOfWeek];
+  const viewerEmailVerified = Boolean(viewer.emailVerified);
   const viewerIsVerified = isFullyVerifiedUser(viewer);
+  const composeRequested = resolvedSearchParams.compose === "1";
+  const savedNotice = resolvedSearchParams.saved ? homeSaveMessages[resolvedSearchParams.saved] ?? null : null;
 
   const [videoTrustAccess, featuredTrustAccess, buddyTrustAccess, notificationCounts] = await Promise.all([
     getHighRiskAccessState(prisma, viewer.id, HIGH_RISK_ACTIONS.VIDEO_REQUEST),
@@ -57,7 +73,7 @@ export default async function HomePage() {
   const visibleGroupIds = memberships.map((membership) => membership.groupId);
   const featuredState = singleOfWeekEnabled ? await syncSingleOfWeekState() : null;
 
-  const [posts, recommendedGroups, promotedPlacement, activeBuddyRequest] = await Promise.all([
+  const [posts, recommendedGroups, promotedPlacement, activeBuddyRequest, viewerPostCount, receivedReactionCount, receivedReplyCount, sentReactionCount] = await Promise.all([
     prisma.post.findMany({
       where: {
         visibilityStatus: PostVisibilityStatus.VISIBLE,
@@ -140,9 +156,33 @@ export default async function HomePage() {
           select: { id: true, status: true },
         })
       : Promise.resolve(null),
+    prisma.post.count({ where: { authorUserId: viewer.id } }),
+    prisma.postReaction.count({
+      where: {
+        userId: { not: viewer.id },
+        post: { authorUserId: viewer.id },
+      },
+    }),
+    prisma.comment.count({
+      where: {
+        authorUserId: { not: viewer.id },
+        moderationStatus: { not: "REMOVED" },
+        post: { authorUserId: viewer.id },
+      },
+    }),
+    prisma.postReaction.count({
+      where: { userId: viewer.id },
+    }),
   ]);
 
   const featuredMember = featuredState?.status === "ACTIVE" ? featuredState : null;
+  const firstPostMode = viewerEmailVerified && viewerPostCount === 0;
+  const engagementState = getViewerEngagementState({
+    viewerPostCount,
+    receivedReactionCount,
+    receivedReplyCount,
+    sentReactionCount,
+  });
   const featuredPhotoUrl = featuredMember
     ? featuredMember.application.photos.map((photo) => resolveSingleOfWeekPhotoUrl(photo)).find((value): value is string => Boolean(value)) ?? null
     : null;
@@ -150,7 +190,15 @@ export default async function HomePage() {
   const featuredTrustUser = featuredMember
     ? await prisma.user.findUnique({
         where: { id: featuredMember.featuredUserId },
-        select: { trustTier: true, trustSummary: true, emailVerified: true, phoneVerifiedAt: true },
+        select: {
+          trustTier: true,
+          trustSummary: true,
+          emailVerified: true,
+          phoneVerifiedAt: true,
+          verificationStatus: true,
+          kycVerified: true,
+          buddyProfile: { select: { domains: { select: { id: true }, take: 1 } } },
+        },
       })
     : null;
 
@@ -231,6 +279,8 @@ export default async function HomePage() {
   const approvedGalleryOwners = new Set(photoGrants.map((grant) => grant.ownerUserId));
   const blockedUsers = new Set(blocks.map((block) => (block.blockerUserId === viewer.id ? block.blockedUserId : block.blockerUserId)));
 
+  const followUpThreadHref = posts[0] ? `/posts/${posts[0].id}` : "/home";
+
   const feedEntries = posts.map((post) => {
     const isAnonymousToViewer = post.isAnonymous && post.authorUserId !== viewer.id;
     const isAnonymousAuthorView = post.isAnonymous && post.authorUserId === viewer.id;
@@ -272,7 +322,7 @@ export default async function HomePage() {
         ? "approved"
         : videoConsent?.status === ConsentStatus.PENDING
           ? "pending"
-          : !videoTrustAccess.allowed
+          : !viewerEmailVerified || !videoTrustAccess.allowed
             ? "blocked"
             : isBlocked
               ? "blocked"
@@ -317,19 +367,25 @@ export default async function HomePage() {
   });
 
   return (
-    <main className="mx-auto min-h-screen max-w-[1380px] px-3 pb-28 pt-4 md:px-5 md:pb-10 md:pt-5" data-testid="home-page">
+    <main className="mx-auto min-h-screen max-w-[1380px] px-3 pb-[calc(var(--member-shell-bottom-offset)+1rem)] pt-[calc(var(--member-shell-top-offset)+0.6rem)] md:px-5 md:pb-10 md:pt-[calc(var(--member-shell-top-offset-md)+0.75rem)]" data-testid="home-page">
+      {savedNotice ? (
+        <div className="mb-4 rounded-[1.25rem] border border-[rgba(109,125,97,0.28)] bg-[color:var(--lux-success-bg)] px-4 py-3 text-sm text-[color:var(--lux-success)]" data-testid="home-save-message">
+          <p className="font-medium">{savedNotice.title}</p>
+          {savedNotice.hint ? <p className="mt-1 text-[13px] text-[color:var(--lux-success)]">{savedNotice.hint}</p> : null}
+        </div>
+      ) : null}
       <div className="rounded-[2rem] border border-[rgba(228,213,192,0.05)] bg-[radial-gradient(circle_at_top,rgba(189,151,100,0.06),transparent_32%),radial-gradient(circle_at_82%_8%,rgba(126,89,73,0.06),transparent_22%),linear-gradient(180deg,#2e251f_0%,#231c18_42%,#1c1714_100%)] px-3 py-3 text-white shadow-[0_22px_54px_rgba(18,12,9,0.1)] md:px-5 md:py-5">
         <HomeTopBar notificationCount={notificationCounts.total} viewerInitial={viewer.displayName.slice(0, 1).toUpperCase()} />
 
         <section className="mt-4 grid gap-5 lg:grid-cols-[minmax(0,1.65fr)_340px] lg:items-start">
           <div className="space-y-4" data-testid="home-feed">
-            <section className="rounded-[1.75rem] border border-[rgba(228,213,192,0.05)] bg-[linear-gradient(180deg,rgba(255,255,255,0.026),rgba(255,255,255,0.012))] px-4 py-3.5 text-white shadow-[0_10px_24px_rgba(18,12,9,0.08)] md:px-5 md:py-4">
+            <section className="rounded-[1.75rem] border border-[rgba(228,213,192,0.04)] bg-[radial-gradient(circle_at_top_left,rgba(189,151,100,0.08),transparent_28%),linear-gradient(180deg,rgba(255,255,255,0.022),rgba(255,255,255,0.01))] px-4 py-3.5 text-white shadow-[0_10px_24px_rgba(18,12,9,0.06)] md:px-5 md:py-4">
               <p className="text-[10px] uppercase tracking-[0.28em] text-[color:var(--lux-text-muted)]">Community pulse</p>
               <div className="mt-3 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                 <div>
                   <h1 className="text-[1.75rem] font-medium tracking-tight text-white/90 md:text-[2.2rem]">See the circle, not the noise.</h1>
                   <p className="mt-2 max-w-2xl text-sm leading-[1.65] text-[color:var(--lux-text-secondary)] md:text-[15px]">
-                    A discreet place to catch what&apos;s moving through the community, post quickly, and notice the people, signals, and opportunities that matter.
+                    A discreet place to notice what is moving through the community, leave a quiet signal, and feel where people are gathering around each other.
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2 text-[11px] uppercase tracking-[0.18em] text-[color:var(--lux-text-muted)]">
@@ -340,17 +396,68 @@ export default async function HomePage() {
               </div>
             </section>
 
-            <HomeComposer action={createPostAction} viewerName={viewer.displayName} />
+            {firstPostMode && !composeRequested ? (
+              <section className="rounded-[1.4rem] border border-[rgba(255,255,255,0.07)] bg-[radial-gradient(circle_at_top_left,rgba(189,151,100,0.06),transparent_34%),rgba(255,255,255,0.026)] px-4 py-4 text-white shadow-[0_10px_24px_rgba(18,12,9,0.05)]" data-testid="home-first-action-card">
+                <p className="text-[10px] uppercase tracking-[0.24em] text-[color:var(--lux-text-muted)]">First action</p>
+                <div className="mt-3 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+                  <div>
+                    <h2 className="text-[1.3rem] font-medium tracking-tight text-white/90">Start simple</h2>
+                    <p className="mt-2 max-w-xl text-sm leading-6 text-[color:var(--lux-text-secondary)]">A small first post is enough. You do not need to impress the circle.</p>
+                  </div>
+                  <div className="flex flex-wrap gap-3">
+                    <Link className="lux-button-primary" href="/home?compose=1&firstPost=1">Share something small</Link>
+                    <Link className="lux-button-secondary" href="/search">Explore quietly</Link>
+                    <Link className="lux-button-subtle" href="/buddy">Get a Buddy</Link>
+                  </div>
+                </div>
+              </section>
+            ) : null}
+
+            <HomeComposer action={createPostAction} autoFocus={composeRequested} firstPostMode={firstPostMode} requiresEmailVerification={!viewerEmailVerified} viewerName={viewer.displayName} />
+
+            {engagementState.activityTitle ? (
+              <section className="rounded-[1.35rem] border border-[rgba(255,255,255,0.07)] bg-[rgba(255,255,255,0.026)] px-4 py-3.5 text-white" data-testid="home-recent-activity">
+                <p className="text-[10px] uppercase tracking-[0.24em] text-[color:var(--lux-text-muted)]">Recent activity</p>
+                <div className="mt-3 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+                  <div>
+                    <h2 className="text-[1.05rem] font-medium tracking-tight text-white/88">{engagementState.activityTitle}</h2>
+                    {engagementState.activityBody ? <p className="mt-2 text-sm leading-6 text-[color:var(--lux-text-secondary)]">{engagementState.activityBody}</p> : null}
+                  </div>
+                  {engagementState.hasMeaningfulEngagement ? (
+                    <Link className="lux-button-secondary" href={followUpThreadHref}>Open a thread</Link>
+                  ) : engagementState.hasFirstPost ? (
+                    <Link className="lux-button-subtle" href="/search">Explore people</Link>
+                  ) : null}
+                </div>
+              </section>
+            ) : null}
+
+            {engagementState.shouldShowFirstPostFollowUp ? (
+              <section className="rounded-[1.35rem] border border-[rgba(255,255,255,0.07)] bg-[rgba(255,255,255,0.026)] px-4 py-4 text-white" data-testid="home-first-post-follow-up">
+                <p className="text-[10px] uppercase tracking-[0.24em] text-[color:var(--lux-text-muted)]">Next move</p>
+                <div className="mt-3 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+                  <div>
+                    <h2 className="text-[1.15rem] font-medium tracking-tight text-white/90">Stay close to the circle</h2>
+                    <p className="mt-2 max-w-xl text-sm leading-6 text-[color:var(--lux-text-secondary)]">A second small move helps people place you in context and gives the circle another reason to respond.</p>
+                  </div>
+                  <div className="flex flex-wrap gap-3">
+                    <Link className="lux-button-primary" href="/search">Explore people</Link>
+                    <Link className="lux-button-secondary" href={followUpThreadHref}>Reply to a thread</Link>
+                  </div>
+                </div>
+              </section>
+            ) : null}
 
             <div className="space-y-4" data-testid="home-feed-list">
               {feedEntries.length === 0 ? (
-                <div className="rounded-[1.65rem] border border-dashed border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.02)] px-5 py-8 text-sm leading-7 text-white/56">
-                  No posts yet. Start the pulse with a quick update above.
+                <div className="rounded-[1.65rem] border border-[rgba(255,255,255,0.07)] bg-[radial-gradient(circle_at_top,rgba(189,151,100,0.07),transparent_38%),rgba(255,255,255,0.02)] px-5 py-8 text-sm leading-7 text-white/62">
+                  <p className="font-medium text-white/84">Nothing has landed here yet</p>
+                  <p className="mt-2 max-w-xl text-white/58">Your feed will feel more human once a few small signals start moving. A quick post above is enough to begin.</p>
                 </div>
               ) : (
                 feedEntries.map((entry) => (
                   <div key={entry.post.id} className="space-y-4">
-                    <HomeFeedCard authorActions={entry.authorActions} commentAction={createCommentAction} post={entry.post} viewerId={viewer.id} />
+                    <HomeFeedCard authorActions={entry.authorActions} commentAction={createCommentAction} post={entry.post} requiresEmailVerification={!viewerEmailVerified} viewerId={viewer.id} />
                   </div>
                 ))
               )}
@@ -433,9 +540,9 @@ export default async function HomePage() {
             {buddyEnabled ? (
               <HomeSignalCard
                 body="Private peer support for moments where you need someone steady, without scrolling for the right person."
-                ctaHref={activeBuddyRequest ? "/buddy" : "/buddy/new"}
-                ctaLabel={activeBuddyRequest ? "Open Buddy" : "Start Buddy"}
-                meta={!buddyTrustAccess.allowed ? `${buddyTrustAccess.reason} ${buddyTrustAccess.nextStep ?? ""}`.trim() : activeBuddyRequest ? `Current request ${activeBuddyRequest.status}` : "Available when you need a calmer hand."}
+                ctaHref={!viewerEmailVerified ? "/onboarding?step=3" : activeBuddyRequest ? "/buddy" : "/buddy/new"}
+                ctaLabel={!viewerEmailVerified ? "Verify email" : activeBuddyRequest ? "Open Buddy" : "Start Buddy"}
+                meta={!viewerEmailVerified ? "Verify your email before sending Buddy requests." : !buddyTrustAccess.allowed ? `${buddyTrustAccess.reason} ${buddyTrustAccess.nextStep ?? ""}`.trim() : activeBuddyRequest ? `Current request ${activeBuddyRequest.status}` : "Available when you need a calmer hand."}
                 overline="Buddy"
                 title="Need help? Get a Buddy"
                 tone="buddy"
@@ -505,9 +612,9 @@ export default async function HomePage() {
           {buddyEnabled ? (
             <HomeSignalCard
               body="Private peer support for moments where you need someone steady, without searching for the right person yourself."
-              ctaHref={activeBuddyRequest ? "/buddy" : "/buddy/new"}
-              ctaLabel={activeBuddyRequest ? "Open Buddy" : "Start Buddy"}
-              meta={!buddyTrustAccess.allowed ? `${buddyTrustAccess.reason} ${buddyTrustAccess.nextStep ?? ""}`.trim() : activeBuddyRequest ? `Current request ${activeBuddyRequest.status}` : "Available when you need a calmer hand."}
+              ctaHref={!viewerEmailVerified ? "/onboarding?step=3" : activeBuddyRequest ? "/buddy" : "/buddy/new"}
+              ctaLabel={!viewerEmailVerified ? "Verify email" : activeBuddyRequest ? "Open Buddy" : "Start Buddy"}
+              meta={!viewerEmailVerified ? "Verify your email before sending Buddy requests." : !buddyTrustAccess.allowed ? `${buddyTrustAccess.reason} ${buddyTrustAccess.nextStep ?? ""}`.trim() : activeBuddyRequest ? `Current request ${activeBuddyRequest.status}` : "Available when you need a calmer hand."}
               overline="Buddy"
               title="Need help? Get a Buddy"
               tone="buddy"
@@ -520,4 +627,9 @@ export default async function HomePage() {
     </main>
   );
 }
+
+
+
+
+
 

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ConsentStatus, ConversationKind, NotificationType, VerificationStatus } from "@prisma/client";
+import { ConsentStatus, ConversationKind, NotificationType } from "@prisma/client";
 import { notFound } from "next/navigation";
 import { requireActiveUser } from "@/lib/auth/guards";
 import { prisma } from "@/lib/db/prisma";
@@ -13,6 +13,7 @@ import {
 } from "../actions";
 import { ConversationThread } from "../../chats/[conversationId]/conversation-thread";
 import { StartBuddyVideoCallButton } from "../start-buddy-video-call-button";
+import { HomeTrustBadge } from "@/components/home/trust-badge";
 import { FeatureUnavailableCard } from "@/components/feature-unavailable-card";
 import { FEATURE_FLAG_KEYS, isFeatureEnabled } from "@/lib/feature-flags";
 import { getHighRiskAccessState, HIGH_RISK_ACTIONS } from "@/lib/high-risk-access";
@@ -34,6 +35,7 @@ export default async function BuddyConversationPage({
 }) {
   const viewer = await requireActiveUser();
   const featureEnabled = await isFeatureEnabled(FEATURE_FLAG_KEYS.buddy, viewer);
+  const viewerEmailVerified = Boolean(viewer.emailVerified);
 
   if (!featureEnabled) {
     return (
@@ -60,16 +62,34 @@ export default async function BuddyConversationPage({
         select: {
           id: true,
           displayName: true,
+          emailVerified: true,
+          phoneVerified: true,
+          phoneVerifiedAt: true,
+          kycVerified: true,
+          ageVerified: true,
           verificationStatus: true,
-          verifiedBadgeVisible: true,
+          buddyProfile: {
+            select: {
+              isAvailable: true,
+            },
+          },
         },
       },
       userTwo: {
         select: {
           id: true,
           displayName: true,
+          emailVerified: true,
+          phoneVerified: true,
+          phoneVerifiedAt: true,
+          kycVerified: true,
+          ageVerified: true,
           verificationStatus: true,
-          verifiedBadgeVisible: true,
+          buddyProfile: {
+            select: {
+              isAvailable: true,
+            },
+          },
         },
       },
       buddyRequest: {
@@ -182,9 +202,16 @@ export default async function BuddyConversationPage({
             <p className="lux-overline">Buddy support conversation</p>
             <div className="mt-3 flex flex-wrap items-center gap-3">
               <h1 className="lux-title !text-[2.3rem] md:!text-[2.8rem]">{otherUser.displayName}</h1>
-              {otherUser.verificationStatus === VerificationStatus.APPROVED && otherUser.verifiedBadgeVisible ? (
-                <span className="lux-chip lux-chip-accent">Verified</span>
-              ) : null}
+              <HomeTrustBadge
+                compact={false}
+                emailVerified={Boolean(otherUser.emailVerified)}
+                phoneVerified={Boolean(otherUser.phoneVerified)}
+                phoneVerifiedAt={otherUser.phoneVerifiedAt}
+                kycVerified={Boolean(otherUser.kycVerified)}
+                ageVerified={Boolean(otherUser.ageVerified)}
+                verificationStatus={otherUser.verificationStatus}
+                isBuddyApproved={Boolean(otherUser.buddyProfile?.isAvailable)}
+              />
               <span className="lux-chip">{conversation.buddyRequest?.domain.name ?? "Buddy"}</span>
             </div>
             <p className="lux-body mt-4">A private support space, separate from member flirting and social chat.</p>
@@ -197,13 +224,15 @@ export default async function BuddyConversationPage({
         </div>
         <div className="mt-5 rounded-[1rem] border border-[color:var(--lux-border)] bg-[rgba(255,255,255,0.04)] p-4 text-sm text-[color:var(--lux-text-secondary)]">
           <p className="font-medium text-[color:var(--lux-text)]">
-            {videoTrustAccess.allowed
-              ? "Video calls require separate approval and can be revoked at any time."
-              : `${videoTrustAccess.reason} ${videoTrustAccess.nextStep ?? ""}`.trim()}
+            {!viewerEmailVerified
+              ? "Verify your email before requesting Buddy video or sending messages."
+              : videoTrustAccess.allowed
+                ? "Video calls require separate approval and can be revoked at any time."
+                : `${videoTrustAccess.reason} ${videoTrustAccess.nextStep ?? ""}`.trim()}
           </p>
           {conversation.buddyRequest?.message ? <p className="mt-2 leading-6">Original request: {conversation.buddyRequest.message}</p> : null}
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            {!videoConsent && videoTrustAccess.allowed ? (
+            {!videoConsent && viewerEmailVerified && videoTrustAccess.allowed ? (
               <form action={requestBuddyVideoConsentAction}>
                 <input name="conversationId" type="hidden" value={conversation.id} />
                 <button className="lux-button-secondary" type="submit">Request Buddy video approval</button>
@@ -233,7 +262,7 @@ export default async function BuddyConversationPage({
                 </form>
               </>
             ) : null}
-            {videoTrustAccess.allowed && videoConsent && (videoConsent.status === ConsentStatus.DECLINED || videoConsent.status === ConsentStatus.REVOKED || videoConsent.status === ConsentStatus.CANCELED) ? (
+            {viewerEmailVerified && videoTrustAccess.allowed && videoConsent && (videoConsent.status === ConsentStatus.DECLINED || videoConsent.status === ConsentStatus.REVOKED || videoConsent.status === ConsentStatus.CANCELED) ? (
               <form action={requestBuddyVideoConsentAction}>
                 <input name="conversationId" type="hidden" value={conversation.id} />
                 <button className="lux-button-secondary" type="submit">Request video again</button>
@@ -276,9 +305,15 @@ export default async function BuddyConversationPage({
         viewerId={viewer.id}
         enablePushPrompt={!(notificationSettings?.webPushEnabled ?? false) && !notificationSettings?.pushPromptDismissedAt}
         pushPromptVariant="buddy"
+        composerDisabledReason={!viewerEmailVerified ? "Verify your email before sending Buddy messages." : null}
       />
     </main>
   );
 }
+
+
+
+
+
 
 

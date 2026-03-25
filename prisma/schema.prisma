@@ -297,6 +297,11 @@ enum InternalTrustTier {
   HIGH
 }
 
+enum TrustScoreEventType {
+  RECOMPUTE
+  ADMIN_OVERRIDE
+}
+
 enum ReportTargetType {
   USER
   POST
@@ -331,6 +336,8 @@ model User {
   email                String @unique
   emailVerified        DateTime?
   phone                String? @unique
+  phoneVerified        Boolean @default(false)
+  kycVerified          Boolean @default(false)
   passwordHash         String?
   displayName          String
   bio                  String?
@@ -348,7 +355,7 @@ model User {
   isTestUser           Boolean @default(false)
   image                String?
   trustTier            InternalTrustTier @default(LOW)
-  trustScore           Int @default(0)
+  trustScore           Int @default(50)
   trustSummary         String?
   trustUpdatedAt       DateTime?
   createdAt            DateTime @default(now())
@@ -415,6 +422,8 @@ model User {
   reportsResolved        Report[] @relation("ReportResolvedBy")
   reportsAgainstUser     Report[] @relation("ReportTargetUser")
   audits                 AuditLog[]
+  trustScoreEvents       TrustScoreEvent[]
+  trustScoreEventsAuthored TrustScoreEvent[] @relation("TrustScoreEventSource")
 
   eventPromotionsCreated EventPromotion[] @relation("EventPromotionCreatedBy")
 
@@ -1282,6 +1291,23 @@ model Report {
 
   @@index([status, createdAt])
   @@index([targetType, createdAt])
+}
+
+model TrustScoreEvent {
+  id           String              @id @default(cuid())
+  userId       String
+  eventType    TrustScoreEventType
+  delta        Int
+  reason       String
+  sourceUserId String?
+  metadataJson Json?
+  createdAt    DateTime            @default(now())
+
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sourceUser   User?               @relation("TrustScoreEventSource", fields: [sourceUserId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([eventType, createdAt])
 }
 
 model AuditLog {

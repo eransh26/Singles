@@ -11,6 +11,7 @@ import {
 } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { refreshUserTrustStates } from "@/lib/internal-trust";
+import { trustScoreMeetsThreshold } from "@/lib/trust-score";
 import { getHighRiskAccessState, HIGH_RISK_ACTIONS } from "@/lib/high-risk-access";
 import { createNotificationWithDelivery } from "@/lib/notifications";
 
@@ -18,6 +19,7 @@ export const SINGLE_OF_WEEK_BIO_MAX = 300;
 export const SINGLE_OF_WEEK_TEXT_MAX = 300;
 export const SINGLE_OF_WEEK_MAX_PHOTOS = 4;
 const DAY_MS = 24 * 60 * 60 * 1000;
+export const SINGLE_OF_WEEK_MIN_TRUST_SCORE = 60;
 
 export function isSingleOfWeekVerifiedUser(user: { emailVerified: Date | null; phoneVerifiedAt: Date | null }) {
   return Boolean(user.emailVerified && user.phoneVerifiedAt);
@@ -121,6 +123,8 @@ export async function hasTrustedConversation(db: Prisma.TransactionClient | type
 }
 
 export async function canApplyForSingleOfWeek(db: Prisma.TransactionClient | typeof prisma, userId: string) {
+  await refreshUserTrustStates(db, [userId]);
+
   const user = await db.user.findUnique({
     where: { id: userId },
     select: {
@@ -128,6 +132,7 @@ export async function canApplyForSingleOfWeek(db: Prisma.TransactionClient | typ
       accountStatus: true,
       emailVerified: true,
       phoneVerifiedAt: true,
+      trustScore: true,
     },
   });
 
@@ -137,6 +142,10 @@ export async function canApplyForSingleOfWeek(db: Prisma.TransactionClient | typ
 
   if (!isSingleOfWeekVerifiedUser(user)) {
     return { allowed: false, reason: "Complete email and phone verification before applying." };
+  }
+
+  if (!trustScoreMeetsThreshold(user.trustScore, SINGLE_OF_WEEK_MIN_TRUST_SCORE)) {
+    return { allowed: false, reason: "Healthy activity improves access over time before Single of the Week opens." };
   }
 
   if (await hasAnyUserBlock(db, userId)) {
@@ -404,6 +413,7 @@ export async function buildSingleOfWeekShortlist(limit = 5) {
           email: true,
           region: true,
           trustTier: true,
+          trustScore: true,
           trustSummary: true,
           _count: {
             select: {
@@ -434,8 +444,9 @@ export async function buildSingleOfWeekShortlist(limit = 5) {
       if (application.photos.length >= 3) score += 5;
       if (!recentFeaturedUserIds.has(application.applicant.id)) score += 4;
       if (application.applicant.region && !recentRegions.has(application.applicant.region)) score += 3;
-      if (application.applicant.trustTier === InternalTrustTier.HIGH) score += 3;
-      else if (application.applicant.trustTier === InternalTrustTier.NORMAL) score += 1;
+      if (application.applicant.trustScore >= 85) score += 4;
+      else if (application.applicant.trustScore >= SINGLE_OF_WEEK_MIN_TRUST_SCORE) score += 2;
+      else if (application.applicant.trustTier === InternalTrustTier.HIGH) score += 1;
       return { application, score };
     })
     .sort((left, right) => right.score - left.score || left.application.submittedAt.getTime() - right.application.submittedAt.getTime())

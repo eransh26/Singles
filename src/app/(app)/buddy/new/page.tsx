@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { BuddyRequestStatus } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { createBuddyRequestAction } from "../actions";
@@ -18,6 +19,24 @@ export default async function NewBuddyRequestPage({
   const initialDomainId = typeof resolvedSearchParams.domainId === "string" ? resolvedSearchParams.domainId : "";
   const initialMessage = typeof resolvedSearchParams.message === "string" ? resolvedSearchParams.message : "";
   const featureEnabled = await isFeatureEnabled(FEATURE_FLAG_KEYS.buddy, viewer);
+  const viewerEmailVerified = Boolean(viewer.emailVerified);
+
+
+  if (!viewerEmailVerified) {
+    return (
+      <main className="lux-shell max-w-4xl">
+        <section className="lux-card">
+          <p className="lux-overline">Buddy</p>
+          <h1 className="mt-3 text-[2rem] font-semibold tracking-tight text-[color:var(--lux-text)]">Verify your email first</h1>
+          <p className="mt-4 text-sm leading-6 text-[color:var(--lux-text-secondary)]">Buddy requests stay locked until your email is confirmed. You can keep browsing the app while you finish verification.</p>
+          <div className="mt-5 flex flex-wrap gap-3">
+            <Link className="lux-button-primary" href="/onboarding?step=3">Open verification</Link>
+            <Link className="lux-button-secondary" href="/buddy">Back to Buddy</Link>
+          </div>
+        </section>
+      </main>
+    );
+  }
 
   if (!featureEnabled) {
     return (
@@ -83,3 +102,4 @@ export default async function NewBuddyRequestPage({
     </main>
   );
 }
+

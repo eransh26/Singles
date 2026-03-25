@@ -9,6 +9,7 @@ import { requireUser } from "@/lib/auth/guards";
 import { prisma } from "@/lib/db/prisma";
 import { AvatarOptionPicker } from "@/components/avatar-option-picker";
 import { FEATURE_FLAG_KEYS, isFeatureEnabled } from "@/lib/feature-flags";
+import { HomeTrustBadge } from "@/components/home/trust-badge";
 import { resolveProfileImageUrl } from "@/lib/media-display";
 
 const saveMessages: Record<string, string> = {
@@ -39,8 +40,13 @@ export default async function MePage({
         bio: true,
         region: true,
         image: true,
+        emailVerified: true,
+        phoneVerified: true,
+        phoneVerifiedAt: true,
+        kycVerified: true,
         verificationStatus: true,
         interests: { select: { interestId: true } },
+        buddyProfile: { select: { domains: { select: { id: true }, take: 1 } } },
         profileImageAssets: {
           where: {
             OR: [
@@ -115,7 +121,18 @@ export default async function MePage({
                 {resolvedProfileImage ? <img alt={`${user.displayName} profile`} className="h-full w-full object-cover" src={resolvedProfileImage} /> : user.displayName.slice(0, 1).toUpperCase()}
               </div>
               <div className="space-y-3">
-                <h1 className="text-[2.9rem] font-semibold tracking-tight text-[color:var(--lux-text)] md:text-[4rem] md:leading-[0.98]">{user.displayName}</h1>
+                <div className="flex flex-wrap items-center gap-3">
+                  <h1 className="text-[2.9rem] font-semibold tracking-tight text-[color:var(--lux-text)] md:text-[4rem] md:leading-[0.98]">{user.displayName}</h1>
+                  <HomeTrustBadge
+                    animateNewForUserId={user.id}
+                    emailVerified={Boolean(user.emailVerified)}
+                    isBuddyApproved={Boolean(user.buddyProfile?.domains?.length)}
+                    kycVerified={Boolean(user.kycVerified)}
+                    phoneVerified={Boolean(user.phoneVerified || user.phoneVerifiedAt)}
+                    showActivationCopy
+                    verificationStatus={user.verificationStatus}
+                  />
+                </div>
                 <p className="max-w-2xl text-base leading-8 text-[color:var(--lux-text-secondary)]">
                   Shape how your member identity reads, which interests lead the conversation, and how your media collection feels to the people you allow close.
                 </p>
@@ -296,6 +313,11 @@ export default async function MePage({
     </main>
   );
 }
+
+
+
+
+
 
 
 

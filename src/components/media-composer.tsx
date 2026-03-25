@@ -22,6 +22,8 @@ type MediaComposerProps = {
   formClassName?: string;
   allowSensitive?: boolean;
   tone?: "light" | "dark";
+  autoFocus?: boolean;
+  promptSuggestions?: string[];
 };
 
 function isMobileCapturePreferred() {
@@ -31,7 +33,20 @@ function isMobileCapturePreferred() {
   return window.matchMedia("(max-width: 767px)").matches || /Android|iPhone|iPad|iPod/i.test(window.navigator.userAgent);
 }
 
-export function MediaComposer({ action, hiddenFields = [], placeholder, submitLabel, allowAnonymous = false, compact = false, textareaClassName = "", formClassName = "", allowSensitive = false, tone = "light" }: MediaComposerProps) {
+export function MediaComposer({
+  action,
+  hiddenFields = [],
+  placeholder,
+  submitLabel,
+  allowAnonymous = false,
+  compact = false,
+  textareaClassName = "",
+  formClassName = "",
+  allowSensitive = false,
+  tone = "light",
+  autoFocus = false,
+  promptSuggestions = [],
+}: MediaComposerProps) {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
@@ -54,6 +69,13 @@ export function MediaComposer({ action, hiddenFields = [], placeholder, submitLa
     textarea.style.height = "0px";
     textarea.style.height = `${Math.max(textarea.scrollHeight, compact ? 44 : 48)}px`;
   }, [compact, contentText]);
+
+  useEffect(() => {
+    if (!autoFocus) {
+      return;
+    }
+    requestAnimationFrame(() => textareaRef.current?.focus());
+  }, [autoFocus]);
 
   useEffect(() => {
     if (!cameraOpen || !videoRef.current) {
@@ -112,6 +134,11 @@ export function MediaComposer({ action, hiddenFields = [], placeholder, submitLa
 
   function appendEmoji(emoji: string) {
     setContentText((current) => `${current}${emoji}`);
+    requestAnimationFrame(() => textareaRef.current?.focus());
+  }
+
+  function applySuggestion(suggestion: string) {
+    setContentText(suggestion);
     requestAnimationFrame(() => textareaRef.current?.focus());
   }
 
@@ -194,15 +221,15 @@ export function MediaComposer({ action, hiddenFields = [], placeholder, submitLa
 
   const darkTone = tone === "dark";
   const inputToneClass = darkTone
-    ? "border-transparent bg-[rgba(255,255,255,0.026)] text-white/92 placeholder:text-white/28"
+    ? "border-transparent bg-[rgba(255,255,255,0.018)] text-white/88 placeholder:text-white/26"
     : "border-[color:var(--lux-border)] bg-white text-[color:var(--lux-text)] placeholder:text-[color:var(--lux-text-muted)]";
   const selectedFileChip = darkTone
-    ? `${PREMIUM_CHIP} normal-case tracking-[0.04em]`
+    ? `${PREMIUM_CHIP} normal-case tracking-[0.04em] bg-[rgba(255,255,255,0.03)]`
     : "inline-flex items-center gap-2 rounded-full border border-[color:var(--lux-border)] bg-white px-3 py-1.5 text-xs uppercase tracking-[0.14em] text-[color:var(--lux-text-muted)]";
   const dividerClass = darkTone ? "border-[rgba(255,255,255,0.08)]" : "border-[color:var(--lux-border)]";
   const iconButtonClass = darkTone ? PREMIUM_TOOL_CHIP : "inline-flex h-9 w-9 items-center justify-center rounded-full border border-[color:var(--lux-border)] bg-white transition hover:border-[color:var(--lux-accent)] hover:text-[color:var(--lux-accent-deep)]";
   const toggleChipClass = darkTone
-    ? `${PREMIUM_CHIP} gap-2.5 py-2 normal-case tracking-[0.06em] text-[color:var(--lux-text-secondary)]`
+    ? `${PREMIUM_CHIP} gap-3 py-2 normal-case tracking-[0.04em] text-[color:var(--lux-text-secondary)]`
     : "inline-flex items-center justify-center gap-2.5 rounded-full border border-[color:var(--lux-border)] px-3 py-2 text-xs text-[color:var(--lux-text-secondary)]";
   const submitClass = darkTone ? PREMIUM_ACTION_ACCENT : compact ? "lux-button-secondary px-4 py-2" : "lux-button-primary";
 
@@ -215,8 +242,9 @@ export function MediaComposer({ action, hiddenFields = [], placeholder, submitLa
 
         <div className={PREMIUM_INPUT_SHELL}>
           <textarea
+            autoFocus={autoFocus}
             ref={textareaRef}
-            className={`w-full resize-none bg-transparent text-[15px] leading-6 outline-none ${compact ? "min-h-[44px]" : "min-h-[48px]"} ${inputToneClass} ${textareaClassName}`.trim()}
+            className={`w-full resize-none bg-transparent text-[15px] leading-[1.65] outline-none ${compact ? "min-h-[42px]" : "min-h-[46px]"} ${inputToneClass} ${textareaClassName}`.trim()}
             name="contentText"
             onChange={(event) => setContentText(event.target.value)}
             placeholder={placeholder}
@@ -225,6 +253,22 @@ export function MediaComposer({ action, hiddenFields = [], placeholder, submitLa
             value={contentText}
           />
         </div>
+
+        {promptSuggestions.length > 0 ? (
+          <div className="flex flex-wrap gap-2" data-testid="media-composer-suggestions">
+            {promptSuggestions.map((suggestion, index) => (
+              <button
+                className={PREMIUM_CHIP}
+                data-testid={`media-composer-suggestion-${index}`}
+                key={suggestion}
+                onClick={() => applySuggestion(suggestion)}
+                type="button"
+              >
+                {suggestion}
+              </button>
+            ))}
+          </div>
+        ) : null}
 
         <input accept="image/*" className="hidden" name="imageAttachment" onChange={(event) => handleFileChange(event, "image")} ref={imageInputRef} type="file" />
         <input accept="image/*" capture="environment" className="hidden" name="cameraAttachment" onChange={(event) => handleFileChange(event, "camera")} ref={cameraInputRef} type="file" />
@@ -250,8 +294,8 @@ export function MediaComposer({ action, hiddenFields = [], placeholder, submitLa
           </div>
         ) : null}
 
-        <div className={`flex flex-col gap-3 border-t pt-2 sm:flex-row sm:items-center sm:justify-between ${dividerClass}`}>
-          <div className="flex items-center gap-2 text-white/52">
+        <div className={`flex flex-col gap-3 border-t pt-2.5 sm:flex-row sm:items-center sm:justify-between ${dividerClass}`}>
+          <div className="flex items-center gap-2 text-white/48">
             <button className={iconButtonClass} onClick={() => imageInputRef.current?.click()} title="Choose image" type="button">
               <ImagePlus className="h-4 w-4" />
             </button>
@@ -292,7 +336,7 @@ export function MediaComposer({ action, hiddenFields = [], placeholder, submitLa
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-sm font-semibold">Capture photo</p>
-                <p className={`${PREMIUM_BODY} text-sm ${darkTone ? 'text-white/52' : 'text-[color:var(--lux-text-muted)]'}`}>Use your camera or close this panel to upload instead.</p>
+                <p className={`${PREMIUM_BODY} text-sm ${darkTone ? 'text-white/52' : 'text-[color:var(--lux-text-muted)]'}`}>Use your camera here, or close this panel and add an image another way.</p>
               </div>
               <button aria-label="Close camera panel" className={darkTone ? PREMIUM_TOOL_CHIP : PREMIUM_ACTION} onClick={closeCamera} ref={cameraCloseButtonRef} type="button">
                 <X className="h-4 w-4" />
@@ -315,8 +359,5 @@ export function MediaComposer({ action, hiddenFields = [], placeholder, submitLa
     </>
   );
 }
-
-
-
 
 

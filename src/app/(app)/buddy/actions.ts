@@ -14,8 +14,9 @@ import {
   NotificationType,
   Prisma,
   UserRole,
+  VerificationStatus,
 } from "@prisma/client";
-import { requireActiveUser } from "@/lib/auth/guards";
+import { isEmailVerifiedUser, requireActiveUser } from "@/lib/auth/guards";
 import { prisma } from "@/lib/db/prisma";
 import {
   BUDDY_MAX_TEXT_LENGTH,
@@ -27,10 +28,11 @@ import {
   refreshBuddyRequestState,
   refreshBuddyStateForUser,
 } from "@/lib/buddy";
-import { createNotificationRecord, deliverNotifications } from "@/lib/notifications";
 import { FEATURE_FLAG_KEYS, isFeatureEnabled } from "@/lib/feature-flags";
+import { canUserHoldBuddyRole } from "@/lib/trust-ladder";
+import { createNotificationRecord, deliverNotifications } from "@/lib/notifications";
 import { HIGH_RISK_ACTIONS, assertHighRiskAccess } from "@/lib/high-risk-access";
-
+import { getEmailVerificationBlockedReason } from "@/lib/email-verification-gating";
 async function assertBuddyFeatureEnabled(user: { id: string; role?: unknown }) {
   if (!(await isFeatureEnabled(FEATURE_FLAG_KEYS.buddy, user as never))) {
     throw new Error("Buddy is currently unavailable.");
@@ -80,6 +82,8 @@ async function getEligibleBuddyIds(tx: Prisma.TransactionClient, seekerId: strin
           id: { not: seekerId },
           accountStatus: AccountStatus.ACTIVE,
           role: UserRole.USER,
+          OR: [{ emailVerified: { not: null } }, { phoneVerified: true }, { phoneVerifiedAt: { not: null } }],
+          AND: [{ OR: [{ kycVerified: true }, { verificationStatus: VerificationStatus.APPROVED }] }],
         },
       },
     },
@@ -141,8 +145,8 @@ export async function updateBuddyProfileAction(formData: FormData) {
     if (approvedDomainCount === 0) {
       throw new Error("You need at least one approved Buddy domain before making yourself available.");
     }
-    if (!user.emailVerified || !user.phoneVerifiedAt) {
-      throw new Error("Complete email and phone verification before becoming available as a Buddy.");
+    if (!canUserHoldBuddyRole(user)) {
+      throw new Error("Complete Connected and Verified trust before becoming available as a Buddy.");
     }
     if (!availabilityLevel) {
       throw new Error("Choose an availability level before making yourself available as a Buddy.");
@@ -174,6 +178,9 @@ export async function updateBuddyProfileAction(formData: FormData) {
 
 export async function createBuddyRequestAction(formData: FormData) {
   const user = await requireActiveUser();
+  if (!isEmailVerifiedUser(user)) {
+    throw new Error(getEmailVerificationBlockedReason("send Buddy requests"));
+  }
   await assertBuddyFeatureEnabled(user);
   await ensureBuddyDomainsSeeded();
   const domainId = textValue(formData, "domainId");
@@ -556,6 +563,9 @@ export async function cancelBuddyRequestAction(formData: FormData) {
 
 export async function requestBuddyVideoConsentAction(formData: FormData) {
   const user = await requireActiveUser();
+  if (!isEmailVerifiedUser(user)) {
+    throw new Error(getEmailVerificationBlockedReason("request Buddy video access"));
+  }
   await assertBuddyFeatureEnabled(user);
   const conversationId = textValue(formData, "conversationId");
 
@@ -818,5 +828,12 @@ export async function primeBuddyStateAction() {
   await assertBuddyFeatureEnabled(user);
   await refreshBuddyStateForUser(user.id);
 }
+
+
+
+
+
+
+
 
 
