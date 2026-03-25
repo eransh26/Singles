@@ -2,9 +2,9 @@ import { VerificationStatus } from "@prisma/client";
 
 export const TRUST_LADDER_LEVELS = {
   UNVERIFIED: "UNVERIFIED",
-  EMAIL_VERIFIED: "EMAIL_VERIFIED",
-  PHONE_VERIFIED: "PHONE_VERIFIED",
-  KYC_VERIFIED: "KYC_VERIFIED",
+  CONNECTED: "CONNECTED",
+  VERIFIED: "VERIFIED",
+  BUDDY: "BUDDY",
 } as const;
 
 export const TRUST_BADGE_KINDS = {
@@ -31,6 +31,10 @@ export type TrustLadderUser = {
 
 export function isConnectedVerifiedUser(user: TrustLadderUser) {
   return Boolean(user.emailVerified || user.phoneVerified || user.phoneVerifiedAt);
+}
+
+export function hasPhoneVerification(user: TrustLadderUser) {
+  return Boolean(user.phoneVerified || user.phoneVerifiedAt);
 }
 
 export function isIdentityVerifiedUser(user: TrustLadderUser) {
@@ -66,43 +70,42 @@ export function getUserTrustBadgeKinds(user: TrustLadderUser): TrustBadgeKind[] 
 }
 
 export function getTrustLadderLevel(user: TrustLadderUser): TrustLadderLevel {
-  if (!user.emailVerified) {
+  if (!isConnectedVerifiedUser(user)) {
     return TRUST_LADDER_LEVELS.UNVERIFIED;
   }
 
-  if (user.kycVerified) {
-    return TRUST_LADDER_LEVELS.KYC_VERIFIED;
+  if (isBuddyApprovedUser(user)) {
+    return TRUST_LADDER_LEVELS.BUDDY;
   }
 
-  if (user.phoneVerified || user.phoneVerifiedAt) {
-    return TRUST_LADDER_LEVELS.PHONE_VERIFIED;
+  if (isIdentityVerifiedUser(user)) {
+    return TRUST_LADDER_LEVELS.VERIFIED;
   }
 
-  return TRUST_LADDER_LEVELS.EMAIL_VERIFIED;
+  return TRUST_LADDER_LEVELS.CONNECTED;
 }
 
 export function getTrustBadgeCopy(level: TrustLadderLevel) {
   switch (level) {
-    case TRUST_LADDER_LEVELS.KYC_VERIFIED:
-      return { label: "Trusted", tone: "trusted" as const };
-    case TRUST_LADDER_LEVELS.PHONE_VERIFIED:
-      return { label: "Verified+", tone: "plus" as const };
-    case TRUST_LADDER_LEVELS.EMAIL_VERIFIED:
+    case TRUST_LADDER_LEVELS.BUDDY:
+      return { label: "Buddy", tone: "buddy" as const };
+    case TRUST_LADDER_LEVELS.VERIFIED:
       return { label: "Verified", tone: "verified" as const };
+    case TRUST_LADDER_LEVELS.CONNECTED:
+      return { label: "Connected", tone: "connected" as const };
     default:
-      return { label: "New", tone: "new" as const };
+      return null;
   }
 }
 
 export function getTrustPromptCopy(level: TrustLadderLevel, action: "chat" | "video" | "buddy") {
-  if (action === "chat" && level === TRUST_LADDER_LEVELS.EMAIL_VERIFIED) {
+  if (action === "chat" && level === TRUST_LADDER_LEVELS.CONNECTED) {
     return "Verify your phone to reach more people.";
   }
 
-  if ((action === "video" || action === "buddy") && level !== TRUST_LADDER_LEVELS.KYC_VERIFIED) {
+  if ((action === "video" || action === "buddy") && level !== TRUST_LADDER_LEVELS.VERIFIED && level !== TRUST_LADDER_LEVELS.BUDDY) {
     return "This requires higher trust.";
   }
 
   return null;
 }
-

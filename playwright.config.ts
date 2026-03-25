@@ -36,8 +36,8 @@ loadEnvFile(".env");
 loadEnvFile(".env.local");
 
 const databaseUrl = process.env.E2E_DATABASE_URL ?? process.env.DATABASE_URL;
-const baseURL = process.env.E2E_BASE_URL ?? "http://localhost:3100";
-const port = Number(new URL(baseURL).port || "3100");
+const baseURL = process.env.E2E_BASE_URL ?? "http://localhost:3000";
+const port = Number(new URL(baseURL).port || "3000");
 
 if (!databaseUrl) {
   throw new Error("Set DATABASE_URL or E2E_DATABASE_URL before running Playwright tests.");
@@ -79,6 +79,3 @@ export default defineConfig({
   ],
   outputDir: "test-results/playwright",
 });
-
-
-

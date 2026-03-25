@@ -14,14 +14,13 @@ export function isFullyVerifiedUser(user: {
   verificationStatus: VerificationStatus;
 }) {
   return Boolean(
-    user.emailVerified &&
-      (user.phoneVerified || user.phoneVerifiedAt) &&
+    (user.emailVerified || user.phoneVerified || user.phoneVerifiedAt) &&
       (user.kycVerified || (user.ageVerified && user.verificationStatus === VerificationStatus.APPROVED)),
   );
 }
 
-export function isEmailVerifiedUser(user: { emailVerified: Date | null }) {
-  return Boolean(user.emailVerified);
+export function isEmailVerifiedUser(user: { emailVerified: Date | null; phoneVerified?: boolean; phoneVerifiedAt?: Date | null }) {
+  return Boolean(user.emailVerified || user.phoneVerified || user.phoneVerifiedAt);
 }
 
 export function hasMinimalProfileVisibility(targetProfileVisibility: ProfileVisibility, isOwner = false) {

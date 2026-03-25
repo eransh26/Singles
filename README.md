@@ -46,7 +46,10 @@ The Playwright setup seeds deterministic test data automatically and is designed
 - `AUTH_SECRET` must be a real strong secret in every non-test environment.
 - `AUTH_URL` must match the actual base URL being used.
 - `AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET` must match the Google OAuth client you configured.
-- `E2E_BASE_URL` defaults to `http://localhost:3100`.
+- `E2E_BASE_URL` defaults to `http://localhost:3000`.
+- Optional tunnel/dev origins should be provided through env instead of editing `next.config.js`:
+  - `NEXT_PUBLIC_DEV_TUNNEL_ORIGIN`
+  - `DEV_ALLOWED_ORIGINS` as a comma-separated list
 
 ## Important Integrity Rules
 
