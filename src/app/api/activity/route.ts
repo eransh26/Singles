@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth/guards";
 import { prisma } from "@/lib/db/prisma";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(request: Request) {
   const user = await requireUser();
   const payload = await request.json().catch(() => null);
