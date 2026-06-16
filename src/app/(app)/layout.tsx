@@ -1,65 +1,42 @@
-import Image from "next/image";
 import Link from "next/link";
 import { requireMemberUser } from "@/lib/auth/guards";
 import { getUnreadNotificationCounts } from "@/lib/notifications";
-import { MemberNav } from "./member-nav";
 import { MemberHeaderActions } from "./member-header-actions";
-import { MemberHeaderFrame } from "./member-header-frame";
 import { MobileBottomNav } from "@/components/shell/mobile-bottom-nav";
 import { NotificationActivityClient } from "@/components/notification-activity-client";
-import { ensureDefaultFeatureFlags, FEATURE_FLAG_KEYS, getFeatureAvailability } from "@/lib/feature-flags";
+import { ensureDefaultFeatureFlags } from "@/lib/feature-flags";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const viewer = await requireMemberUser();
   await ensureDefaultFeatureFlags();
-  const [counts, features] = await Promise.all([
-    getUnreadNotificationCounts(viewer.id),
-    getFeatureAvailability([FEATURE_FLAG_KEYS.buddy, FEATURE_FLAG_KEYS.singleOfWeek], viewer),
-  ]);
-
-  const navigation = [
-    { href: "/home", label: "Home", icon: "home" as const },
-    { href: "/groups", label: "Groups", icon: "groups" as const },
-    { href: "/chats", label: "Chats", icon: "chats" as const, badgeCount: counts.chats },
-    ...(features[FEATURE_FLAG_KEYS.buddy] ? [{ href: "/buddy", label: "Buddy", icon: "buddy" as const, badgeCount: counts.buddy }] : []),
-    { href: "/notifications", label: "Notifications", icon: "notifications" as const, badgeCount: counts.total },
-    { href: "/me", label: "Profile", icon: "profile" as const },
-  ];
+  const counts = await getUnreadNotificationCounts(viewer.id);
 
   return (
-    <div className="min-h-screen bg-background text-foreground pt-[var(--member-shell-top-offset)] pb-[var(--member-shell-bottom-offset)] md:pb-0 md:pt-[var(--member-shell-top-offset-md)]">
+    <div className="ev-app-frame relative flex min-h-screen flex-col text-[color:var(--ev-text)]" data-testid="member-shell">
       <NotificationActivityClient />
-      <MemberHeaderFrame>
-        <header className="fixed inset-x-0 top-0 z-40 border-b border-transparent bg-[linear-gradient(180deg,rgba(37,29,24,0.78),rgba(30,24,20,0.52))] text-[color:var(--lux-text)] shadow-[0_8px_20px_rgba(18,12,9,0.1)] backdrop-blur-xl" data-testid="member-shell-header">
-          <div className="mx-auto max-w-6xl px-4 md:px-6">
-            <div className="member-header-bar flex min-h-[4.85rem] items-center gap-4 whitespace-nowrap md:gap-6">
-              <div className="flex min-w-[160px] flex-none items-center">
-                <div className="flex flex-col gap-0.5">
-                  <div className="member-header-logo w-[134px] sm:w-[148px]">
-                    <Image alt="Evyta" className="h-auto w-full object-contain" height={56} priority src="/brand/evyta-logo.svg" unoptimized width={240} />
-                  </div>
-                  <p className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--lux-text-muted)]">Private Circle</p>
-                </div>
-              </div>
-
-              <div className="member-header-nav hidden min-w-0 flex-1 justify-center overflow-hidden md:flex">
-                <MemberNav items={navigation} />
-              </div>
-
-              <div className="flex min-w-[128px] flex-none items-center justify-end">
-                <MemberHeaderActions notificationCount={counts.total} />
-              </div>
-            </div>
-          </div>
-        </header>
-      </MemberHeaderFrame>
-      <div className="flex-1">{children}</div>
-      <footer className="mx-auto flex w-full max-w-6xl justify-end px-4 pb-6 pt-2 md:px-6 md:pb-8">
-        <div className="flex items-center gap-4 text-xs uppercase tracking-[0.14em] text-[color:var(--lux-text-muted)]">
-          <Link className="hover:text-[color:var(--lux-text)]" href="/privacy">Privacy</Link>
-          <Link className="hover:text-[color:var(--lux-text)]" href="/terms">Terms</Link>
+      <header
+        className="fixed left-1/2 top-0 z-40 w-full max-w-[var(--ev-app-width)] -translate-x-1/2 border-b border-[color:var(--ev-line)] bg-[color:var(--ev-bg-0)]/85 backdrop-blur-xl"
+        data-testid="member-shell-header"
+      >
+        <div className="flex h-[3.55rem] items-center justify-between gap-3 px-4">
+          <Link
+            aria-label="Evyta home"
+            className="ev-display text-[1.55rem] font-medium tracking-tight text-[color:var(--ev-text)]"
+            href="/home"
+          >
+            Evyta
+          </Link>
+          <MemberHeaderActions notificationCount={counts.total} viewerInitial={viewer.displayName.slice(0, 1).toUpperCase()} />
         </div>
+      </header>
+
+      <div className="flex-1 pt-[var(--member-shell-top-offset)] pb-[var(--member-shell-bottom-offset)] md:pt-[var(--member-shell-top-offset-md)]">{children}</div>
+
+      <footer className="flex justify-center gap-4 px-4 pb-[calc(var(--member-shell-bottom-offset)+0.25rem)] pt-3 text-[11px] uppercase tracking-[0.14em] text-[color:var(--ev-text-3)]">
+        <Link className="hover:text-[color:var(--ev-text)]" href="/privacy">Privacy</Link>
+        <Link className="hover:text-[color:var(--ev-text)]" href="/terms">Terms</Link>
       </footer>
+
       <MobileBottomNav />
     </div>
   );

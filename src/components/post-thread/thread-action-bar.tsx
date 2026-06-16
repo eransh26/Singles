@@ -21,7 +21,10 @@ type ThreadActionBarProps = {
 
 export function ThreadActionBar({ buddyHref, buddyLabel = "Buddy", postId, groupId, reactionCount, reactionType, replyHref, groupHref, revealHref, eventRelated = false }: ThreadActionBarProps) {
   return (
-    <div className="fixed inset-x-3 bottom-4 z-30 md:static md:mt-6" data-testid="thread-action-bar">
+    <div
+      className="fixed inset-x-0 bottom-[calc(var(--member-shell-bottom-offset)+0.25rem)] left-1/2 z-30 w-full max-w-[var(--ev-app-width)] -translate-x-1/2 px-3"
+      data-testid="thread-action-bar"
+    >
       <div className={`mx-auto flex max-w-3xl items-center justify-between gap-3 rounded-[1.5rem] px-3 py-3 md:px-4 ${PREMIUM_SURFACE_STRONG}`}>
         <div className="flex items-center gap-3">
           {!eventRelated ? <PostReactionButton groupId={groupId} initialCount={reactionCount} initialReactionType={reactionType} postId={postId} /> : null}

@@ -1,10 +1,21 @@
 import Link from "next/link";
 import { ConversationKind } from "@prisma/client";
+import { LifeBuoy } from "lucide-react";
 import { reviewChatRequestAction } from "../actions";
 import { requireUser } from "@/lib/auth/guards";
 import { prisma } from "@/lib/db/prisma";
 import { RelativeTime } from "@/components/relative-time";
 import { HomeTrustBadge } from "@/components/home/trust-badge";
+import { EmptyState, StatusBanner } from "@/components/ui/states";
+import { ensureDefaultFeatureFlags, FEATURE_FLAG_KEYS, getFeatureAvailability } from "@/lib/feature-flags";
+
+function Avatar({ initial }: { initial: string }) {
+  return (
+    <div className="flex h-12 w-12 flex-none items-center justify-center rounded-full border border-[color:var(--ev-line-2)] bg-[image:var(--ev-avatar)] text-sm font-semibold text-[color:var(--ev-text)]">
+      {initial}
+    </div>
+  );
+}
 
 export default async function ChatsPage({
   searchParams,
@@ -13,8 +24,9 @@ export default async function ChatsPage({
 }) {
   const viewer = await requireUser();
   const resolvedSearchParams = await searchParams;
+  await ensureDefaultFeatureFlags();
 
-  const [conversations, incomingRequests, outgoingRequests] = await Promise.all([
+  const [conversations, incomingRequests, outgoingRequests, features] = await Promise.all([
     prisma.conversation.findMany({
       where: {
         status: "ACTIVE",
@@ -92,7 +104,10 @@ export default async function ChatsPage({
         },
       },
     }),
+    getFeatureAvailability([FEATURE_FLAG_KEYS.buddy], viewer),
   ]);
+
+  const buddyEnabled = features[FEATURE_FLAG_KEYS.buddy];
 
   const savedMessage = resolvedSearchParams?.saved === "incoming-chat"
     ? "You already have an incoming request from this member."
@@ -105,95 +120,30 @@ export default async function ChatsPage({
           : null;
 
   return (
-    <main className="lux-shell">
-      {savedMessage ? (
-        <div className="rounded-[1.25rem] border border-[color:rgba(109,125,97,0.28)] bg-[color:var(--lux-success-bg)] px-4 py-3 text-sm text-[color:var(--lux-success)]">
-          {savedMessage}
-        </div>
-      ) : null}
+    <main className="mx-auto min-h-screen max-w-xl px-4 pb-[calc(var(--member-shell-bottom-offset)+1rem)] pt-4" data-testid="chats-page">
+      {savedMessage ? <StatusBanner className="mb-4">{savedMessage}</StatusBanner> : null}
 
-      <section className="lux-hero">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-3xl">
-            <p className="lux-overline">Chats</p>
-            <h1 className="lux-title mt-3">Direct conversations, kept calm and close.</h1>
-            <p className="lux-body mt-4">
-              Review requests, continue active conversations, and keep the tone intimate rather than transactional.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2.5">
-            <span className="lux-chip">Conversations {conversations.length}</span>
-            <span className="lux-chip">Incoming {incomingRequests.length}</span>
-            <span className="lux-chip lux-chip-accent">Outgoing {outgoingRequests.length}</span>
-          </div>
-        </div>
-      </section>
+      <header className="mb-5">
+        <h1 className="ev-display text-[1.75rem] font-medium tracking-tight text-[color:var(--ev-text)]">Chats</h1>
+        <p className="mt-1 text-sm text-[color:var(--ev-text-2)]">Private by design — conversations open only when both of you agree.</p>
+      </header>
 
-      <section className="grid gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.95fr)]">
-        <section className="lux-card">
-          <div className="border-b lux-divider pb-5">
-            <p className="lux-overline">Conversations</p>
-            <h2 className="mt-3 text-2xl font-semibold tracking-tight text-[color:var(--lux-text)]">Active chats</h2>
+      {incomingRequests.length > 0 ? (
+        <section className="mb-5" data-testid="chat-requests">
+          <div className="mb-2 flex items-center justify-between">
+            <p className="ev-label text-[color:var(--ev-gold-text)]">Requests</p>
+            <span className="ev-badge ev-badge-connected">{incomingRequests.length}</span>
           </div>
-          <div className="mt-5 space-y-3">
-            {conversations.length === 0 ? (
-              <p className="lux-empty">No conversations yet. Send a chat request from a member profile to start one.</p>
-            ) : (
-              conversations.map((conversation) => {
-                const otherUser = conversation.userOne.id === viewer.id ? conversation.userTwo : conversation.userOne;
-                const lastMessage = conversation.messages[0];
-
-                return (
-                  <Link key={conversation.id} className="lux-card-soft block transition hover:border-[color:var(--lux-accent-border)]" href={`/chats/${conversation.id}`}>
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <div className="flex flex-wrap items-center gap-2.5">
-                          <p className="text-base font-semibold tracking-tight text-[color:var(--lux-text)]">{otherUser.displayName}</p>
-                          <HomeTrustBadge
-                            compact
-                            emailVerified={Boolean(otherUser.emailVerified)}
-                            isBuddyApproved={Boolean(otherUser.buddyProfile?.domains?.length)}
-                            kycVerified={Boolean(otherUser.kycVerified)}
-                            phoneVerified={Boolean(otherUser.phoneVerifiedAt)}
-                            verificationStatus={otherUser.verificationStatus}
-                          />
-                        </div>
-                        <RelativeTime className="mt-3 block text-xs uppercase tracking-[0.16em] text-[color:var(--lux-text-muted)]" value={(lastMessage ? lastMessage.createdAt : conversation.updatedAt).toISOString()} />
-                      </div>
-                      <span className="lux-button-subtle px-3 py-1.5 text-xs">Open chat</span>
-                    </div>
-                    <p className="mt-3 text-sm leading-6 text-[color:var(--lux-text-secondary)]">
-                      {lastMessage ? lastMessage.body : "No messages yet. Open the conversation to say hello."}
-                    </p>
-                  </Link>
-                );
-              })
-            )}
-          </div>
-        </section>
-
-        <div className="space-y-6">
-          <section className="lux-card">
-            <div className="border-b lux-divider pb-5">
-              <p className="lux-overline">Incoming</p>
-              <h2 className="mt-3 text-2xl font-semibold tracking-tight text-[color:var(--lux-text)]">Requests to review</h2>
-            </div>
-            <div className="mt-5 space-y-3">
-              {incomingRequests.length === 0 ? (
-                <p className="lux-empty">No pending chat requests.</p>
-              ) : (
-                incomingRequests.map((request) => (
-                  <div key={request.id} className="lux-card-soft text-sm">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <Link className="font-medium text-[color:var(--lux-text)] underline-offset-4 hover:underline" href={`/users/${request.fromUser.id}`}>
-                          {request.fromUser.displayName}
-                        </Link>
-                        <div className="mt-2 text-xs uppercase tracking-[0.16em] text-[color:var(--lux-text-muted)]">
-                          <span className="mr-1">Requested</span>
-                          <RelativeTime value={request.createdAt.toISOString()} />
-                        </div>
-                      </div>
+          <div className="space-y-3">
+            {incomingRequests.map((request) => (
+              <div className="ev-card ev-rail-sage p-4" key={request.id}>
+                <div className="flex items-center gap-3">
+                  <Avatar initial={request.fromUser.displayName.slice(0, 1).toUpperCase()} />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Link className="font-medium text-[color:var(--ev-text)] underline-offset-4 hover:underline" href={`/users/${request.fromUser.id}`}>
+                        {request.fromUser.displayName}
+                      </Link>
                       <HomeTrustBadge
                         compact
                         emailVerified={Boolean(request.fromUser.emailVerified)}
@@ -203,61 +153,105 @@ export default async function ChatsPage({
                         verificationStatus={request.fromUser.verificationStatus}
                       />
                     </div>
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      <Link className="lux-button-secondary" href={`/users/${request.fromUser.id}`}>
-                        View profile
-                      </Link>
-                      <form action={reviewChatRequestAction}>
-                        <input name="chatRequestId" type="hidden" value={request.id} />
-                        <input name="decision" type="hidden" value="accept" />
-                        <input name="redirectToConversation" type="hidden" value="true" />
-                        <button className="lux-button-primary" type="submit">Accept and open chat</button>
-                      </form>
-                      <form action={reviewChatRequestAction}>
-                        <input name="chatRequestId" type="hidden" value={request.id} />
-                        <input name="decision" type="hidden" value="reject" />
-                        <button className="lux-button-secondary" type="submit">Reject</button>
-                      </form>
-                    </div>
+                    <p className="mt-0.5 text-xs text-[color:var(--ev-text-3)]">They can&rsquo;t message you until you accept.</p>
                   </div>
-                ))
-              )}
-            </div>
-          </section>
+                </div>
+                <div className="mt-3 flex gap-2">
+                  <form action={reviewChatRequestAction} className="flex-1">
+                    <input name="chatRequestId" type="hidden" value={request.id} />
+                    <input name="decision" type="hidden" value="accept" />
+                    <input name="redirectToConversation" type="hidden" value="true" />
+                    <button className="ev-btn-primary w-full py-2.5 text-sm" type="submit">Accept</button>
+                  </form>
+                  <form action={reviewChatRequestAction} className="flex-1">
+                    <input name="chatRequestId" type="hidden" value={request.id} />
+                    <input name="decision" type="hidden" value="reject" />
+                    <button className="ev-btn-secondary w-full py-2.5 text-sm" type="submit">Decline</button>
+                  </form>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
-          <section className="lux-card">
-            <div className="border-b lux-divider pb-5">
-              <p className="lux-overline">Outgoing</p>
-              <h2 className="mt-3 text-2xl font-semibold tracking-tight text-[color:var(--lux-text)]">Requests already sent</h2>
-            </div>
-            <div className="mt-5 space-y-3">
-              {outgoingRequests.length === 0 ? (
-                <p className="lux-empty">No outgoing chat requests.</p>
-              ) : (
-                outgoingRequests.map((request) => (
-                  <div key={request.id} className="lux-card-soft text-sm">
-                    <div className="flex items-center justify-between gap-3">
-                      <Link className="font-medium text-[color:var(--lux-text)] underline-offset-4 hover:underline" href={`/users/${request.toUser.id}`}>
-                        {request.toUser.displayName}
-                      </Link>
-                      <div className="text-xs uppercase tracking-[0.16em] text-[color:var(--lux-text-muted)]">
-                        <span className="mr-1">Sent</span>
-                        <RelativeTime value={request.createdAt.toISOString()} />
+      {buddyEnabled ? (
+        <Link className="ev-card ev-rail-gold mb-5 flex items-center gap-3 p-4" href="/buddy">
+          <span className="ev-fab h-11 w-11 shadow-none">
+            <LifeBuoy className="h-5 w-5" strokeWidth={1.8} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="font-medium text-[color:var(--ev-text)]">Buddy support</p>
+            <p className="text-xs text-[color:var(--ev-text-3)]">A steady, private hand when you need one.</p>
+          </div>
+        </Link>
+      ) : null}
+
+      <section data-testid="chat-list">
+        <p className="ev-label mb-2 text-[color:var(--ev-gold-text)]">Conversations</p>
+        {conversations.length === 0 ? (
+          <EmptyState
+            action={{ label: "Explore people", href: "/search" }}
+            body="When a connection request is accepted, your conversation opens here."
+            title="No conversations yet"
+          />
+        ) : (
+          <div className="space-y-2">
+            {conversations.map((conversation) => {
+              const otherUser = conversation.userOne.id === viewer.id ? conversation.userTwo : conversation.userOne;
+              const lastMessage = conversation.messages[0];
+
+              return (
+                <Link
+                  className="ev-card flex items-center gap-3 p-3.5 transition hover:border-[color:var(--ev-line-2)]"
+                  href={`/chats/${conversation.id}`}
+                  key={conversation.id}
+                >
+                  <Avatar initial={otherUser.displayName.slice(0, 1).toUpperCase()} />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <p className="truncate font-medium text-[color:var(--ev-text)]">{otherUser.displayName}</p>
+                        <HomeTrustBadge
+                          compact
+                          emailVerified={Boolean(otherUser.emailVerified)}
+                          isBuddyApproved={Boolean(otherUser.buddyProfile?.domains?.length)}
+                          kycVerified={Boolean(otherUser.kycVerified)}
+                          phoneVerified={Boolean(otherUser.phoneVerifiedAt)}
+                          verificationStatus={otherUser.verificationStatus}
+                        />
                       </div>
+                      <RelativeTime
+                        className="flex-none text-[11px] text-[color:var(--ev-text-3)]"
+                        value={(lastMessage ? lastMessage.createdAt : conversation.updatedAt).toISOString()}
+                      />
                     </div>
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      <Link className="lux-button-secondary" href={`/users/${request.toUser.id}`}>
-                        Open profile
-                      </Link>
-                      <span className="lux-chip">Waiting for response</span>
-                    </div>
+                    <p className="mt-0.5 truncate text-sm text-[color:var(--ev-text-2)]">
+                      {lastMessage ? lastMessage.body : "No messages yet — open to say hello."}
+                    </p>
                   </div>
-                ))
-              )}
-            </div>
-          </section>
-        </div>
+                </Link>
+              );
+            })}
+          </div>
+        )}
       </section>
+
+      {outgoingRequests.length > 0 ? (
+        <section className="mt-6">
+          <p className="ev-label mb-2 text-[color:var(--ev-text-3)]">Sent · waiting</p>
+          <div className="space-y-2">
+            {outgoingRequests.map((request) => (
+              <div className="ev-card flex items-center justify-between gap-3 p-3.5 text-sm" key={request.id}>
+                <Link className="font-medium text-[color:var(--ev-text)] underline-offset-4 hover:underline" href={`/users/${request.toUser.id}`}>
+                  {request.toUser.displayName}
+                </Link>
+                <span className="ev-chip text-[color:var(--ev-text-3)]">Waiting</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
     </main>
   );
 }

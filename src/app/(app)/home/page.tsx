@@ -366,7 +366,7 @@ export default async function HomePage({
   });
 
   return (
-    <main className="mx-auto min-h-screen max-w-[1380px] px-3 pb-[calc(var(--member-shell-bottom-offset)+1rem)] pt-[calc(var(--member-shell-top-offset)+0.6rem)] md:px-5 md:pb-10 md:pt-[calc(var(--member-shell-top-offset-md)+0.75rem)]" data-testid="home-page">
+    <main className="mx-auto min-h-screen max-w-[1380px] px-3 pb-[calc(var(--member-shell-bottom-offset)+1rem)] pt-3 md:px-5 md:pb-10 md:pt-4" data-testid="home-page">
       {savedNotice ? (
         <div className="mb-4 rounded-[1.25rem] border border-[rgba(109,125,97,0.28)] bg-[color:var(--lux-success-bg)] px-4 py-3 text-sm text-[color:var(--lux-success)]" data-testid="home-save-message">
           <p className="font-medium">{savedNotice.title}</p>
@@ -376,7 +376,7 @@ export default async function HomePage({
       <div className="rounded-[2rem] border border-[rgba(228,213,192,0.05)] bg-[radial-gradient(circle_at_top,rgba(189,151,100,0.06),transparent_32%),radial-gradient(circle_at_82%_8%,rgba(126,89,73,0.06),transparent_22%),linear-gradient(180deg,#2e251f_0%,#231c18_42%,#1c1714_100%)] px-3 py-3 text-white shadow-[0_22px_54px_rgba(18,12,9,0.1)] md:px-5 md:py-5">
         <HomeTopBar notificationCount={notificationCounts.total} viewerInitial={viewer.displayName.slice(0, 1).toUpperCase()} />
 
-        <section className="mt-4 grid gap-5 lg:grid-cols-[minmax(0,1.65fr)_340px] lg:items-start">
+        <section className="mt-4 grid gap-5">
           <div className="space-y-4" data-testid="home-feed">
             <section className="rounded-[1.75rem] border border-[rgba(228,213,192,0.04)] bg-[radial-gradient(circle_at_top_left,rgba(189,151,100,0.08),transparent_28%),linear-gradient(180deg,rgba(255,255,255,0.022),rgba(255,255,255,0.01))] px-4 py-3.5 text-white shadow-[0_10px_24px_rgba(18,12,9,0.06)] md:px-5 md:py-4">
               <p className="text-[10px] uppercase tracking-[0.28em] text-[color:var(--lux-text-muted)]">Community pulse</p>

@@ -6,16 +6,16 @@ export default function LoginPage() {
   return (
     <AuthShell
       alternateHref="/register"
-      alternateLabel="Create one"
-      alternatePrompt="No account yet?"
-      description="Enter the private Evyta member circle with the sign-in method attached to your account."
-      eyebrow="Member sign in"
+      alternateLabel="Request access"
+      alternatePrompt="New to the circle?"
+      description="Welcome back. Enter the private Evyta circle with the method attached to your account."
+      eyebrow="Sign in"
       title="Enter quietly."
     >
       <div className="space-y-4">
         <LoginForm />
         <form action={signInWithGoogleAction}>
-          <button className="lux-button-secondary w-full justify-center" type="submit">
+          <button className="ev-btn-secondary w-full" type="submit">
             Continue with Google
           </button>
         </form>

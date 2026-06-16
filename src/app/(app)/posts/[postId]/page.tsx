@@ -391,8 +391,8 @@ export default async function PostThreadPage({ params }: { params: Promise<{ pos
   const showBuddyHandoff = buddyContextRelevant;
 
   const threadBody = (
-    <main className="mx-auto min-h-screen max-w-3xl px-3 pb-[calc(var(--member-shell-bottom-offset)+1rem)] pt-[calc(var(--member-shell-top-offset)+0.6rem)] md:px-5 md:pb-16 md:pt-[calc(var(--member-shell-top-offset-md)+0.75rem)]" data-testid="post-thread-page">
-      <div className="rounded-[2rem] border border-[rgba(255,255,255,0.06)] bg-[radial-gradient(circle_at_top,rgba(97,69,66,0.16),transparent_24%),linear-gradient(180deg,#17181c_0%,#121319_46%,#0f1015_100%)] px-4 py-4 text-white shadow-[0_30px_80px_rgba(7,8,10,0.24)] md:px-6 md:py-6">
+    <main className="mx-auto min-h-screen max-w-3xl px-3 pb-[calc(var(--member-shell-bottom-offset)+3rem)] pt-3 md:px-5 md:pt-4" data-testid="post-thread-page">
+      <div className="rounded-[2rem] border border-[color:var(--ev-line)] bg-[radial-gradient(circle_at_top,rgba(201,164,92,0.10),transparent_30%),linear-gradient(180deg,#1d1813_0%,#15110e_55%,#0c0a08_100%)] px-4 py-4 text-[color:var(--ev-text)] shadow-[0_30px_80px_rgba(8,6,5,0.4)] md:px-6 md:py-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-[10px] uppercase tracking-[0.28em] text-white/45">Thread</p>

@@ -6,22 +6,22 @@ export default function RegisterPage() {
     <AuthShell
       alternateHref="/login"
       alternateLabel="Sign in"
-      alternatePrompt="Already have an account?"
-      description="Create a member account for a more private, curated adult community experience."
-      eyebrow="Member registration"
+      alternatePrompt="Already inside?"
+      description="Join the circle quietly. Create your access to a private, trust-first community."
+      eyebrow="Request access"
       title="Request your place."
     >
       <div className="space-y-4">
         <form action={registerAction} className="flex flex-col gap-3">
-          <input className="lux-input" name="displayName" placeholder="Display name" required type="text" />
-          <input className="lux-input" name="email" placeholder="Email" required type="email" />
-          <input className="lux-input" name="password" placeholder="Password (8+ chars)" required type="password" />
-          <button className="lux-button-primary w-full justify-center" type="submit">
-            Create account
+          <input className="ev-input" name="displayName" placeholder="Your name" required type="text" />
+          <input className="ev-input" name="email" placeholder="Email" required type="email" />
+          <input className="ev-input" name="password" placeholder="Password (8+ chars)" required type="password" />
+          <button className="ev-btn-primary w-full" type="submit">
+            Request access
           </button>
         </form>
         <form action={signInWithGoogleAction}>
-          <button className="lux-button-secondary w-full justify-center" type="submit">
+          <button className="ev-btn-secondary w-full" type="submit">
             Continue with Google
           </button>
         </form>

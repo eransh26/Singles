@@ -13,7 +13,6 @@ type HomeComposerProps = {
   firstPostMode?: boolean;
 };
 
-const PLACEHOLDERS = ["Share with your circle...", "What feels alive tonight?", "Leave a quiet signal..."];
 const FIRST_POST_PROMPTS = [
   "Just arrived and saying hi.",
   "Looking around quietly tonight.",
@@ -21,7 +20,7 @@ const FIRST_POST_PROMPTS = [
 ];
 
 export function HomeComposer({ action, viewerName, requiresEmailVerification = false, autoFocus = false, firstPostMode = false }: HomeComposerProps) {
-  const placeholder = firstPostMode ? "Say something simple. No need to impress." : PLACEHOLDERS[viewerName.length % PLACEHOLDERS.length];
+  const placeholder = "What would you like to share?";
 
   return (
     <section className={`${PREMIUM_COMPOSER_SHELL} ${PREMIUM_COMPOSER_SHELL_ACTIVE} p-4 md:p-5`} data-testid="home-composer">
@@ -32,9 +31,9 @@ export function HomeComposer({ action, viewerName, requiresEmailVerification = f
         <div className="min-w-0 flex-1 space-y-3.5">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-sm font-medium text-white/86">Share as {viewerName}</p>
+              <p className="text-sm font-medium text-[color:var(--ev-text)]">Share a signal</p>
               <p className={`${PREMIUM_META} mt-1`}>
-                {requiresEmailVerification ? "Keep the circle trusted first" : firstPostMode ? "Start small and let people place you gently" : "A small update is enough to keep the room alive"}
+                {requiresEmailVerification ? "Keep the circle trusted first" : firstPostMode ? "Start small — let people place you gently" : "Visible to trusted members"}
               </p>
             </div>
           </div>

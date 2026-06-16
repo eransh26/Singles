@@ -340,12 +340,12 @@ export function ConversationThread({
                   <div
                     className={`max-w-[92%] space-y-2 rounded-[1.15rem] px-4 py-3 shadow-sm md:max-w-[82%] ${
                       isMine
-                        ? "border border-[color:rgba(124,74,110,0.12)] bg-[linear-gradient(180deg,#7c4a6e_0%,#5e3554_100%)] text-white"
-                        : "border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)] text-white/88"
+                        ? "border border-transparent bg-[color:var(--ev-gold)] text-[color:var(--ev-on-gold)]"
+                        : "border border-[color:var(--ev-line)] bg-[color:var(--ev-surface)] text-[color:var(--ev-text)]"
                     }`}
                   >
                     {isRemoved ? (
-                      <p className={`text-sm italic ${isMine ? "text-white/80" : "text-[color:var(--lux-text-muted)]"}`}>This content was removed.</p>
+                      <p className={`text-sm italic ${isMine ? "text-[color:var(--ev-on-gold)]/80" : "text-[color:var(--lux-text-muted)]"}`}>This content was removed.</p>
                     ) : message.body ? (
                       <p className="whitespace-pre-wrap break-words text-sm leading-7">{message.body}</p>
                     ) : null}

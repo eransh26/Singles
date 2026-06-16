@@ -1,6 +1,20 @@
 import "@livekit/components-styles";
 import type { Metadata } from "next";
+import { Hanken_Grotesk, Newsreader } from "next/font/google";
 import "./globals.css";
+
+const hanken = Hanken_Grotesk({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-hanken",
+});
+
+const newsreader = Newsreader({
+  subsets: ["latin"],
+  display: "swap",
+  style: ["normal", "italic"],
+  variable: "--font-newsreader",
+});
 
 export const metadata: Metadata = {
   title: "Evyta",
@@ -16,7 +30,7 @@ export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    <html className={`${hanken.variable} ${newsreader.variable}`} lang="en">
       <body>{children}</body>
     </html>
   );

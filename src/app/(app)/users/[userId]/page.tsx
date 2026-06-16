@@ -718,7 +718,7 @@ export default async function MemberProfilePage({
 
   return (
 
-    <main className="mx-auto min-h-screen max-w-5xl px-3 pb-[calc(var(--member-shell-bottom-offset)+1rem)] pt-[calc(var(--member-shell-top-offset)+0.6rem)] md:px-5 md:pb-14 md:pt-[calc(var(--member-shell-top-offset-md)+0.75rem)]" data-testid="profile-page">
+    <main className="mx-auto min-h-screen max-w-5xl px-3 pb-[calc(var(--member-shell-bottom-offset)+1rem)] pt-3 md:px-5 md:pb-14 md:pt-4" data-testid="profile-page">
 
       <HomeTopBar notificationCount={notificationCount} viewerInitial={viewer.displayName.slice(0, 1).toUpperCase()} />
 
@@ -787,7 +787,7 @@ export default async function MemberProfilePage({
 
         {!canSeeProfile ? (
 
-          <section className="rounded-[1.6rem] border border-[rgba(255,255,255,0.08)] bg-[rgba(18,19,24,0.84)] p-5 text-sm leading-7 text-white/66 shadow-[0_18px_42px_rgba(7,8,10,0.2)]">
+          <section className="rounded-[1.6rem] border border-[color:var(--ev-line)] bg-[color:var(--ev-surface)] p-5 text-sm leading-7 text-[color:var(--ev-text-2)] shadow-[0_18px_42px_rgba(8,6,5,0.3)]">
 
             This member keeps their profile layered. You need minimal visibility into the profile before the fuller identity and interaction surface opens.
 

@@ -3,60 +3,140 @@
 @tailwind utilities;
 
 :root {
-  --background: 224 18% 9%;
-  --foreground: 0 0% 95%;
-  --card: 222 16% 12%;
-  --card-foreground: 0 0% 95%;
-  --border: 220 12% 22%;
-  --input: 220 12% 22%;
-  --ring: 40 55% 62%;
-  --primary: 40 55% 62%;
-  --primary-foreground: 0 0% 100%;
-  --muted: 222 14% 14%;
-  --muted-foreground: 220 10% 68%;
-  --radius: 0.875rem;
+  /* =================================================================
+     EVYTA NORTH-STAR DESIGN TOKENS (dark, ship-first)
+     Source of truth: design/claude-design-handoff/styles.css
+     ================================================================= */
 
-  --lux-bg: #1d1714;
-  --lux-secondary: #27201c;
-  --lux-card: #312823;
-  --lux-elevated: #3a2f29;
-  --lux-surface: #28211d;
-  --lux-bg-main: #1d1714;
-  --lux-bg-surface: #312823;
-  --lux-bg-elevated: #3a2f29;
-  --lux-highlight-soft: rgba(198, 155, 97, 0.09);
-  --lux-highlight: rgba(198, 155, 97, 0.14);
-  --lux-text: #f2ece3;
-  --lux-text-primary: #f2ece3;
-  --lux-text-secondary: #ddd0c3;
-  --lux-text-muted: #b1a397;
-  --lux-text-accent: #ecd2aa;
-  --lux-border: rgba(228, 213, 192, 0.12);
-  --lux-border-soft: rgba(228, 213, 192, 0.07);
-  --lux-border-subtle: rgba(228, 213, 192, 0.07);
-  --lux-border-default: rgba(228, 213, 192, 0.12);
-  --lux-border-strong: rgba(228, 213, 192, 0.18);
-  --lux-divider: rgba(228, 213, 192, 0.1);
-  --lux-accent: #bd9764;
-  --lux-accent-primary: #bd9764;
-  --lux-accent-strong: #cfac7d;
-  --lux-accent-primary-hover: #cfac7d;
-  --lux-accent-deep: #e5cfb0;
-  --lux-accent-soft: rgba(189, 151, 100, 0.12);
-  --lux-accent-border: rgba(189, 151, 100, 0.19);
-  --lux-cta: #d6b06a;
-  --lux-cta-text: #17181d;
-  --lux-danger: #e6a6ae;
-  --lux-danger-bg: rgba(170, 88, 103, 0.16);
-  --lux-success: #b8d2b5;
-  --lux-success-bg: rgba(104, 149, 111, 0.16);
-  --lux-champagne: #c8b79a;
-  --lux-gold: #d6b06a;
-  --lux-taupe: #857d76;
-  --lux-mauve: #8b6f75;
-  --member-shell-top-offset: calc(4.9rem + env(safe-area-inset-top));
-  --member-shell-top-offset-md: 5rem;
-  --member-shell-bottom-offset: calc(6.5rem + env(safe-area-inset-bottom));
+  /* Surfaces — warm espresso, never pure black */
+  --ev-bg-canvas: #0c0a08;
+  --ev-bg-0: #15110e;
+  --ev-bg-1: #1d1813;
+  --ev-surface: #221d18;
+  --ev-surface-2: #262019;
+  --ev-raise: #2c251d;
+
+  /* Hairlines */
+  --ev-line: rgba(245, 235, 215, 0.09);
+  --ev-line-2: rgba(245, 235, 215, 0.15);
+
+  /* Text */
+  --ev-text: #f0e8d8;
+  --ev-text-2: #a99d8c;
+  --ev-text-3: #8d8473;
+
+  /* Gold — primary action + Buddy */
+  --ev-gold: #c9a45c;
+  --ev-gold-text: #d8b873;
+  --ev-gold-bg: rgba(201, 164, 92, 0.16);
+  --ev-on-gold: #231c11;
+
+  /* Sage — verified / trust */
+  --ev-sage: #9bab74;
+  --ev-sage-text: #aebd85;
+  --ev-sage-bg: rgba(155, 171, 116, 0.15);
+  --ev-on-sage: #1c2113;
+
+  /* Rose/plum — intimate / social (Single of the Week) */
+  --ev-rose: #c08aa0;
+  --ev-rose-text: #d3a3b6;
+  --ev-rose-bg: rgba(192, 138, 160, 0.15);
+  --ev-on-rose: #231016;
+
+  --ev-avatar: linear-gradient(135deg, #3c332a, #2a241d);
+
+  /* Type families (wired to next/font in layout.tsx) */
+  --ev-serif: var(--font-newsreader), Georgia, serif;
+  --ev-sans: var(--font-hanken), system-ui, sans-serif;
+
+  /* Radius scale */
+  --ev-r-pill: 20px;
+  --ev-r-input: 13px;
+  --ev-r-card: 18px;
+  --ev-r-card-lg: 22px;
+  --ev-r-sheet: 26px;
+  --ev-r-phone: 46px;
+
+  /* Spacing scale */
+  --ev-s-1: 4px;  --ev-s-2: 8px;  --ev-s-3: 11px; --ev-s-4: 14px;
+  --ev-s-5: 16px; --ev-s-6: 18px; --ev-s-7: 22px; --ev-s-8: 26px;
+
+  /* Shadows */
+  --ev-shadow-gold: 0 8px 20px -6px rgba(201, 164, 92, 0.7);
+  --ev-shadow-sheet: 0 -20px 50px -20px rgba(0, 0, 0, 0.7);
+  --ev-shadow-phone: 0 40px 90px -40px rgba(0, 0, 0, 0.9);
+  --ev-scrim: rgba(8, 6, 5, 0.62);
+
+  --ev-ease-sheet: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --ev-locked-tile: repeating-linear-gradient(45deg, #2a241d, #2a241d 7px, #242019 7px, #242019 14px);
+  --ev-locked-card: repeating-linear-gradient(45deg, #221d18, #221d18 10px, #1f1a15 10px, #1f1a15 20px);
+
+  /* App frame: north-star mobile width centered on desktop */
+  --ev-app-width: 430px;
+
+  /* =================================================================
+     shadcn/Tailwind HSL bridge — remapped to the Evyta palette
+     ================================================================= */
+  --background: 30 22% 7%;        /* ev-bg-0 */
+  --foreground: 41 43% 90%;       /* ev-text */
+  --card: 30 19% 11%;             /* ev-surface */
+  --card-foreground: 41 43% 90%;
+  --border: 40 35% 88% / 0.12;
+  --input: 30 19% 11%;
+  --ring: 38 50% 58%;             /* ev-gold */
+  --primary: 38 50% 58%;
+  --primary-foreground: 38 36% 11%;
+  --muted: 33 16% 12%;
+  --muted-foreground: 38 13% 56%;
+  --radius: 18px;
+
+  /* =================================================================
+     Legacy --lux-* aliases → remapped onto Evyta tokens so existing
+     screens adopt the new system without per-file rewrites.
+     ================================================================= */
+  --lux-bg: var(--ev-bg-0);
+  --lux-secondary: var(--ev-bg-1);
+  --lux-card: var(--ev-surface);
+  --lux-elevated: var(--ev-raise);
+  --lux-surface: var(--ev-surface-2);
+  --lux-bg-main: var(--ev-bg-0);
+  --lux-bg-surface: var(--ev-surface);
+  --lux-bg-elevated: var(--ev-raise);
+  --lux-highlight-soft: var(--ev-gold-bg);
+  --lux-highlight: var(--ev-gold-bg);
+  --lux-text: var(--ev-text);
+  --lux-text-primary: var(--ev-text);
+  --lux-text-secondary: var(--ev-text-2);
+  --lux-text-muted: var(--ev-text-3);
+  --lux-text-accent: var(--ev-gold-text);
+  --lux-border: var(--ev-line);
+  --lux-border-soft: var(--ev-line);
+  --lux-border-subtle: var(--ev-line);
+  --lux-border-default: var(--ev-line);
+  --lux-border-strong: var(--ev-line-2);
+  --lux-divider: var(--ev-line);
+  --lux-accent: var(--ev-gold);
+  --lux-accent-primary: var(--ev-gold);
+  --lux-accent-strong: var(--ev-gold-text);
+  --lux-accent-primary-hover: var(--ev-gold-text);
+  --lux-accent-deep: var(--ev-gold-text);
+  --lux-accent-soft: var(--ev-gold-bg);
+  --lux-accent-border: rgba(201, 164, 92, 0.4);
+  --lux-cta: var(--ev-gold);
+  --lux-cta-text: var(--ev-on-gold);
+  --lux-danger: var(--ev-rose-text);
+  --lux-danger-bg: var(--ev-rose-bg);
+  --lux-success: var(--ev-sage-text);
+  --lux-success-bg: var(--ev-sage-bg);
+  --lux-champagne: var(--ev-gold-text);
+  --lux-gold: var(--ev-gold);
+  --lux-taupe: var(--ev-text-3);
+  --lux-mauve: var(--ev-rose);
+
+  --member-shell-top-offset: calc(3.55rem + env(safe-area-inset-top));
+  --member-shell-top-offset-md: 3.55rem;
+  --member-shell-bottom-offset: calc(6rem + env(safe-area-inset-bottom));
 }
 
 @layer base {
@@ -66,16 +146,14 @@
 
   html {
     min-height: 100%;
-    background-color: var(--lux-bg);
+    background-color: var(--ev-bg-canvas);
   }
 
   body {
     min-height: 100vh;
-    background:
-      radial-gradient(circle at top left, rgba(189, 151, 100, 0.11), transparent 24%),
-      radial-gradient(circle at 82% 7%, rgba(122, 88, 74, 0.12), transparent 22%),
-      linear-gradient(180deg, #302722 0%, #241d19 38%, #1c1714 100%);
-    color: var(--lux-text);
+    background: var(--ev-bg-canvas);
+    color: var(--ev-text);
+    font-family: var(--ev-sans);
     @apply antialiased;
   }
 
@@ -84,8 +162,8 @@
   }
 
   ::selection {
-    background: rgba(124, 74, 110, 0.14);
-    color: var(--lux-text);
+    background: var(--ev-gold-bg);
+    color: var(--ev-text);
   }
 
   input,
@@ -509,6 +587,219 @@
   100% {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* =====================================================================
+   EVYTA NORTH-STAR COMPONENT CLASSES
+   Faithful equivalents of the approved prototype (styles.css).
+   ===================================================================== */
+@keyframes ev-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes ev-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes ev-spin { to { transform: rotate(360deg); } }
+
+@layer components {
+  /* Centered mobile app frame — on desktop, center the app width in the
+     espresso canvas; never widen the layout. */
+  .ev-app-frame {
+    width: 100%;
+    max-width: var(--ev-app-width);
+    margin-inline: auto;
+    background: var(--ev-bg-0);
+    min-height: 100vh;
+  }
+
+  .ev-display {
+    font-family: var(--ev-serif);
+    line-height: 1.1;
+  }
+
+  /* Buttons */
+  .ev-btn-primary {
+    background: var(--ev-gold);
+    color: var(--ev-on-gold);
+    border-radius: 15px;
+    border: none;
+    cursor: pointer;
+    @apply inline-flex items-center justify-center px-4 py-3.5 text-[15px] font-bold;
+  }
+
+  .ev-btn-secondary {
+    background: transparent;
+    color: var(--ev-text);
+    border: 1px solid var(--ev-line-2);
+    border-radius: 15px;
+    cursor: pointer;
+    @apply inline-flex items-center justify-center px-4 py-3 text-[15px] font-semibold;
+  }
+
+  .ev-btn-gold-outline {
+    background: transparent;
+    color: var(--ev-gold-text);
+    border: 1px solid var(--ev-gold);
+    border-radius: 13px;
+    cursor: pointer;
+    @apply inline-flex items-center justify-center px-4 py-3 text-sm font-semibold;
+  }
+
+  .ev-btn-sent {
+    background: var(--ev-sage-bg);
+    color: var(--ev-sage-text);
+    border: 1px solid rgba(155, 171, 116, 0.45);
+    border-radius: 15px;
+    @apply inline-flex items-center justify-center px-4 py-3 text-[15px] font-semibold;
+  }
+
+  /* Chips / pills */
+  .ev-chip {
+    border: 1px solid var(--ev-line-2);
+    color: var(--ev-text);
+    border-radius: var(--ev-r-pill);
+    @apply inline-flex items-center gap-2 px-3.5 py-2 text-[13px];
+  }
+
+  .ev-chip-on {
+    border-color: var(--ev-gold);
+    background: var(--ev-gold-bg);
+    color: var(--ev-gold-text);
+  }
+
+  .ev-label {
+    color: var(--ev-text-3);
+    @apply text-[11px] font-semibold tracking-[1px];
+  }
+
+  /* Inputs */
+  .ev-input,
+  .ev-textarea {
+    background: var(--ev-surface);
+    border: 1px solid var(--ev-line);
+    border-radius: var(--ev-r-input);
+    color: var(--ev-text);
+    font-family: inherit;
+    outline: none;
+    @apply w-full px-4 py-3.5 text-[15px];
+  }
+
+  .ev-textarea {
+    resize: none;
+    line-height: 1.5;
+    min-height: 84px;
+  }
+
+  .ev-input::placeholder,
+  .ev-textarea::placeholder {
+    color: var(--ev-text-3);
+  }
+
+  /* Cards + trust rail */
+  .ev-card {
+    background: var(--ev-surface);
+    border: 1px solid var(--ev-line);
+    border-radius: var(--ev-r-card);
+  }
+
+  .ev-rail-sage { box-shadow: inset 4px 0 0 0 var(--ev-sage); }
+  .ev-rail-gold { box-shadow: inset 4px 0 0 0 var(--ev-gold); }
+  .ev-rail-rose { box-shadow: inset 4px 0 0 0 var(--ev-rose); }
+  .ev-rail-neutral { box-shadow: inset 4px 0 0 0 var(--ev-line-2); }
+
+  /* Trust badges (order: Verified → Buddy → Connected) */
+  .ev-badge {
+    border-radius: var(--ev-r-pill);
+    @apply inline-flex items-center gap-1.5 py-[5px] pl-1.5 pr-3 text-[12.5px] font-semibold;
+  }
+
+  .ev-badge-verified {
+    background: var(--ev-sage-bg);
+    color: var(--ev-sage-text);
+    border: 1px solid rgba(155, 171, 116, 0.35);
+  }
+
+  .ev-badge-buddy {
+    background: var(--ev-gold-bg);
+    color: var(--ev-gold-text);
+    border: 1px solid rgba(201, 164, 92, 0.4);
+    font-weight: 700;
+  }
+
+  .ev-badge-connected {
+    background: rgba(245, 235, 215, 0.05);
+    color: var(--ev-text-2);
+    border: 1px solid var(--ev-line-2);
+  }
+
+  /* Bottom sheet */
+  .ev-sheet-scrim {
+    position: absolute;
+    inset: 0;
+    background: var(--ev-scrim);
+    animation: ev-fade 0.25s ease;
+  }
+
+  .ev-sheet {
+    background: var(--ev-bg-1);
+    border-top: 1px solid var(--ev-line-2);
+    border-radius: var(--ev-r-sheet) var(--ev-r-sheet) 0 0;
+    box-shadow: var(--ev-shadow-sheet);
+    animation: ev-up 0.32s var(--ev-ease-sheet);
+    @apply px-[22px] pb-[26px] pt-6;
+  }
+
+  .ev-sheet-grabber {
+    width: 42px;
+    height: 5px;
+    border-radius: 3px;
+    background: var(--ev-line-2);
+    @apply mx-auto;
+  }
+
+  /* Bottom navigation */
+  .ev-bottomnav {
+    border-top: 1px solid var(--ev-line);
+    background: linear-gradient(to top, var(--ev-bg-0) 72%, transparent);
+  }
+
+  .ev-navitem {
+    color: var(--ev-text-3);
+    @apply flex flex-col items-center gap-1 text-[11px];
+  }
+
+  .ev-navitem-active {
+    color: var(--ev-text);
+    font-weight: 600;
+  }
+
+  .ev-fab {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: var(--ev-gold);
+    color: var(--ev-on-gold);
+    box-shadow: var(--ev-shadow-gold);
+    @apply inline-flex items-center justify-center;
+  }
+
+  /* Locked / private-media textures */
+  .ev-tile-locked { background: var(--ev-locked-tile); }
+  .ev-card-locked {
+    background: var(--ev-locked-card);
+    border: 1px solid var(--ev-line-2);
+  }
+
+  /* Status / skeleton */
+  .ev-spinner {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid var(--ev-line-2);
+    border-top-color: var(--ev-gold);
+    animation: ev-spin 0.9s linear infinite;
+  }
+
+  .ev-skeleton {
+    background: var(--ev-surface-2);
+    border-radius: 6px;
   }
 }
 

@@ -55,7 +55,7 @@ export function HomeFeedCard({ post, viewerId, commentAction, authorActions, req
   const isSensitive = post.sensitivityStatus !== "NORMAL";
 
   return (
-    <article className={`${PREMIUM_SURFACE_STRONG} p-4 md:p-5 hover:-translate-y-0.5`} data-testid="home-feed-card">
+    <article className={`${PREMIUM_SURFACE_STRONG} ${post.group ? "ev-rail-gold" : "ev-rail-sage"} p-4 md:p-5 hover:-translate-y-0.5`} data-testid="home-feed-card">
       <div className="flex flex-col gap-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex items-start gap-3.5">
