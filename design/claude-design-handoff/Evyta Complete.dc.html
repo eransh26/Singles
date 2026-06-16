@@ -1,0 +1,1177 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400;1,6..72,500&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  *::-webkit-scrollbar{width:0;height:0}
+  body{margin:0;-webkit-font-smoothing:antialiased;background:#0c0a08}
+  input,textarea{font-family:inherit}
+  :root{
+    --bg0:#15110e; --bg1:#1d1813; --surface:#221d18; --surface2:#262019;
+    --line:rgba(245,235,215,.09); --line2:rgba(245,235,215,.15);
+    --text:#f0e8d8; --text2:#a99d8c; --text3:#8d8473;
+    --gold:#c9a45c; --gold-t:#d8b873; --gold-bg:rgba(201,164,92,.16);
+    --sage:#9bab74; --sage-t:#aebd85; --sage-bg:rgba(155,171,116,.15);
+    --rose:#c08aa0; --rose-t:#d3a3b6; --rose-bg:rgba(192,138,160,.15);
+    --av:linear-gradient(135deg,#3c332a,#2a241d);
+    --serif:'Newsreader',serif; --sans:'Hanken Grotesk',sans-serif;
+  }
+  [data-ev-theme="light"]{
+    --bg0:#efe7d6; --bg1:#f4ecde; --surface:#fbf5ea; --surface2:#f6eee0;
+    --line:rgba(60,45,28,.12); --line2:rgba(60,45,28,.2);
+    --text:#2c241b; --text2:#6f6556; --text3:#938775;
+    --gold:#a87f2e; --gold-t:#8a6722; --gold-bg:rgba(168,127,46,.14);
+    --sage:#6f7d4e; --sage-t:#566237; --sage-bg:rgba(111,125,78,.16);
+    --rose:#a6657f; --rose-t:#8a4d66; --rose-bg:rgba(166,101,127,.14);
+    --av:linear-gradient(135deg,#e2d7c1,#d2c4aa);
+  }
+  @keyframes evUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+  @keyframes evFade{from{opacity:0}to{opacity:1}}
+  @keyframes evSpin{to{transform:rotate(360deg)}}
+</style>
+</helmet>
+
+<template id="__bundler_thumbnail">
+  <svg viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg">
+    <rect width="240" height="240" fill="#15110e"/>
+    <circle cx="120" cy="120" r="58" fill="none" stroke="#5a4e3a" stroke-width="2"/>
+    <circle cx="120" cy="120" r="38" fill="none" stroke="#7a6a4c" stroke-width="2"/>
+    <circle cx="120" cy="120" r="20" fill="none" stroke="#c9a45c" stroke-width="2.5"/>
+    <circle cx="120" cy="120" r="9" fill="#c9a45c"/>
+  </svg>
+</template>
+
+<div style="min-height:100vh;background:radial-gradient(130% 60% at 50% -5%,#241d16,#0c0a08 60%);display:flex;justify-content:center;align-items:flex-start;gap:30px;padding:34px 24px 70px;font-family:var(--sans)">
+
+  <!-- DEV NAV -->
+  <div style="flex:none;width:166px;position:sticky;top:34px;max-height:calc(100vh - 68px);overflow-y:auto;display:flex;flex-direction:column;gap:5px;color:#cbbfa9">
+    <div style="font-family:var(--serif);font-size:21px;color:#f3ecdf;margin-bottom:2px">Evyta</div>
+    <div style="font-size:10px;letter-spacing:1.2px;color:#7d7464;margin-bottom:4px">PROTOTYPE · 30 SCREENS</div>
+
+    <div style="font-size:9.5px;letter-spacing:1.4px;color:#6f675b;margin:6px 0 1px">ENTRY</div>
+    <span onClick="{{ go_splash }}" style="cursor:pointer;font-size:12.5px;padding:7px 11px;border-radius:9px;background:{{ nav_splash }};border:1px solid rgba(245,235,215,.07)">Splash</span>
+    <span onClick="{{ go_auth }}" style="cursor:pointer;font-size:12.5px;padding:7px 11px;border-radius:9px;background:{{ nav_auth }};border:1px solid rgba(245,235,215,.07)">Join / Sign in</span>
+    <span onClick="{{ go_verify }}" style="cursor:pointer;font-size:12.5px;padding:7px 11px;border-radius:9px;background:{{ nav_verify }};border:1px solid rgba(245,235,215,.07)">Verify email</span>
+    <span onClick="{{ go_first }}" style="cursor:pointer;font-size:12.5px;padding:7px 11px;border-radius:9px;background:{{ nav_first }};border:1px solid rgba(245,235,215,.07)">First action</span>
+
+    <div style="font-size:9.5px;letter-spacing:1.4px;color:#6f675b;margin:8px 0 1px">CORE LOOP</div>
+    <span onClick="{{ go_home }}" style="cursor:pointer;font-size:12.5px;padding:7px 11px;border-radius:9px;background:{{ nav_home }};border:1px solid rgba(245,235,215,.07)">Home feed</span>
+    <span onClick="{{ go_thread }}" style="cursor:pointer;font-size:12.5px;padding:7px 11px;border-radius:9px;background:{{ nav_thread }};border:1px solid rgba(245,235,215,.07)">Post thread</span>
+    <span onClick="{{ go_explore }}" style="cursor:pointer;font-size:12.5px;padding:7px 11px;border-radius:9px;background:{{ nav_explore }};border:1px solid rgba(245,235,215,.07)">Explore / Search</span>
+    <span onClick="{{ go_profile }}" style="cursor:pointer;font-size:12.5px;padding:7px 11px;border-radius:9px;background:{{ nav_profile }};border:1px solid rgba(245,235,215,.07)">Profile</span>
+    <span onClick="{{ go_settings }}" style="cursor:pointer;font-size:12.5px;padding:7px 11px;border-radius:9px;background:{{ nav_settings }};border:1px solid rgba(245,235,215,.07)">Edit / Settings</span>
+
+    <div style="font-size:9.5px;letter-spacing:1.4px;color:#6f675b;margin:8px 0 1px">CONNECT</div>
+    <span onClick="{{ go_requests }}" style="cursor:pointer;font-size:12.5px;padding:7px 11px;border-radius:9px;background:{{ nav_requests }};border:1px solid rgba(245,235,215,.07)">Chat requests</span>
+    <span onClick="{{ go_chats }}" style="cursor:pointer;font-size:12.5px;padding:7px 11px;border-radius:9px;background:{{ nav_chats }};border:1px solid rgba(245,235,215,.07)">Chats</span>
+    <span onClick="{{ go_convo }}" style="cursor:pointer;font-size:12.5px;padding:7px 11px;border-radius:9px;background:{{ nav_convo }};border:1px solid rgba(245,235,215,.07)">Conversation</span>
+    <span onClick="{{ go_buddy }}" style="cursor:pointer;font-size:12.5px;padding:7px 11px;border-radius:9px;background:{{ nav_buddy }};border:1px solid rgba(245,235,215,.07)">Buddy overview</span>
+    <span onClick="{{ go_buddyreq }}" style="cursor:pointer;font-size:12.5px;padding:7px 11px;border-radius:9px;background:{{ nav_buddyreq }};border:1px solid rgba(245,235,215,.07)">Buddy request</span>
+    <span onClick="{{ go_buddychat }}" style="cursor:pointer;font-size:12.5px;padding:7px 11px;border-radius:9px;background:{{ nav_buddychat }};border:1px solid rgba(245,235,215,.07)">Buddy chat</span>
+
+    <div style="font-size:9.5px;letter-spacing:1.4px;color:#6f675b;margin:8px 0 1px">DISCOVER</div>
+    <span onClick="{{ go_single }}" style="cursor:pointer;font-size:12.5px;padding:7px 11px;border-radius:9px;background:{{ nav_single }};border:1px solid rgba(245,235,215,.07)">Single of the Week</span>
+    <span onClick="{{ go_events }}" style="cursor:pointer;font-size:12.5px;padding:7px 11px;border-radius:9px;background:{{ nav_events }};border:1px solid rgba(245,235,215,.07)">Events &amp; plans</span>
+    <span onClick="{{ go_notifs }}" style="cursor:pointer;font-size:12.5px;padding:7px 11px;border-radius:9px;background:{{ nav_notifs }};border:1px solid rgba(245,235,215,.07)">Notifications</span>
+
+    <div style="font-size:9.5px;letter-spacing:1.4px;color:#6f675b;margin:8px 0 1px">STATES</div>
+    <span onClick="{{ go_locked }}" style="cursor:pointer;font-size:12.5px;padding:7px 11px;border-radius:9px;background:{{ nav_locked }};border:1px solid rgba(245,235,215,.07)">Locked / gated</span>
+    <span onClick="{{ go_empty }}" style="cursor:pointer;font-size:12.5px;padding:7px 11px;border-radius:9px;background:{{ nav_empty }};border:1px solid rgba(245,235,215,.07)">Empty</span>
+    <span onClick="{{ go_loading }}" style="cursor:pointer;font-size:12.5px;padding:7px 11px;border-radius:9px;background:{{ nav_loading }};border:1px solid rgba(245,235,215,.07)">Loading</span>
+    <span onClick="{{ go_status }}" style="cursor:pointer;font-size:12.5px;padding:7px 11px;border-radius:9px;background:{{ nav_status }};border:1px solid rgba(245,235,215,.07)">Error / Success</span>
+    <span onClick="{{ go_soon }}" style="cursor:pointer;font-size:12.5px;padding:7px 11px;border-radius:9px;background:{{ nav_soon }};border:1px solid rgba(245,235,215,.07)">Coming soon</span>
+    <span onClick="{{ go_admin }}" style="cursor:pointer;font-size:12.5px;padding:7px 11px;border-radius:9px;background:{{ nav_admin }};border:1px solid rgba(245,235,215,.07)">Admin shell</span>
+
+    <div style="height:1px;background:rgba(245,235,215,.1);margin:8px 0"></div>
+    <span onClick="{{ toggleTheme }}" style="cursor:pointer;font-size:12.5px;padding:8px 11px;border-radius:9px;border:1px solid var(--gold);color:var(--gold-t);text-align:center">Theme · {{ themeLabel }}</span>
+  </div>
+
+  <!-- PHONE -->
+  <div data-ev-theme="{{ theme }}" style="flex:none;width:390px;height:844px;border-radius:46px;background:var(--bg0);border:1px solid rgba(245,235,215,.12);box-shadow:0 40px 90px -40px rgba(0,0,0,.9),0 0 0 8px #0c0a08;position:relative;overflow:hidden;display:flex;flex-direction:column;color:var(--text)">
+
+    <!-- status bar -->
+    <div style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:14px 26px 6px;font-size:13px;color:var(--text2);font-weight:600;z-index:5">
+      <span>9:41</span>
+      <span style="display:flex;gap:6px;align-items:center;font-size:12px">&#9679;&#9679;&#9679;&#9679; &nbsp;5G&nbsp; &#9636;</span>
+    </div>
+
+    <!-- screen area -->
+    <div style="flex:1;min-height:0;position:relative;display:flex;flex-direction:column">
+
+      <!-- ============ SPLASH ============ -->
+      <sc-if value="{{ isSplash }}" hint-placeholder-val="{{ true }}">
+        <div style="flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:30px 30px 38px;text-align:center;position:relative">
+          <div style="position:absolute;inset:0;background:radial-gradient(circle at 50% 34%,rgba(201,164,92,.16),transparent 58%)"></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:34px;position:relative">
+            <div style="position:relative;width:132px;height:132px">
+              <div style="position:absolute;inset:0;border:1px solid var(--line2);border-radius:50%"></div>
+              <div style="position:absolute;inset:24px;border:1px solid var(--line2);border-radius:50%"></div>
+              <div style="position:absolute;inset:46px;border:1px solid var(--gold);border-radius:50%"></div>
+              <div style="position:absolute;inset:60px;background:var(--gold);border-radius:50%;box-shadow:0 0 26px -2px rgba(201,164,92,.6)"></div>
+            </div>
+            <div>
+              <div style="font-family:var(--serif);font-size:54px;letter-spacing:1px;color:var(--text);line-height:1">Evyta</div>
+              <div style="width:46px;height:2px;background:var(--gold);margin:14px auto 16px"></div>
+              <div style="font-family:var(--serif);font-style:italic;font-size:18px;color:var(--text2)">See the circle, not the noise.</div>
+            </div>
+            <div style="font-size:14.5px;line-height:1.65;color:var(--text2);max-width:266px">A private circle for intentional connection. Discover people worth knowing &mdash; quietly, and only on your terms.</div>
+          </div>
+          <div style="width:100%;display:flex;flex-direction:column;gap:15px;position:relative">
+            <div onClick="{{ goAuth }}" style="cursor:pointer;background:var(--gold);color:#231c11;border-radius:16px;padding:16px;text-align:center;font-size:16.5px;font-weight:700;box-shadow:0 12px 28px -10px rgba(201,164,92,.6)">I Want In</div>
+            <div style="font-size:14px;color:var(--text2)">Already inside? <span onClick="{{ goAuth }}" style="color:var(--gold-t);cursor:pointer;font-weight:600">Sign in</span></div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ============ AUTH ============ -->
+      <sc-if value="{{ isAuth }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;padding:6px 26px 30px;gap:20px">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <span onClick="{{ goSplash }}" style="cursor:pointer;width:38px;height:38px;border-radius:50%;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--text2)">&#8249;</span>
+            <span style="font-family:var(--serif);font-size:20px">Evyta</span>
+            <span style="width:38px"></span>
+          </div>
+          <div>
+            <div style="font-family:var(--serif);font-size:28px;line-height:1.15">{{ authTitle }}</div>
+            <div style="font-size:14px;color:var(--text2);margin-top:6px;line-height:1.5">{{ authSub }}</div>
+          </div>
+          <div style="display:flex;gap:4px;padding:4px;background:var(--surface);border:1px solid var(--line);border-radius:14px">
+            <span onClick="{{ setRegister }}" style="cursor:pointer;flex:1;text-align:center;padding:10px;border-radius:11px;font-size:14px;font-weight:600;background:{{ regBg }};color:{{ regColor }}">Request access</span>
+            <span onClick="{{ setLogin }}" style="cursor:pointer;flex:1;text-align:center;padding:10px;border-radius:11px;font-size:14px;font-weight:600;background:{{ logBg }};color:{{ logColor }}">Sign in</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <sc-if value="{{ isRegister }}" hint-placeholder-val="{{ true }}">
+              <label style="display:flex;flex-direction:column;gap:7px"><span style="font-size:13px;color:var(--text2)">Your name</span><input placeholder="How should we address you?" style="background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:13px 15px;color:var(--text);font-size:15px;outline:none"/></label>
+            </sc-if>
+            <label style="display:flex;flex-direction:column;gap:7px"><span style="font-size:13px;color:var(--text2)">Email</span><input type="email" placeholder="you@email.com" style="background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:13px 15px;color:var(--text);font-size:15px;outline:none"/></label>
+            <label style="display:flex;flex-direction:column;gap:7px"><span style="font-size:13px;color:var(--text2)">Password</span><input type="password" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;" style="background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:13px 15px;color:var(--text);font-size:15px;outline:none"/></label>
+          </div>
+          <div onClick="{{ authPrimary }}" style="cursor:pointer;background:var(--gold);color:#231c11;border-radius:15px;padding:15px;text-align:center;font-size:16px;font-weight:700">{{ authCta }}</div>
+          <div style="display:flex;gap:9px;align-items:center;font-size:12.5px;color:var(--text2);background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:12px 14px"><span style="font-size:14px">&#128274;</span>Private by design. Your activity is never shown publicly.</div>
+          <sc-if value="{{ isRegister }}" hint-placeholder-val="{{ true }}">
+            <div style="font-size:12px;color:var(--text3);text-align:center;line-height:1.5">Evyta is in a quiet, invitation-led alpha. Access opens gradually.</div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <!-- ============ VERIFY ============ -->
+      <sc-if value="{{ isVerify }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:1;min-height:0;display:flex;flex-direction:column;padding:6px 26px 30px;gap:18px">
+          <div style="display:flex;align-items:center"><span onClick="{{ goAuth }}" style="cursor:pointer;width:38px;height:38px;border-radius:50%;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--text2)">&#8249;</span></div>
+          <div style="width:52px;height:52px;border-radius:50%;background:var(--gold-bg);color:var(--gold-t);display:flex;align-items:center;justify-content:center;font-size:24px">&#9993;</div>
+          <div style="font-family:var(--serif);font-size:28px;line-height:1.15">Check your inbox</div>
+          <div style="font-size:15px;color:var(--text2);line-height:1.55">We sent a secure link to <span style="color:var(--text)">a&bull;&bull;&bull;&bull;@mail.com</span>. Tap it to confirm your email &mdash; no codes to copy.</div>
+          <div style="display:flex;align-items:center;gap:11px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 15px">
+            <span style="width:20px;height:20px;border-radius:50%;border:2px solid var(--line2);border-top-color:var(--gold);animation:evSpin .9s linear infinite;flex:none"></span>
+            <span style="font-size:13.5px;color:var(--text2)">Waiting for you to confirm&hellip;</span>
+          </div>
+          <div onClick="{{ goFirst }}" style="cursor:pointer;background:var(--gold);color:#231c11;border-radius:15px;padding:15px;text-align:center;font-size:16px;font-weight:700;margin-top:2px">Open email app</div>
+          <div style="display:flex;gap:11px">
+            <span style="cursor:pointer;flex:1;text-align:center;padding:13px;border:1px solid var(--line2);border-radius:14px;font-size:14px;color:var(--text)">Resend verification link</span>
+            <span onClick="{{ goAuth }}" style="cursor:pointer;flex:none;padding:13px 16px;border:1px solid var(--line2);border-radius:14px;font-size:14px;color:var(--text2)">Use another email</span>
+          </div>
+          <div style="text-align:center;font-size:12.5px;color:var(--text3)">A confirmation link keeps your account secure.</div>
+          <div style="margin-top:auto;display:flex;align-items:center;gap:10px;border:1px dashed var(--line2);border-radius:14px;padding:13px">
+            <span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:4px 10px;border-radius:20px;background:var(--sage-bg);color:var(--sage-t)"><span style="width:16px;height:16px;border-radius:50%;border:1.3px solid var(--sage);display:inline-flex;align-items:center;justify-content:center;font-size:8px">&#10003;</span>Connected</span>
+            <span style="font-size:13px;color:var(--text2);line-height:1.4">Confirming your email connects your account.</span>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ============ FIRST ACTION ============ -->
+      <sc-if value="{{ isFirst }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:1;min-height:0;display:flex;flex-direction:column;padding:6px 26px 30px;gap:16px">
+          <div style="display:flex;align-items:center;justify-content:space-between"><span style="font-family:var(--serif);font-size:20px">Evyta</span><span onClick="{{ goHome }}" style="cursor:pointer;font-size:14px;color:var(--text2)">Skip</span></div>
+          <div style="font-family:var(--serif);font-size:27px;line-height:1.15">Set your first intention</div>
+          <div style="font-size:14.5px;color:var(--text2);line-height:1.55">Tell the circle what you&rsquo;re open to &mdash; quietly. You choose who can see more.</div>
+          <div style="background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:15px;min-height:96px;color:var(--text3);font-size:16px">What are you looking for tonight?</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <span style="font-size:13px;padding:8px 14px;border:1px solid var(--gold);background:var(--gold-bg);color:var(--gold-t);border-radius:20px">A calm conversation</span>
+            <span style="font-size:13px;padding:8px 14px;border:1px solid var(--line2);color:var(--text2);border-radius:20px">A plan this week</span>
+            <span style="font-size:13px;padding:8px 14px;border:1px solid var(--line2);color:var(--text2);border-radius:20px">Meeting a Buddy</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:9px;font-size:14px;color:var(--text2);border:1px solid var(--line);border-radius:13px;padding:12px 15px"><span style="font-size:15px">&#128065;</span>Visible to <span style="color:var(--text);font-weight:600">Trusted members</span><span style="margin-left:auto;color:var(--gold-t)">&#9662;</span></div>
+          <div style="margin-top:auto;display:flex;flex-direction:column;gap:11px">
+            <div onClick="{{ goHome }}" style="cursor:pointer;background:var(--gold);color:#231c11;border-radius:15px;padding:15px;text-align:center;font-size:16px;font-weight:700">Share intention</div>
+            <div onClick="{{ goHome }}" style="cursor:pointer;text-align:center;font-size:15px;color:var(--text2)">I&rsquo;ll do this later</div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ============ HOME ============ -->
+      <sc-if value="{{ isHome }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:1;min-height:0;display:flex;flex-direction:column">
+          <div style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:2px 20px 12px">
+            <span style="font-family:var(--serif);font-size:28px;letter-spacing:.4px">Evyta</span>
+            <div style="display:flex;gap:8px">
+              <span onClick="{{ go_explore }}" style="cursor:pointer;width:38px;height:38px;border-radius:50%;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--text2)">&#9906;</span>
+              <span onClick="{{ go_notifs }}" style="cursor:pointer;width:38px;height:38px;border-radius:50%;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--text2);position:relative">&#9711;<span style="position:absolute;top:8px;right:9px;width:7px;height:7px;border-radius:50%;background:var(--rose);border:1.5px solid var(--bg0)"></span></span>
+            </div>
+          </div>
+          <div style="flex:none;display:flex;gap:26px;padding:0 22px 12px;border-bottom:1px solid var(--line);white-space:nowrap">
+            <span onClick="{{ tabFor }}" style="cursor:pointer;font-size:15px;font-weight:600;padding-bottom:11px;color:{{ cFor }};border-bottom:2px solid {{ bFor }};margin-bottom:-1px">For you</span>
+            <span onClick="{{ tabPlans }}" style="cursor:pointer;font-size:15px;font-weight:600;padding-bottom:11px;color:{{ cPlans }};border-bottom:2px solid {{ bPlans }};margin-bottom:-1px">Plans</span>
+            <span onClick="{{ tabPeople }}" style="cursor:pointer;font-size:15px;font-weight:600;padding-bottom:11px;color:{{ cPeople }};border-bottom:2px solid {{ bPeople }};margin-bottom:-1px">People</span>
+          </div>
+          <div style="flex:1;min-height:0;overflow-y:auto;padding:16px 16px 96px;display:flex;flex-direction:column;gap:15px">
+            <div onClick="{{ openComposer }}" style="cursor:pointer;display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:13px 15px">
+              <span style="width:36px;height:36px;border-radius:50%;background:var(--av);flex:none"></span>
+              <span style="flex:1;font-size:15px;color:var(--text3)">Share a quiet signal&hellip;</span>
+              <span style="font-size:12px;color:var(--gold-t);border:1px solid var(--gold);border-radius:16px;padding:5px 12px;font-weight:600">Post</span>
+            </div>
+            <div style="display:{{ dPeople }};border:1px solid var(--line);border-radius:20px;overflow:hidden;background:var(--surface)">
+              <div style="display:flex">
+                <div style="width:4px;background:var(--sage);flex:none"></div>
+                <div style="flex:1;padding:16px;display:flex;flex-direction:column;gap:12px">
+                  <div style="display:flex;align-items:center;gap:11px">
+                    <span style="width:44px;height:44px;border-radius:50%;background:var(--av);flex:none"></span>
+                    <div style="flex:1;min-width:0">
+                      <div style="display:flex;align-items:center;gap:6px;font-size:15px;font-weight:600">Maya R.
+                        <span style="width:18px;height:18px;border-radius:50%;border:1.4px solid var(--sage);color:var(--sage-t);display:inline-flex;align-items:center;justify-content:center;font-size:9px">&#9670;</span>
+                        <span style="width:20px;height:20px;border-radius:50%;background:var(--gold);color:#231c11;display:inline-flex;align-items:center;justify-content:center;font-size:10px;box-shadow:0 2px 8px -1px rgba(201,164,92,.55)">&#10022;</span>
+                        <span style="width:18px;height:18px;border-radius:50%;border:1.4px solid var(--line2);color:var(--text2);display:inline-flex;align-items:center;justify-content:center;font-size:9px">&#10003;</span>
+                      </div>
+                      <div style="font-size:12px;color:var(--text3);margin-top:2px">Verified · 2h ago</div>
+                    </div>
+                    <span style="font-size:10px;letter-spacing:.5px;padding:3px 9px;border-radius:20px;border:1px solid var(--line2);color:var(--text2);font-weight:600">INTENT</span>
+                  </div>
+                  <div style="font-size:15.5px;line-height:1.55;color:var(--text)">Open to a slow Sunday walk and good conversation. No agenda, no rush &mdash; just somewhere unhurried.</div>
+                  <div style="display:flex;align-items:center;gap:16px;border-top:1px solid var(--line);padding-top:12px;font-size:13.5px;color:var(--text2)">
+                    <span onClick="{{ react1 }}" style="cursor:pointer;display:flex;align-items:center;gap:6px;color:{{ col1 }};font-weight:500">{{ g1 }} Resonate · {{ n1 }}</span>
+                    <span onClick="{{ go_thread }}" style="cursor:pointer">&#8617; Reply</span>
+                    <span onClick="{{ connect1 }}" style="cursor:pointer;margin-left:auto;font-size:12.5px;font-weight:600;border-radius:18px;padding:6px 15px;background:{{ u1bg }};border:1px solid {{ u1border }};color:{{ u1color }}">{{ u1label }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div style="display:{{ dPlans }};border:1px solid var(--line);border-radius:20px;overflow:hidden;background:var(--surface)">
+              <div style="display:flex">
+                <div style="width:4px;background:var(--gold);flex:none"></div>
+                <div style="flex:1;padding:16px;display:flex;flex-direction:column;gap:11px">
+                  <div style="display:flex;align-items:center;justify-content:space-between">
+                    <span style="font-size:10px;letter-spacing:.6px;padding:4px 10px;border-radius:20px;background:var(--gold-bg);color:var(--gold-t);font-weight:600">PLAN · TONIGHT</span>
+                    <span style="font-size:12px;color:var(--text3)">Connected members</span>
+                  </div>
+                  <div style="font-family:var(--serif);font-size:21px;line-height:1.2">Quiet rooftop drinks</div>
+                  <div style="font-size:13.5px;color:var(--text2)">Soho · 8:00pm &mdash; small, unhurried, easy to leave early.</div>
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-top:2px">
+                    <div style="display:flex;align-items:center;gap:9px">
+                      <div style="display:flex">
+                        <span style="width:30px;height:30px;border-radius:50%;background:var(--av);border:2px solid var(--surface)"></span>
+                        <span style="width:30px;height:30px;border-radius:50%;background:var(--av);border:2px solid var(--surface);margin-left:-10px"></span>
+                        <span style="width:30px;height:30px;border-radius:50%;background:var(--av);border:2px solid var(--surface);margin-left:-10px"></span>
+                      </div>
+                      <span style="font-size:12.5px;color:var(--text2)">4 going</span>
+                    </div>
+                    <span onClick="{{ joinEvent }}" style="cursor:pointer;font-size:13px;font-weight:600;border-radius:18px;padding:8px 17px;background:{{ ejBg }};border:1px solid {{ ejBorder }};color:{{ ejColor }}">{{ ejLabel }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div style="display:{{ dPeople }};flex-direction:column;border:1px solid var(--rose);border-radius:22px;overflow:hidden;background:linear-gradient(180deg,rgba(192,138,160,.12),rgba(192,138,160,.03))">
+              <div style="padding:16px 16px 18px;display:flex;flex-direction:column;gap:13px">
+                <span style="align-self:flex-start;font-size:10px;letter-spacing:.7px;padding:4px 11px;border-radius:20px;background:var(--rose);color:#231016;font-weight:700">&#10022; SINGLE OF THE WEEK</span>
+                <div style="display:flex;align-items:center;gap:14px">
+                  <span style="width:66px;height:66px;border-radius:50%;background:var(--av);border:2px solid var(--rose);flex:none"></span>
+                  <div>
+                    <div style="font-family:var(--serif);font-size:23px;line-height:1.1;display:flex;align-items:center;gap:7px">Elena V. <span style="width:18px;height:18px;border-radius:50%;border:1.4px solid var(--sage);color:var(--sage-t);display:inline-flex;align-items:center;justify-content:center;font-size:9px">&#9670;</span></div>
+                    <div style="font-size:13px;color:var(--text2);margin-top:4px">Verified · 34 · London</div>
+                  </div>
+                </div>
+                <div style="font-size:15px;line-height:1.55;color:var(--text);font-style:italic;font-family:var(--serif)">&ldquo;Drawn to slow mornings, real talk, and people who actually mean it.&rdquo;</div>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-top:2px">
+                  <span style="font-size:12px;color:var(--text3)">Featured for 6 more days · limited</span>
+                  <span onClick="{{ goProfile }}" style="font-size:13px;font-weight:600;border-radius:18px;padding:8px 17px;border:1px solid var(--rose);color:var(--rose-t);cursor:pointer">View profile</span>
+                </div>
+              </div>
+            </div>
+            <div style="display:{{ dPeople }};border:1px solid var(--line);border-radius:20px;overflow:hidden;background:var(--surface)">
+              <div style="display:flex">
+                <div style="width:4px;background:var(--line2);flex:none"></div>
+                <div style="flex:1;padding:16px;display:flex;flex-direction:column;gap:12px">
+                  <div style="display:flex;align-items:center;gap:11px">
+                    <span style="width:44px;height:44px;border-radius:50%;background:var(--av);flex:none"></span>
+                    <div style="flex:1;min-width:0">
+                      <div style="display:flex;align-items:center;gap:6px;font-size:15px;font-weight:600">Daniel K. <span style="width:18px;height:18px;border-radius:50%;border:1.4px solid var(--line2);color:var(--text2);display:inline-flex;align-items:center;justify-content:center;font-size:9px">&#10003;</span></div>
+                      <div style="font-size:12px;color:var(--text3);margin-top:2px">Connected · 5h ago</div>
+                    </div>
+                    <span style="font-size:10px;letter-spacing:.5px;padding:3px 9px;border-radius:20px;border:1px solid var(--line2);color:var(--text2);font-weight:600">INTENT</span>
+                  </div>
+                  <div style="font-size:15.5px;line-height:1.55;color:var(--text)">New to the city. Hoping to find one or two steady people to share quiet evenings with.</div>
+                  <div style="display:flex;align-items:center;gap:16px;border-top:1px solid var(--line);padding-top:12px;font-size:13.5px;color:var(--text2)">
+                    <span onClick="{{ react2 }}" style="cursor:pointer;display:flex;align-items:center;gap:6px;color:{{ col2 }};font-weight:500">{{ g2 }} Resonate · {{ n2 }}</span>
+                    <span onClick="{{ go_thread }}" style="cursor:pointer">&#8617; Reply</span>
+                    <span onClick="{{ connect2 }}" style="cursor:pointer;margin-left:auto;font-size:12.5px;font-weight:600;border-radius:18px;padding:6px 15px;background:{{ u2bg }};border:1px solid {{ u2border }};color:{{ u2color }}">{{ u2label }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div style="text-align:center;font-size:12.5px;color:var(--text3);padding:8px 0 4px">You&rsquo;re all caught up · the circle stays quiet on purpose</div>
+          </div>
+          <div style="flex:none;position:absolute;left:0;right:0;bottom:0;display:flex;align-items:flex-end;justify-content:space-around;padding:11px 16px 26px;background:linear-gradient(to top,var(--bg0) 72%,transparent);border-top:1px solid var(--line)">
+            <span style="display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--text);font-weight:600"><span style="font-size:19px">&#8962;</span>Home</span>
+            <span onClick="{{ go_explore }}" style="cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--text3)"><span style="font-size:19px">&#9906;</span>Explore</span>
+            <span onClick="{{ openComposer }}" style="cursor:pointer;width:52px;height:52px;border-radius:50%;background:var(--gold);color:#231c11;display:flex;align-items:center;justify-content:center;font-size:30px;margin-bottom:6px;box-shadow:0 8px 20px -6px rgba(201,164,92,.7)">+</span>
+            <span onClick="{{ go_chats }}" style="cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--text3)"><span style="font-size:19px">&#9863;</span>Chats</span>
+            <span onClick="{{ goProfile }}" style="cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--text3)"><span style="width:21px;height:21px;border-radius:50%;background:var(--av)"></span>You</span>
+          </div>
+          <sc-if value="{{ composerOpen }}" hint-placeholder-val="{{ false }}">
+            <div style="position:absolute;inset:0;z-index:20">
+              <div onClick="{{ closeComposer }}" style="position:absolute;inset:0;background:rgba(8,6,5,.6);animation:evFade .25s ease"></div>
+              <div style="position:absolute;left:0;right:0;bottom:0;background:var(--bg1);border-top:1px solid var(--line2);border-radius:26px 26px 0 0;padding:14px 22px 26px;display:flex;flex-direction:column;gap:16px;box-shadow:0 -20px 50px -20px rgba(0,0,0,.7);animation:evUp .32s cubic-bezier(.22,1,.36,1)">
+                <div style="display:flex;align-items:center;justify-content:space-between">
+                  <span style="width:42px;height:5px;border-radius:3px;background:var(--line2);position:absolute;left:50%;transform:translateX(-50%);top:9px"></span>
+                  <span style="font-family:var(--serif);font-size:21px;margin-top:6px">New signal</span>
+                  <span onClick="{{ closeComposer }}" style="cursor:pointer;width:34px;height:34px;border-radius:50%;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--text2);margin-top:6px">&times;</span>
+                </div>
+                <div style="display:flex;gap:11px;align-items:flex-start">
+                  <span style="width:40px;height:40px;border-radius:50%;background:var(--av);flex:none"></span>
+                  <textarea placeholder="What are you looking for tonight?" style="flex:1;min-height:84px;resize:none;background:transparent;border:none;outline:none;color:var(--text);font-size:16px;line-height:1.5;padding-top:8px"></textarea>
+                </div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap">
+                  <span style="font-size:12.5px;padding:7px 13px;border:1px solid var(--gold);background:var(--gold-bg);color:var(--gold-t);border-radius:20px">A calm conversation</span>
+                  <span style="font-size:12.5px;padding:7px 13px;border:1px solid var(--line2);color:var(--text2);border-radius:20px">A plan this week</span>
+                  <span style="font-size:12.5px;padding:7px 13px;border:1px solid var(--line2);color:var(--text2);border-radius:20px">Meeting a Buddy</span>
+                </div>
+                <div onClick="{{ cycleAudience }}" style="cursor:pointer;display:flex;align-items:center;gap:9px;font-size:14px;color:var(--text2);border:1px solid var(--line);border-radius:13px;padding:12px 15px"><span style="font-size:15px">&#128065;</span>Visible to <span style="color:var(--text);font-weight:600">{{ audience }}</span><span style="margin-left:auto;color:var(--gold-t)">&#8645;</span></div>
+                <div style="display:flex;gap:11px">
+                  <span onClick="{{ closeComposer }}" style="cursor:pointer;flex:none;padding:14px 20px;border:1px solid var(--line2);border-radius:15px;font-size:15px;color:var(--text2)">Cancel</span>
+                  <span onClick="{{ closeComposer }}" style="cursor:pointer;flex:1;text-align:center;padding:14px;background:var(--gold);color:#231c11;border-radius:15px;font-size:15.5px;font-weight:700">Share signal</span>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <!-- ============ PROFILE ============ -->
+      <sc-if value="{{ isProfile }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:1;min-height:0;display:flex;flex-direction:column">
+          <div style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:0 18px 8px"><span onClick="{{ goHome }}" style="cursor:pointer;width:38px;height:38px;border-radius:50%;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--text2)">&#8249;</span><span style="font-size:14px;color:var(--text2);font-weight:600">Profile</span><span onClick="{{ go_settings }}" style="cursor:pointer;width:38px;height:38px;border-radius:50%;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--text2)">&#8943;</span></div>
+          <div style="flex:1;min-height:0;overflow-y:auto;padding:8px 18px 110px;display:flex;flex-direction:column;gap:18px">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:13px;text-align:center">
+              <div style="position:relative"><span style="width:104px;height:104px;border-radius:50%;background:var(--av);display:block;border:1px solid var(--line2)"></span><span style="position:absolute;bottom:4px;right:4px;width:18px;height:18px;border-radius:50%;background:var(--sage);border:3px solid var(--bg0)"></span></div>
+              <div><div style="font-family:var(--serif);font-size:30px;line-height:1.05">Maya R.</div><div style="font-size:13.5px;color:var(--text2);margin-top:5px">32 · London · active recently</div></div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
+                <span style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;padding:5px 12px 5px 6px;border-radius:20px;background:var(--sage-bg);color:var(--sage-t);border:1px solid rgba(155,171,116,.35)"><span style="width:18px;height:18px;border-radius:50%;border:1.4px solid var(--sage);display:inline-flex;align-items:center;justify-content:center;font-size:9px">&#9670;</span>Verified</span>
+                <span style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;padding:5px 12px 5px 5px;border-radius:20px;background:var(--gold-bg);color:var(--gold-t);border:1px solid rgba(201,164,92,.4)"><span style="width:19px;height:19px;border-radius:50%;background:var(--gold);color:#231c11;display:inline-flex;align-items:center;justify-content:center;font-size:10px;box-shadow:0 2px 7px -1px rgba(201,164,92,.5)">&#10022;</span>Buddy</span>
+                <span style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;padding:5px 12px 5px 6px;border-radius:20px;background:rgba(245,235,215,.05);color:var(--text2);border:1px solid var(--line2)"><span style="width:18px;height:18px;border-radius:50%;border:1.4px solid var(--line2);display:inline-flex;align-items:center;justify-content:center;font-size:9px">&#10003;</span>Connected</span>
+              </div>
+            </div>
+            <div style="display:flex;gap:10px">
+              <span onClick="{{ toggleConnect }}" style="cursor:pointer;flex:1;text-align:center;padding:13px;border-radius:15px;font-size:15px;font-weight:600;background:{{ connBg }};border:1px solid {{ connBorder }};color:{{ connColor }}">{{ connLabel }}</span>
+              <span style="cursor:pointer;flex:none;padding:13px 18px;border-radius:15px;font-size:15px;font-weight:600;border:1px solid var(--line2);color:var(--text)">Message</span>
+            </div>
+            <div style="font-size:15px;line-height:1.6;color:var(--text)">Slow mornings, long walks, and conversations that mean something. Here intentionally &mdash; quality over quantity, always.</div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div style="font-size:11px;letter-spacing:1px;color:var(--text3);font-weight:600">OPEN TO</div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <span style="font-size:13px;padding:7px 13px;border:1px solid var(--line2);border-radius:20px;color:var(--text)">Slow conversations</span>
+                <span style="font-size:13px;padding:7px 13px;border:1px solid var(--line2);border-radius:20px;color:var(--text)">Weeknight plans</span>
+                <span style="font-size:13px;padding:7px 13px;border:1px solid var(--line2);border-radius:20px;color:var(--text)">A steady Buddy</span>
+              </div>
+            </div>
+            <div style="display:flex;justify-content:space-between;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 16px">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex:1"><span style="font-size:16px;color:var(--sage-t)">&#9670;</span><span style="font-size:15px;font-weight:600">18+</span><span style="font-size:11px;color:var(--text3)">Verified</span></div>
+              <div style="width:1px;background:var(--line)"></div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex:1"><span style="font-size:16px;color:var(--gold-t)">&#9737;</span><span style="font-size:15px;font-weight:600">2024</span><span style="font-size:11px;color:var(--text3)">Joined</span></div>
+              <div style="width:1px;background:var(--line)"></div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex:1"><span style="font-size:16px;color:var(--rose-t)">&#10022;</span><span style="font-size:15px;font-weight:600">8</span><span style="font-size:11px;color:var(--text3)">Mutual</span></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:12px;border:1px solid rgba(201,164,92,.4);border-radius:18px;padding:16px;background:linear-gradient(180deg,rgba(201,164,92,.1),rgba(201,164,92,.02))">
+              <div style="display:flex;align-items:center;gap:10px"><span style="width:34px;height:34px;border-radius:50%;background:var(--gold);color:#231c11;display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 3px 9px -2px rgba(201,164,92,.55)">&#10022;</span><div><div style="font-size:15px;font-weight:600;color:var(--gold-t)">Approved Buddy</div><div style="font-size:12px;color:var(--text2)">Steady, private peer support &mdash; not advice, just presence</div></div></div>
+              <span onClick="{{ go_buddy }}" style="cursor:pointer;text-align:center;font-size:14px;font-weight:600;padding:11px;border-radius:13px;border:1px solid var(--gold);color:var(--gold-t)">Request a Buddy chat</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:11px">
+              <div style="display:flex;align-items:center;justify-content:space-between"><div style="font-size:11px;letter-spacing:1px;color:var(--text3);font-weight:600">PRIVATE PHOTOS</div><div style="font-size:11.5px;color:{{ revLabelColor }};display:flex;align-items:center;gap:4px">{{ revLabelIcon }} {{ revLabel }}</div></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px">
+                <span onClick="{{ openSheet }}" style="cursor:pointer;aspect-ratio:1;border-radius:14px;background:{{ tileBg }};border:1px solid var(--line2);display:flex;align-items:center;justify-content:center;color:var(--text2);font-size:18px">{{ tileIcon }}</span>
+                <span onClick="{{ openSheet }}" style="cursor:pointer;aspect-ratio:1;border-radius:14px;background:{{ tileBg }};border:1px solid var(--line2);display:flex;align-items:center;justify-content:center;color:var(--text2);font-size:18px">{{ tileIcon }}</span>
+                <span onClick="{{ openSheet }}" style="cursor:pointer;aspect-ratio:1;border-radius:14px;background:{{ tileBg }};border:1px solid var(--line2);display:flex;align-items:center;justify-content:center;color:var(--text2);font-size:18px;position:relative">{{ tileIcon }}<span style="position:absolute;right:7px;bottom:6px;font-size:11px;color:#fff;background:rgba(8,6,5,.55);border-radius:10px;padding:1px 7px">+1</span></span>
+              </div>
+              <span onClick="{{ openSheet }}" style="cursor:pointer;text-align:center;font-size:13.5px;color:var(--gold-t);display:{{ revCtaShow }};align-items:center;justify-content:center;gap:6px;border:1px solid var(--line2);border-radius:13px;padding:11px">&#128274; Reveal &mdash; consent required</span>
+            </div>
+            <div style="text-align:center;font-size:12px;color:var(--text3);padding-top:4px">Report or block · safety is one tap away</div>
+          </div>
+          <div style="flex:none;position:absolute;left:0;right:0;bottom:0;display:flex;align-items:flex-end;justify-content:space-around;padding:11px 16px 26px;background:linear-gradient(to top,var(--bg0) 72%,transparent);border-top:1px solid var(--line)">
+            <span onClick="{{ goHome }}" style="cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--text3)"><span style="font-size:19px">&#8962;</span>Home</span>
+            <span onClick="{{ go_explore }}" style="cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--text3)"><span style="font-size:19px">&#9906;</span>Explore</span>
+            <span onClick="{{ goHome }}" style="cursor:pointer;width:52px;height:52px;border-radius:50%;background:var(--gold);color:#231c11;display:flex;align-items:center;justify-content:center;font-size:30px;margin-bottom:6px;box-shadow:0 8px 20px -6px rgba(201,164,92,.7)">+</span>
+            <span onClick="{{ go_chats }}" style="cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--text3)"><span style="font-size:19px">&#9863;</span>Chats</span>
+            <span style="display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--text);font-weight:600"><span style="width:21px;height:21px;border-radius:50%;background:var(--av);border:1.5px solid var(--gold)"></span>You</span>
+          </div>
+          <sc-if value="{{ sheetOpen }}" hint-placeholder-val="{{ false }}">
+            <div style="position:absolute;inset:0;z-index:20">
+              <div onClick="{{ closeSheet }}" style="position:absolute;inset:0;background:rgba(8,6,5,.62);animation:evFade .25s ease"></div>
+              <div style="position:absolute;left:0;right:0;bottom:0;background:var(--bg1);border-top:1px solid var(--line2);border-radius:26px 26px 0 0;padding:24px 22px 26px;display:flex;flex-direction:column;gap:15px;box-shadow:0 -20px 50px -20px rgba(0,0,0,.7);animation:evUp .32s cubic-bezier(.22,1,.36,1)">
+                <span style="width:42px;height:5px;border-radius:3px;background:var(--line2);position:absolute;left:50%;transform:translateX(-50%);top:9px"></span>
+                <span style="width:46px;height:46px;border-radius:50%;background:var(--gold-bg);color:var(--gold-t);display:flex;align-items:center;justify-content:center;font-size:21px">&#128274;</span>
+                <div style="font-family:var(--serif);font-size:23px;line-height:1.2">Reveal private photos?</div>
+                <div style="font-size:14px;color:var(--text2);line-height:1.55">Maya shared 4 private photos with her connections. Sharing is mutual &mdash; she&rsquo;ll only see yours if you choose to share back. Reveal access can be revoked anytime.</div>
+                <div onClick="{{ toggleShare }}" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;border:1px solid var(--line2);border-radius:14px;padding:13px 15px"><span style="font-size:14px">Share my private photos too</span><span style="width:46px;height:27px;border-radius:20px;background:{{ switchBg }};position:relative;display:inline-block;transition:background .2s"><span style="position:absolute;top:3px;left:{{ knobLeft }};width:21px;height:21px;border-radius:50%;background:#fff;transition:left .2s"></span></span></div>
+                <div style="display:flex;gap:11px;margin-top:2px"><span onClick="{{ closeSheet }}" style="cursor:pointer;flex:none;padding:14px 20px;border:1px solid var(--line2);border-radius:15px;font-size:15px;color:var(--text2)">Not now</span><span onClick="{{ doReveal }}" style="cursor:pointer;flex:1;text-align:center;padding:14px;background:var(--gold);color:#231c11;border-radius:15px;font-size:15px;font-weight:700">{{ revealBtn }}</span></div>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <!-- ============ THREAD ============ -->
+      <sc-if value="{{ is_thread }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:1;min-height:0;display:flex;flex-direction:column">
+          <div style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:0 18px 10px;border-bottom:1px solid var(--line)">
+            <span onClick="{{ go_home }}" style="cursor:pointer;width:38px;height:38px;border-radius:50%;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--text2)">&#8249;</span>
+            <span style="font-size:14px;color:var(--text2);font-weight:600">Thread</span>
+            <span style="width:38px;height:38px;border-radius:50%;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--text2)">&#8943;</span>
+          </div>
+          <div style="flex:1;min-height:0;overflow-y:auto;padding:16px 16px 20px;display:flex;flex-direction:column;gap:16px">
+            <!-- original post -->
+            <div style="display:flex;flex-direction:column;gap:13px">
+              <div style="display:flex;align-items:center;gap:11px">
+                <span style="width:46px;height:46px;border-radius:50%;background:var(--av);flex:none"></span>
+                <div style="flex:1;min-width:0">
+                  <div style="display:flex;align-items:center;gap:6px;font-size:16px;font-weight:600">Maya R.
+                    <span style="width:18px;height:18px;border-radius:50%;border:1.4px solid var(--sage);color:var(--sage-t);display:inline-flex;align-items:center;justify-content:center;font-size:9px">&#9670;</span>
+                    <span style="width:20px;height:20px;border-radius:50%;background:var(--gold);color:#231c11;display:inline-flex;align-items:center;justify-content:center;font-size:10px;box-shadow:0 2px 8px -1px rgba(201,164,92,.55)">&#10022;</span>
+                  </div>
+                  <div style="font-size:12px;color:var(--text3);margin-top:2px">Verified · Buddy · 2h ago</div>
+                </div>
+                <span style="font-size:10px;letter-spacing:.5px;padding:3px 9px;border-radius:20px;border:1px solid var(--line2);color:var(--text2);font-weight:600">INTENT</span>
+              </div>
+              <div style="font-size:18px;line-height:1.55;color:var(--text);font-family:var(--serif)">Open to a slow Sunday walk and good conversation. No agenda, no rush &mdash; just somewhere unhurried near the water.</div>
+              <div style="font-size:12.5px;color:var(--text3)">Visible to Trusted members · 12 resonated</div>
+              <!-- gentle reactions -->
+              <div style="display:flex;gap:8px;flex-wrap:wrap;padding-top:2px">
+                <span onClick="{{ react_resonate }}" style="cursor:pointer;display:flex;align-items:center;gap:6px;font-size:13px;padding:8px 14px;border-radius:20px;background:{{ tr_resonate_bg }};border:1px solid {{ tr_resonate_bd }};color:{{ tr_resonate_col }}">&#9826; Resonate · {{ tr_resonate_n }}</span>
+                <span onClick="{{ react_support }}" style="cursor:pointer;display:flex;align-items:center;gap:6px;font-size:13px;padding:8px 14px;border-radius:20px;background:{{ tr_support_bg }};border:1px solid {{ tr_support_bd }};color:{{ tr_support_col }}">&#9825; Support · {{ tr_support_n }}</span>
+                <span onClick="{{ react_join }}" style="cursor:pointer;display:flex;align-items:center;gap:6px;font-size:13px;padding:8px 14px;border-radius:20px;background:{{ tr_join_bg }};border:1px solid {{ tr_join_bd }};color:{{ tr_join_col }}">&#10022; Join · {{ tr_join_n }}</span>
+                <span onClick="{{ react_curious }}" style="cursor:pointer;display:flex;align-items:center;gap:6px;font-size:13px;padding:8px 14px;border-radius:20px;background:{{ tr_curious_bg }};border:1px solid {{ tr_curious_bd }};color:{{ tr_curious_col }}">&#9678; Curious · {{ tr_curious_n }}</span>
+              </div>
+              <span onClick="{{ openConnectSheet }}" style="cursor:pointer;text-align:center;font-size:14.5px;font-weight:600;padding:13px;border-radius:14px;background:var(--gold);color:#231c11;margin-top:2px">Request to connect with Maya</span>
+            </div>
+            <div style="height:1px;background:var(--line)"></div>
+            <div style="font-size:11px;letter-spacing:1px;color:var(--text3);font-weight:600">3 REPLIES · THOUGHTFUL ONLY</div>
+            <!-- comments -->
+            <div style="display:flex;gap:11px">
+              <span style="width:38px;height:38px;border-radius:50%;background:var(--av);flex:none"></span>
+              <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px">
+                <div style="background:var(--surface);border:1px solid var(--line);border-radius:4px 16px 16px 16px;padding:12px 14px">
+                  <div style="display:flex;align-items:center;gap:6px;font-size:14px;font-weight:600">Daniel K.<span style="width:16px;height:16px;border-radius:50%;border:1.3px solid var(--line2);color:var(--text2);display:inline-flex;align-items:center;justify-content:center;font-size:8px">&#10003;</span></div>
+                  <div style="font-size:14.5px;line-height:1.5;color:var(--text);margin-top:5px">There&rsquo;s a quiet stretch by the canal that&rsquo;s perfect for this. Would gladly join.</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:14px;font-size:12px;color:var(--text3);padding-left:4px"><span>1h</span><span onClick="{{ react_c1 }}" style="cursor:pointer;color:{{ c1col }}">&#9826; Resonate · {{ c1n }}</span><span style="cursor:pointer">Reply</span></div>
+              </div>
+            </div>
+            <div style="display:flex;gap:11px;padding-left:30px">
+              <span style="width:34px;height:34px;border-radius:50%;background:var(--av);flex:none"></span>
+              <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px">
+                <div style="background:var(--surface);border:1px solid var(--line);border-radius:4px 16px 16px 16px;padding:11px 13px">
+                  <div style="display:flex;align-items:center;gap:6px;font-size:13.5px;font-weight:600">Maya R.<span style="width:15px;height:15px;border-radius:50%;border:1.3px solid var(--sage);color:var(--sage-t);display:inline-flex;align-items:center;justify-content:center;font-size:8px">&#9670;</span></div>
+                  <div style="font-size:14px;line-height:1.5;color:var(--text);margin-top:4px">The canal sounds right. Maybe Sunday morning before it gets busy?</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:14px;font-size:12px;color:var(--text3);padding-left:4px"><span>48m</span><span style="cursor:pointer">&#9826; Resonate</span><span style="cursor:pointer">Reply</span></div>
+              </div>
+            </div>
+            <div style="display:flex;gap:11px">
+              <span style="width:38px;height:38px;border-radius:50%;background:var(--av);flex:none"></span>
+              <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px">
+                <div style="background:var(--surface);border:1px solid var(--line);border-radius:4px 16px 16px 16px;padding:12px 14px">
+                  <div style="display:flex;align-items:center;gap:6px;font-size:14px;font-weight:600">Priya N.<span style="width:16px;height:16px;border-radius:50%;border:1.3px solid var(--sage);color:var(--sage-t);display:inline-flex;align-items:center;justify-content:center;font-size:8px">&#9670;</span></div>
+                  <div style="font-size:14.5px;line-height:1.5;color:var(--text);margin-top:5px">Love this energy. Saving for next weekend if there&rsquo;s room.</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:14px;font-size:12px;color:var(--text3);padding-left:4px"><span>32m</span><span style="cursor:pointer">&#9826; Resonate · 2</span><span style="cursor:pointer">Reply</span></div>
+              </div>
+            </div>
+          </div>
+          <!-- reply bar -->
+          <div style="flex:none;display:flex;align-items:center;gap:10px;padding:11px 16px 16px;border-top:1px solid var(--line);background:var(--bg0)">
+            <span style="width:34px;height:34px;border-radius:50%;background:var(--av);flex:none"></span>
+            <input placeholder="Add a thoughtful reply&hellip;" style="flex:1;background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:11px 16px;color:var(--text);font-size:14.5px;outline:none"/>
+            <span style="width:40px;height:40px;border-radius:50%;background:var(--gold);color:#231c11;display:flex;align-items:center;justify-content:center;font-size:17px;flex:none">&#8593;</span>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ============ EXPLORE ============ -->
+      <sc-if value="{{ is_explore }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:1;min-height:0;display:flex;flex-direction:column">
+          <div style="flex:none;padding:2px 18px 12px;display:flex;flex-direction:column;gap:13px">
+            <span style="font-family:var(--serif);font-size:26px">Explore</span>
+            <div style="display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 15px">
+              <span style="font-size:15px;color:var(--text3)">&#9906;</span>
+              <input placeholder="Search people, plans, intentions&hellip;" style="flex:1;background:transparent;border:none;outline:none;color:var(--text);font-size:14.5px"/>
+            </div>
+          </div>
+          <div style="flex:1;min-height:0;overflow-y:auto;padding:4px 16px 96px;display:flex;flex-direction:column;gap:18px">
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <span style="font-size:12.5px;padding:7px 14px;border:1px solid var(--gold);background:var(--gold-bg);color:var(--gold-t);border-radius:20px">Near you</span>
+              <span style="font-size:12.5px;padding:7px 14px;border:1px solid var(--line2);color:var(--text2);border-radius:20px">Slow conversations</span>
+              <span style="font-size:12.5px;padding:7px 14px;border:1px solid var(--line2);color:var(--text2);border-radius:20px">Weeknight plans</span>
+              <span style="font-size:12.5px;padding:7px 14px;border:1px solid var(--line2);color:var(--text2);border-radius:20px">Buddies</span>
+            </div>
+            <div>
+              <div style="font-size:11px;letter-spacing:1px;color:var(--text3);font-weight:600;margin-bottom:11px">PEOPLE WORTH KNOWING</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px">
+                <div onClick="{{ go_profile }}" style="cursor:pointer;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:15px;display:flex;flex-direction:column;align-items:center;gap:9px;text-align:center">
+                  <span style="width:62px;height:62px;border-radius:50%;background:var(--av);border:1px solid var(--line2)"></span>
+                  <div><div style="font-size:14.5px;font-weight:600;display:flex;align-items:center;gap:5px;justify-content:center">Maya R.<span style="width:15px;height:15px;border-radius:50%;border:1.3px solid var(--sage);color:var(--sage-t);display:inline-flex;align-items:center;justify-content:center;font-size:8px">&#9670;</span></div><div style="font-size:12px;color:var(--text3);margin-top:2px">London · 8 mutual</div></div>
+                  <span style="font-size:12px;font-weight:600;color:var(--gold-t);border:1px solid var(--gold);border-radius:18px;padding:6px 16px">Connect</span>
+                </div>
+                <div style="background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:15px;display:flex;flex-direction:column;align-items:center;gap:9px;text-align:center">
+                  <span style="width:62px;height:62px;border-radius:50%;background:var(--av);border:1px solid var(--line2)"></span>
+                  <div><div style="font-size:14.5px;font-weight:600;display:flex;align-items:center;gap:5px;justify-content:center">James O.<span style="width:15px;height:15px;border-radius:50%;border:1.3px solid var(--line2);color:var(--text2);display:inline-flex;align-items:center;justify-content:center;font-size:8px">&#10003;</span></div><div style="font-size:12px;color:var(--text3);margin-top:2px">London · 3 mutual</div></div>
+                  <span style="font-size:12px;font-weight:600;color:var(--gold-t);border:1px solid var(--gold);border-radius:18px;padding:6px 16px">Connect</span>
+                </div>
+              </div>
+            </div>
+            <div>
+              <div style="font-size:11px;letter-spacing:1px;color:var(--text3);font-weight:600;margin-bottom:11px">QUIET PLANS</div>
+              <div onClick="{{ go_events }}" style="cursor:pointer;border:1px solid var(--line);border-radius:18px;overflow:hidden;background:var(--surface);display:flex">
+                <div style="width:4px;background:var(--gold);flex:none"></div>
+                <div style="flex:1;padding:14px 15px;display:flex;flex-direction:column;gap:6px">
+                  <span style="align-self:flex-start;font-size:10px;letter-spacing:.6px;padding:3px 10px;border-radius:20px;background:var(--gold-bg);color:var(--gold-t);font-weight:600">PLAN · FRI</span>
+                  <div style="font-family:var(--serif);font-size:18px">Gallery late, then wine</div>
+                  <div style="font-size:13px;color:var(--text2)">Mayfair · 7:30pm · 5 going</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style="flex:none;position:absolute;left:0;right:0;bottom:0;display:flex;align-items:flex-end;justify-content:space-around;padding:11px 16px 26px;background:linear-gradient(to top,var(--bg0) 72%,transparent);border-top:1px solid var(--line)">
+            <span onClick="{{ go_home }}" style="cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--text3)"><span style="font-size:19px">&#8962;</span>Home</span>
+            <span style="display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--text);font-weight:600"><span style="font-size:19px">&#9906;</span>Explore</span>
+            <span onClick="{{ openComposer }}" style="cursor:pointer;width:52px;height:52px;border-radius:50%;background:var(--gold);color:#231c11;display:flex;align-items:center;justify-content:center;font-size:30px;margin-bottom:6px;box-shadow:0 8px 20px -6px rgba(201,164,92,.7)">+</span>
+            <span onClick="{{ go_chats }}" style="cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--text3)"><span style="font-size:19px">&#9863;</span>Chats</span>
+            <span onClick="{{ go_profile }}" style="cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--text3)"><span style="width:21px;height:21px;border-radius:50%;background:var(--av)"></span>You</span>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ============ CHATS LIST ============ -->
+      <sc-if value="{{ is_chats }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:1;min-height:0;display:flex;flex-direction:column">
+          <div style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:2px 20px 12px">
+            <span style="font-family:var(--serif);font-size:26px">Chats</span>
+            <span style="font-size:13px;color:var(--text2)">Private by design</span>
+          </div>
+          <div onClick="{{ go_requests }}" style="cursor:pointer;flex:none;margin:0 16px 6px;display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--gold);border-radius:16px;padding:13px 15px">
+            <span style="width:40px;height:40px;border-radius:12px;background:var(--gold-bg);color:var(--gold-t);display:flex;align-items:center;justify-content:center;font-size:18px;flex:none">&#9993;</span>
+            <div style="flex:1"><div style="font-size:14.5px;font-weight:600">Connection requests</div><div style="font-size:12.5px;color:var(--text2);margin-top:1px">3 people want to connect</div></div>
+            <span style="font-size:12px;font-weight:700;background:var(--gold);color:#231c11;border-radius:14px;min-width:22px;height:22px;display:flex;align-items:center;justify-content:center;padding:0 7px">3</span>
+          </div>
+          <div style="flex:1;min-height:0;overflow-y:auto;padding:8px 0 96px">
+            <div onClick="{{ go_convo }}" style="cursor:pointer;display:flex;align-items:center;gap:13px;padding:13px 18px">
+              <span style="position:relative;flex:none"><span style="width:52px;height:52px;border-radius:50%;background:var(--av);display:block"></span><span style="position:absolute;bottom:1px;right:1px;width:13px;height:13px;border-radius:50%;background:var(--sage);border:2.5px solid var(--bg0)"></span></span>
+              <div style="flex:1;min-width:0;border-bottom:1px solid var(--line);padding-bottom:13px">
+                <div style="display:flex;align-items:center;justify-content:space-between"><div style="display:flex;align-items:center;gap:6px;font-size:15px;font-weight:600">Maya R.<span style="width:16px;height:16px;border-radius:50%;border:1.3px solid var(--sage);color:var(--sage-t);display:inline-flex;align-items:center;justify-content:center;font-size:8px">&#9670;</span></div><span style="font-size:11.5px;color:var(--text3)">2m</span></div>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-top:3px"><div style="font-size:13.5px;color:var(--text);max-width:210px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Sunday morning by the canal sounds&hellip;</div><span style="font-size:11px;font-weight:700;background:var(--gold);color:#231c11;border-radius:12px;min-width:20px;height:20px;display:flex;align-items:center;justify-content:center;padding:0 6px">2</span></div>
+              </div>
+            </div>
+            <div onClick="{{ go_convo }}" style="cursor:pointer;display:flex;align-items:center;gap:13px;padding:13px 18px">
+              <span style="flex:none;width:52px;height:52px;border-radius:50%;background:var(--av)"></span>
+              <div style="flex:1;min-width:0;border-bottom:1px solid var(--line);padding-bottom:13px">
+                <div style="display:flex;align-items:center;justify-content:space-between"><div style="display:flex;align-items:center;gap:6px;font-size:15px;font-weight:600">Daniel K.<span style="width:16px;height:16px;border-radius:50%;border:1.3px solid var(--line2);color:var(--text2);display:inline-flex;align-items:center;justify-content:center;font-size:8px">&#10003;</span></div><span style="font-size:11.5px;color:var(--text3)">1h</span></div>
+                <div style="font-size:13.5px;color:var(--text2);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">You: that works for me &#9786;</div>
+              </div>
+            </div>
+            <div onClick="{{ go_buddychat }}" style="cursor:pointer;display:flex;align-items:center;gap:13px;padding:13px 18px">
+              <span style="flex:none;width:52px;height:52px;border-radius:50%;background:var(--gold-bg);color:var(--gold-t);display:flex;align-items:center;justify-content:center;font-size:20px;border:1px solid rgba(201,164,92,.4)">&#10022;</span>
+              <div style="flex:1;min-width:0;border-bottom:1px solid var(--line);padding-bottom:13px">
+                <div style="display:flex;align-items:center;justify-content:space-between"><div style="display:flex;align-items:center;gap:6px;font-size:15px;font-weight:600;color:var(--gold-t)">Your Buddy</div><span style="font-size:11.5px;color:var(--text3)">3h</span></div>
+                <div style="font-size:13.5px;color:var(--text2);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Here whenever you need a quiet check-in.</div>
+              </div>
+            </div>
+          </div>
+          <div style="flex:none;position:absolute;left:0;right:0;bottom:0;display:flex;align-items:flex-end;justify-content:space-around;padding:11px 16px 26px;background:linear-gradient(to top,var(--bg0) 72%,transparent);border-top:1px solid var(--line)">
+            <span onClick="{{ go_home }}" style="cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--text3)"><span style="font-size:19px">&#8962;</span>Home</span>
+            <span onClick="{{ go_explore }}" style="cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--text3)"><span style="font-size:19px">&#9906;</span>Explore</span>
+            <span onClick="{{ openComposer }}" style="cursor:pointer;width:52px;height:52px;border-radius:50%;background:var(--gold);color:#231c11;display:flex;align-items:center;justify-content:center;font-size:30px;margin-bottom:6px;box-shadow:0 8px 20px -6px rgba(201,164,92,.7)">+</span>
+            <span style="display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--text);font-weight:600"><span style="font-size:19px">&#9863;</span>Chats</span>
+            <span onClick="{{ go_profile }}" style="cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--text3)"><span style="width:21px;height:21px;border-radius:50%;background:var(--av)"></span>You</span>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ============ CHAT REQUESTS ============ -->
+      <sc-if value="{{ is_requests }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:1;min-height:0;display:flex;flex-direction:column">
+          <div style="flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 18px 10px;border-bottom:1px solid var(--line)">
+            <span onClick="{{ go_chats }}" style="cursor:pointer;width:38px;height:38px;border-radius:50%;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--text2)">&#8249;</span>
+            <span style="font-size:14px;color:var(--text2);font-weight:600">Connection requests</span>
+            <span style="width:38px"></span>
+          </div>
+          <div style="flex:1;min-height:0;overflow-y:auto;padding:16px 16px 24px;display:flex;flex-direction:column;gap:14px">
+            <div style="display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--text2);background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:11px 14px"><span style="font-size:14px">&#128274;</span>Requests stay private. They can&rsquo;t message you until you accept.</div>
+            <div style="background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:13px">
+              <div style="display:flex;align-items:center;gap:12px">
+                <span style="width:50px;height:50px;border-radius:50%;background:var(--av);flex:none"></span>
+                <div style="flex:1"><div style="display:flex;align-items:center;gap:6px;font-size:15px;font-weight:600">Elena V.<span style="width:16px;height:16px;border-radius:50%;border:1.3px solid var(--sage);color:var(--sage-t);display:inline-flex;align-items:center;justify-content:center;font-size:8px">&#9670;</span></div><div style="font-size:12.5px;color:var(--text3);margin-top:2px">Verified · 34 · 5 mutual</div></div>
+              </div>
+              <div style="font-size:14px;line-height:1.5;color:var(--text2);font-style:italic;font-family:var(--serif)">&ldquo;We keep crossing paths in the same plans &mdash; thought I&rsquo;d say hello properly.&rdquo;</div>
+              <div style="display:flex;gap:10px"><span style="cursor:pointer;flex:1;text-align:center;font-size:14px;font-weight:600;padding:11px;border-radius:13px;background:var(--gold);color:#231c11">Accept</span><span style="cursor:pointer;flex:none;padding:11px 20px;border-radius:13px;border:1px solid var(--line2);color:var(--text2);font-size:14px">Decline</span></div>
+            </div>
+            <div style="background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:13px">
+              <div style="display:flex;align-items:center;gap:12px">
+                <span style="width:50px;height:50px;border-radius:50%;background:var(--av);flex:none"></span>
+                <div style="flex:1"><div style="display:flex;align-items:center;gap:6px;font-size:15px;font-weight:600">Priya N.<span style="width:16px;height:16px;border-radius:50%;border:1.3px solid var(--sage);color:var(--sage-t);display:inline-flex;align-items:center;justify-content:center;font-size:8px">&#9670;</span></div><div style="font-size:12.5px;color:var(--text3);margin-top:2px">Verified · 29 · 2 mutual</div></div>
+              </div>
+              <div style="display:flex;gap:10px"><span style="cursor:pointer;flex:1;text-align:center;font-size:14px;font-weight:600;padding:11px;border-radius:13px;background:var(--gold);color:#231c11">Accept</span><span style="cursor:pointer;flex:none;padding:11px 20px;border-radius:13px;border:1px solid var(--line2);color:var(--text2);font-size:14px">Decline</span></div>
+            </div>
+            <div style="text-align:center;font-size:12.5px;color:var(--text3);padding-top:4px">You decide who enters your circle. No pressure, ever.</div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ============ CONVERSATION ============ -->
+      <sc-if value="{{ is_convo }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:1;min-height:0;display:flex;flex-direction:column">
+          <div style="flex:none;display:flex;align-items:center;gap:11px;padding:0 16px 11px;border-bottom:1px solid var(--line)">
+            <span onClick="{{ go_chats }}" style="cursor:pointer;width:36px;height:36px;border-radius:50%;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--text2);flex:none">&#8249;</span>
+            <span style="width:38px;height:38px;border-radius:50%;background:var(--av);flex:none"></span>
+            <div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:5px;font-size:15px;font-weight:600">Maya R.<span style="width:15px;height:15px;border-radius:50%;border:1.3px solid var(--sage);color:var(--sage-t);display:inline-flex;align-items:center;justify-content:center;font-size:8px">&#9670;</span></div><div style="font-size:11.5px;color:var(--sage-t)">Active now</div></div>
+            <span onClick="{{ openVideoSheet }}" style="cursor:pointer;width:38px;height:38px;border-radius:50%;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:15px;color:{{ videoIconColor }};flex:none">&#9658;</span>
+          </div>
+          <div style="flex:1;min-height:0;overflow-y:auto;padding:16px 16px 14px;display:flex;flex-direction:column;gap:11px">
+            <div style="text-align:center;font-size:11.5px;color:var(--text3);margin-bottom:2px">You connected &middot; be kind, be real</div>
+            <div style="align-self:flex-start;max-width:78%;background:var(--surface);border:1px solid var(--line);border-radius:4px 16px 16px 16px;padding:11px 14px;font-size:14.5px;line-height:1.45;color:var(--text)">That canal walk was lovely. Same time next week?</div>
+            <div style="align-self:flex-end;max-width:78%;background:var(--gold);color:#231c11;border-radius:16px 16px 4px 16px;padding:11px 14px;font-size:14.5px;line-height:1.45">I&rsquo;d like that. Sunday works.</div>
+            <!-- private media bubble -->
+            <div style="align-self:flex-start;max-width:78%;display:flex;flex-direction:column;gap:6px">
+              <div onClick="{{ openMediaSheet }}" style="cursor:pointer;width:170px;height:200px;border-radius:16px;border:1px solid var(--line2);background:{{ mediaTileBg }};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;color:var(--text2);position:relative;overflow:hidden">
+                <span style="font-size:24px">{{ mediaTileIcon }}</span>
+                <span style="font-size:12px;max-width:130px;text-align:center;line-height:1.4">{{ mediaTileLabel }}</span>
+              </div>
+              <span style="font-size:11px;color:var(--text3);padding-left:2px">{{ mediaCaption }}</span>
+            </div>
+            <!-- video approval banner -->
+            <div style="align-self:stretch;margin-top:4px;border:1px dashed var(--line2);border-radius:16px;padding:14px;display:flex;align-items:center;gap:12px;background:var(--surface)">
+              <span style="width:38px;height:38px;border-radius:11px;background:{{ videoChipBg }};color:{{ videoChipColor }};display:flex;align-items:center;justify-content:center;font-size:17px;flex:none">&#9658;</span>
+              <div style="flex:1"><div style="font-size:13.5px;font-weight:600;color:{{ videoTitleColor }}">{{ videoTitle }}</div><div style="font-size:12px;color:var(--text3);margin-top:2px">{{ videoSub }}</div></div>
+            </div>
+          </div>
+          <div style="flex:none;display:flex;align-items:center;gap:9px;padding:11px 14px 16px;border-top:1px solid var(--line);background:var(--bg0)">
+            <span style="width:36px;height:36px;border-radius:50%;border:1px solid var(--line2);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--text2);flex:none">+</span>
+            <input placeholder="Message&hellip;" style="flex:1;background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:11px 16px;color:var(--text);font-size:14.5px;outline:none"/>
+            <span style="width:40px;height:40px;border-radius:50%;background:var(--gold);color:#231c11;display:flex;align-items:center;justify-content:center;font-size:17px;flex:none">&#8593;</span>
+          </div>
+          <!-- consent / video sheet -->
+          <sc-if value="{{ convoSheetOpen }}" hint-placeholder-val="{{ false }}">
+            <div style="position:absolute;inset:0;z-index:20">
+              <div onClick="{{ closeConvoSheet }}" style="position:absolute;inset:0;background:rgba(8,6,5,.62);animation:evFade .25s ease"></div>
+              <div style="position:absolute;left:0;right:0;bottom:0;background:var(--bg1);border-top:1px solid var(--line2);border-radius:26px 26px 0 0;padding:26px 22px 26px;display:flex;flex-direction:column;gap:14px;box-shadow:0 -20px 50px -20px rgba(0,0,0,.7);animation:evUp .32s cubic-bezier(.22,1,.36,1)">
+                <span style="width:42px;height:5px;border-radius:3px;background:var(--line2);position:absolute;left:50%;transform:translateX(-50%);top:9px"></span>
+                <span style="width:46px;height:46px;border-radius:50%;background:var(--gold-bg);color:var(--gold-t);display:flex;align-items:center;justify-content:center;font-size:21px">{{ sheetIcon }}</span>
+                <div style="font-family:var(--serif);font-size:23px;line-height:1.2">{{ sheetTitle }}</div>
+                <div style="font-size:14px;color:var(--text2);line-height:1.55">{{ sheetBody }}</div>
+                <div style="display:flex;gap:11px;margin-top:2px"><span onClick="{{ closeConvoSheet }}" style="cursor:pointer;flex:none;padding:14px 20px;border:1px solid var(--line2);border-radius:15px;font-size:15px;color:var(--text2)">Not now</span><span onClick="{{ sheetConfirm }}" style="cursor:pointer;flex:1;text-align:center;padding:14px;background:var(--gold);color:#231c11;border-radius:15px;font-size:15px;font-weight:700">{{ sheetCta }}</span></div>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <!-- ============ BUDDY OVERVIEW ============ -->
+      <sc-if value="{{ is_buddy }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:1;min-height:0;display:flex;flex-direction:column">
+          <div style="flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 18px 8px">
+            <span onClick="{{ go_profile }}" style="cursor:pointer;width:38px;height:38px;border-radius:50%;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--text2)">&#8249;</span>
+            <span style="font-size:14px;color:var(--text2);font-weight:600">Buddy</span>
+            <span style="width:38px"></span>
+          </div>
+          <div style="flex:1;min-height:0;overflow-y:auto;padding:8px 18px 28px;display:flex;flex-direction:column;gap:18px">
+            <div style="display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px;padding-top:6px">
+              <span style="width:64px;height:64px;border-radius:50%;background:var(--gold);color:#231c11;display:flex;align-items:center;justify-content:center;font-size:28px;box-shadow:0 8px 22px -6px rgba(201,164,92,.6)">&#10022;</span>
+              <div><div style="font-family:var(--serif);font-size:27px;line-height:1.1">The Buddy circle</div><div style="font-size:14px;color:var(--text2);margin-top:7px;line-height:1.55;max-width:280px">A Buddy is a steady, trusted presence &mdash; private peer support, not advice. Rare by design, earned through trust.</div></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:12px;border:1px solid rgba(201,164,92,.4);border-radius:18px;padding:16px;background:linear-gradient(180deg,rgba(201,164,92,.1),rgba(201,164,92,.02))">
+              <div style="display:flex;align-items:center;gap:11px">
+                <span style="width:46px;height:46px;border-radius:50%;background:var(--av);border:1.5px solid var(--gold);flex:none"></span>
+                <div style="flex:1"><div style="display:flex;align-items:center;gap:6px;font-size:15px;font-weight:600;color:var(--gold-t)">Your Buddy · Sam</div><div style="font-size:12.5px;color:var(--text2);margin-top:2px">Approved · matched 3 weeks ago</div></div>
+                <span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;background:var(--gold);color:#231c11">ACTIVE</span>
+              </div>
+              <span onClick="{{ go_buddychat }}" style="cursor:pointer;text-align:center;font-size:14px;font-weight:600;padding:12px;border-radius:13px;background:var(--gold);color:#231c11">Open Buddy chat</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:11px">
+              <div style="font-size:11px;letter-spacing:1px;color:var(--text3);font-weight:600">HOW IT WORKS</div>
+              <div style="display:flex;gap:12px;align-items:flex-start"><span style="width:26px;height:26px;border-radius:50%;border:1px solid var(--gold);color:var(--gold-t);display:flex;align-items:center;justify-content:center;font-size:12px;flex:none">1</span><div style="font-size:14px;color:var(--text);line-height:1.5">Request a Buddy &mdash; share a little about what kind of presence helps.</div></div>
+              <div style="display:flex;gap:12px;align-items:flex-start"><span style="width:26px;height:26px;border-radius:50%;border:1px solid var(--gold);color:var(--gold-t);display:flex;align-items:center;justify-content:center;font-size:12px;flex:none">2</span><div style="font-size:14px;color:var(--text);line-height:1.5">Both sides approve. Buddy pairs are mutual and consent-first.</div></div>
+              <div style="display:flex;gap:12px;align-items:flex-start"><span style="width:26px;height:26px;border-radius:50%;border:1px solid var(--gold);color:var(--gold-t);display:flex;align-items:center;justify-content:center;font-size:12px;flex:none">3</span><div style="font-size:14px;color:var(--text);line-height:1.5">A calm, private space &mdash; check in at your own pace, leave anytime.</div></div>
+            </div>
+            <span onClick="{{ go_buddyreq }}" style="cursor:pointer;text-align:center;font-size:15px;font-weight:600;padding:14px;border-radius:14px;border:1px solid var(--gold);color:var(--gold-t)">Request another Buddy</span>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ============ BUDDY REQUEST ============ -->
+      <sc-if value="{{ is_buddyreq }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:1;min-height:0;display:flex;flex-direction:column">
+          <div style="flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 18px 8px">
+            <span onClick="{{ go_buddy }}" style="cursor:pointer;width:38px;height:38px;border-radius:50%;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--text2)">&#8249;</span>
+            <span style="font-size:14px;color:var(--text2);font-weight:600">Request a Buddy</span>
+            <span style="width:38px"></span>
+          </div>
+          <div style="flex:1;min-height:0;overflow-y:auto;padding:10px 22px 24px;display:flex;flex-direction:column;gap:16px">
+            <div style="font-family:var(--serif);font-size:24px;line-height:1.2">A few quiet questions</div>
+            <div style="font-size:14px;color:var(--text2);line-height:1.55">This stays private to the matching team. There&rsquo;s no rush &mdash; answer only what feels right.</div>
+            <label style="display:flex;flex-direction:column;gap:8px"><span style="font-size:13px;color:var(--text2)">What kind of presence helps you most?</span>
+              <div style="display:flex;gap:8px;flex-wrap:wrap"><span style="font-size:12.5px;padding:8px 14px;border:1px solid var(--gold);background:var(--gold-bg);color:var(--gold-t);border-radius:20px">A good listener</span><span style="font-size:12.5px;padding:8px 14px;border:1px solid var(--line2);color:var(--text2);border-radius:20px">Gentle accountability</span><span style="font-size:12.5px;padding:8px 14px;border:1px solid var(--line2);color:var(--text2);border-radius:20px">Just company</span></div>
+            </label>
+            <label style="display:flex;flex-direction:column;gap:8px"><span style="font-size:13px;color:var(--text2)">Anything you&rsquo;d like your Buddy to know?</span><textarea placeholder="Optional &mdash; a sentence or two." style="min-height:90px;resize:none;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:13px 15px;color:var(--text);font-size:15px;outline:none;line-height:1.5"></textarea></label>
+            <div onClick="{{ toggleBuddyConsent }}" style="cursor:pointer;display:flex;align-items:center;gap:11px;border:1px solid var(--line2);border-radius:14px;padding:13px 15px"><span style="width:24px;height:24px;border-radius:7px;border:1.5px solid {{ bcBorder }};background:{{ bcBg }};color:#231c11;display:flex;align-items:center;justify-content:center;font-size:13px;flex:none">{{ bcCheck }}</span><span style="font-size:13.5px;color:var(--text);line-height:1.45">I understand a Buddy is peer support, not professional or crisis help.</span></div>
+            <div style="display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--text2);background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:12px 14px"><span style="font-size:14px">&#128274;</span>Matching is consent-first. They approve before any chat opens.</div>
+            <span onClick="{{ submitBuddyReq }}" style="cursor:pointer;text-align:center;font-size:16px;font-weight:700;padding:15px;border-radius:15px;background:{{ bcSubmitBg }};color:{{ bcSubmitColor }};border:1px solid var(--gold)">{{ bcSubmitLabel }}</span>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ============ BUDDY CHAT ============ -->
+      <sc-if value="{{ is_buddychat }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:1;min-height:0;display:flex;flex-direction:column">
+          <div style="flex:none;display:flex;align-items:center;gap:11px;padding:0 16px 11px;border-bottom:1px solid rgba(201,164,92,.25)">
+            <span onClick="{{ go_chats }}" style="cursor:pointer;width:36px;height:36px;border-radius:50%;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--text2);flex:none">&#8249;</span>
+            <span style="width:38px;height:38px;border-radius:50%;background:var(--gold-bg);color:var(--gold-t);display:flex;align-items:center;justify-content:center;font-size:17px;border:1px solid rgba(201,164,92,.5);flex:none">&#10022;</span>
+            <div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:600;color:var(--gold-t)">Your Buddy · Sam</div><div style="font-size:11.5px;color:var(--text2)">Private &middot; supportive presence</div></div>
+          </div>
+          <div style="flex:1;min-height:0;overflow-y:auto;padding:16px 16px 14px;display:flex;flex-direction:column;gap:11px">
+            <div style="text-align:center;font-size:11.5px;color:var(--gold-t);background:var(--gold-bg);border-radius:20px;padding:6px 14px;align-self:center">A calm space · no pressure to reply</div>
+            <div style="align-self:flex-start;max-width:80%;background:var(--surface);border:1px solid rgba(201,164,92,.25);border-radius:4px 16px 16px 16px;padding:11px 14px;font-size:14.5px;line-height:1.45;color:var(--text)">Hey, no agenda today. Just checking in &mdash; how&rsquo;s your week landing?</div>
+            <div style="align-self:flex-end;max-width:80%;background:var(--gold);color:#231c11;border-radius:16px 16px 4px 16px;padding:11px 14px;font-size:14.5px;line-height:1.45">Slow, but okay. Appreciate you asking.</div>
+            <div style="align-self:flex-start;max-width:80%;background:var(--surface);border:1px solid rgba(201,164,92,.25);border-radius:4px 16px 16px 16px;padding:11px 14px;font-size:14.5px;line-height:1.45;color:var(--text)">Slow is allowed. I&rsquo;m around whenever.</div>
+          </div>
+          <div style="flex:none;display:flex;align-items:center;gap:9px;padding:11px 14px 16px;border-top:1px solid rgba(201,164,92,.2);background:var(--bg0)">
+            <input placeholder="Take your time&hellip;" style="flex:1;background:var(--surface);border:1px solid rgba(201,164,92,.3);border-radius:22px;padding:11px 16px;color:var(--text);font-size:14.5px;outline:none"/>
+            <span style="width:40px;height:40px;border-radius:50%;background:var(--gold);color:#231c11;display:flex;align-items:center;justify-content:center;font-size:17px;flex:none">&#8593;</span>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ============ SINGLE OF THE WEEK ============ -->
+      <sc-if value="{{ is_single }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:1;min-height:0;display:flex;flex-direction:column">
+          <div style="flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 18px 8px">
+            <span onClick="{{ go_home }}" style="cursor:pointer;width:38px;height:38px;border-radius:50%;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--text2)">&#8249;</span>
+            <span style="font-size:14px;color:var(--text2);font-weight:600">Single of the Week</span>
+            <span style="width:38px"></span>
+          </div>
+          <div style="flex:1;min-height:0;overflow-y:auto;padding:8px 18px 28px;display:flex;flex-direction:column;gap:18px">
+            <div style="border:1px solid var(--rose);border-radius:24px;overflow:hidden;background:linear-gradient(180deg,rgba(192,138,160,.14),rgba(192,138,160,.03))">
+              <div style="padding:22px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:13px">
+                <span style="align-self:center;white-space:nowrap;font-size:10px;letter-spacing:.8px;padding:5px 13px;border-radius:20px;background:var(--rose);color:#231016;font-weight:700">&#10022; FEATURED THIS WEEK</span>
+                <span style="width:96px;height:96px;border-radius:50%;background:var(--av);border:2px solid var(--rose)"></span>
+                <div><div style="font-family:var(--serif);font-size:28px;line-height:1.05;display:flex;align-items:center;gap:8px;justify-content:center">Elena V.<span style="width:20px;height:20px;border-radius:50%;border:1.4px solid var(--sage);color:var(--sage-t);display:inline-flex;align-items:center;justify-content:center;font-size:10px">&#9670;</span></div><div style="font-size:13.5px;color:var(--text2);margin-top:6px">Verified · 34 · London</div></div>
+                <div style="font-size:16px;line-height:1.5;color:var(--text);font-style:italic;font-family:var(--serif)">&ldquo;Drawn to slow mornings, real talk, and people who actually mean it.&rdquo;</div>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div style="font-size:11px;letter-spacing:1px;color:var(--text3);font-weight:600">A FEW PROMPTS</div>
+              <div style="display:flex;flex-direction:column;gap:9px">
+                <div style="background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:13px 15px"><div style="font-size:12.5px;color:var(--rose-t);margin-bottom:4px">A perfect Sunday is&hellip;</div><div style="font-size:14.5px;color:var(--text);line-height:1.45">Coffee, a long walk, and nowhere to be.</div></div>
+                <div style="background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:13px 15px"><div style="font-size:12.5px;color:var(--rose-t);margin-bottom:4px">I&rsquo;m looking for&hellip;</div><div style="font-size:14.5px;color:var(--text);line-height:1.45">Someone steady. No games, no rush.</div></div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;font-size:12.5px;color:var(--text3)"><span>Featured for 6 more days</span><span style="color:var(--rose-t)">&#9737; limited spotlight</span></div>
+            <div style="display:flex;gap:11px">
+              <span onClick="{{ openConnectSheet }}" style="cursor:pointer;flex:1;text-align:center;font-size:15px;font-weight:600;padding:14px;border-radius:15px;background:var(--rose);color:#231016">Send a quiet hello</span>
+              <span onClick="{{ go_profile }}" style="cursor:pointer;flex:none;padding:14px 18px;border-radius:15px;border:1px solid var(--rose);color:var(--rose-t);font-size:15px;font-weight:600">Profile</span>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ============ EVENTS / PLANS ============ -->
+      <sc-if value="{{ is_events }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:1;min-height:0;display:flex;flex-direction:column">
+          <div style="flex:none;display:flex;align-items:center;justify-content:space-between;padding:2px 18px 12px">
+            <span style="font-family:var(--serif);font-size:26px">Plans</span>
+            <span onClick="{{ openComposer }}" style="cursor:pointer;font-size:13px;font-weight:600;color:var(--gold-t);border:1px solid var(--gold);border-radius:18px;padding:7px 15px">Open a plan</span>
+          </div>
+          <div style="flex:1;min-height:0;overflow-y:auto;padding:4px 16px 96px;display:flex;flex-direction:column;gap:14px">
+            <div style="font-size:11px;letter-spacing:1px;color:var(--text3);font-weight:600">TONIGHT</div>
+            <div style="border:1px solid var(--line);border-radius:20px;overflow:hidden;background:var(--surface);display:flex">
+              <div style="width:4px;background:var(--gold);flex:none"></div>
+              <div style="flex:1;padding:16px;display:flex;flex-direction:column;gap:11px">
+                <div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:10px;letter-spacing:.6px;padding:4px 10px;border-radius:20px;background:var(--gold-bg);color:var(--gold-t);font-weight:600">8:00PM · SOHO</span><span style="font-size:12px;color:var(--text3)">Connected members</span></div>
+                <div style="font-family:var(--serif);font-size:21px;line-height:1.2">Quiet rooftop drinks</div>
+                <div style="font-size:13.5px;color:var(--text2)">Small, unhurried, easy to leave early.</div>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-top:2px">
+                  <div style="display:flex;align-items:center;gap:9px"><div style="display:flex"><span style="width:30px;height:30px;border-radius:50%;background:var(--av);border:2px solid var(--surface)"></span><span style="width:30px;height:30px;border-radius:50%;background:var(--av);border:2px solid var(--surface);margin-left:-10px"></span><span style="width:30px;height:30px;border-radius:50%;background:var(--av);border:2px solid var(--surface);margin-left:-10px"></span></div><span style="font-size:12.5px;color:var(--text2)">4 going</span></div>
+                  <span onClick="{{ joinEvent }}" style="cursor:pointer;font-size:13px;font-weight:600;border-radius:18px;padding:8px 17px;background:{{ ejBg }};border:1px solid {{ ejBorder }};color:{{ ejColor }}">{{ ejLabel }}</span>
+                </div>
+              </div>
+            </div>
+            <div style="font-size:11px;letter-spacing:1px;color:var(--text3);font-weight:600;margin-top:6px">THIS WEEK</div>
+            <div style="border:1px solid var(--line);border-radius:20px;overflow:hidden;background:var(--surface);display:flex">
+              <div style="width:4px;background:var(--line2);flex:none"></div>
+              <div style="flex:1;padding:16px;display:flex;flex-direction:column;gap:9px">
+                <div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:10px;letter-spacing:.6px;padding:4px 10px;border-radius:20px;border:1px solid var(--line2);color:var(--text2);font-weight:600">FRI · 7:30PM</span></div>
+                <div style="font-family:var(--serif);font-size:20px;line-height:1.2">Gallery late, then wine</div>
+                <div style="font-size:13.5px;color:var(--text2)">Mayfair · 5 going · two spots left</div>
+                <span style="align-self:flex-start;margin-top:4px;cursor:pointer;font-size:13px;font-weight:600;border-radius:18px;padding:8px 17px;border:1px solid var(--gold);color:var(--gold-t)">Ask to join</span>
+              </div>
+            </div>
+            <div style="border:1px solid var(--line);border-radius:20px;overflow:hidden;background:var(--surface);display:flex;opacity:.7">
+              <div style="width:4px;background:var(--line2);flex:none"></div>
+              <div style="flex:1;padding:16px;display:flex;flex-direction:column;gap:9px">
+                <div style="font-family:var(--serif);font-size:20px;line-height:1.2">Sunday slow walk</div>
+                <div style="font-size:13.5px;color:var(--text2)">Regent&rsquo;s Park · 10:00am · 2 going</div>
+                <span style="align-self:flex-start;margin-top:4px;font-size:12.5px;color:var(--text3);border:1px solid var(--line2);border-radius:18px;padding:7px 15px">Full &middot; ask to be notified</span>
+              </div>
+            </div>
+          </div>
+          <div style="flex:none;position:absolute;left:0;right:0;bottom:0;display:flex;align-items:flex-end;justify-content:space-around;padding:11px 16px 26px;background:linear-gradient(to top,var(--bg0) 72%,transparent);border-top:1px solid var(--line)">
+            <span onClick="{{ go_home }}" style="cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--text3)"><span style="font-size:19px">&#8962;</span>Home</span>
+            <span onClick="{{ go_explore }}" style="cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--text);font-weight:600"><span style="font-size:19px">&#9906;</span>Explore</span>
+            <span onClick="{{ openComposer }}" style="cursor:pointer;width:52px;height:52px;border-radius:50%;background:var(--gold);color:#231c11;display:flex;align-items:center;justify-content:center;font-size:30px;margin-bottom:6px;box-shadow:0 8px 20px -6px rgba(201,164,92,.7)">+</span>
+            <span onClick="{{ go_chats }}" style="cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--text3)"><span style="font-size:19px">&#9863;</span>Chats</span>
+            <span onClick="{{ go_profile }}" style="cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--text3)"><span style="width:21px;height:21px;border-radius:50%;background:var(--av)"></span>You</span>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ============ SETTINGS / EDIT ============ -->
+      <sc-if value="{{ is_settings }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:1;min-height:0;display:flex;flex-direction:column">
+          <div style="flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 18px 10px;border-bottom:1px solid var(--line)">
+            <span onClick="{{ go_profile }}" style="cursor:pointer;width:38px;height:38px;border-radius:50%;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--text2)">&#8249;</span>
+            <span style="font-size:14px;color:var(--text2);font-weight:600">Edit &amp; settings</span>
+            <span onClick="{{ go_profile }}" style="cursor:pointer;font-size:14px;font-weight:600;color:var(--gold-t)">Save</span>
+          </div>
+          <div style="flex:1;min-height:0;overflow-y:auto;padding:18px 18px 28px;display:flex;flex-direction:column;gap:20px">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:9px">
+              <div style="position:relative"><span style="width:86px;height:86px;border-radius:50%;background:var(--av);border:1px solid var(--line2);display:block"></span><span style="position:absolute;bottom:0;right:0;width:30px;height:30px;border-radius:50%;background:var(--gold);color:#231c11;display:flex;align-items:center;justify-content:center;font-size:14px;border:3px solid var(--bg0)">&#9998;</span></div>
+              <span style="font-size:13px;color:var(--gold-t)">Change photo</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:13px">
+              <label style="display:flex;flex-direction:column;gap:7px"><span style="font-size:13px;color:var(--text2)">Display name</span><input value="Maya R." style="background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:13px 15px;color:var(--text);font-size:15px;outline:none"/></label>
+              <div style="display:flex;gap:11px"><label style="flex:1;display:flex;flex-direction:column;gap:7px"><span style="font-size:13px;color:var(--text2)">Age</span><input value="32" style="background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:13px 15px;color:var(--text);font-size:15px;outline:none"/></label><label style="flex:1;display:flex;flex-direction:column;gap:7px"><span style="font-size:13px;color:var(--text2)">City</span><input value="London" style="background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:13px 15px;color:var(--text);font-size:15px;outline:none"/></label></div>
+              <label style="display:flex;flex-direction:column;gap:7px"><span style="font-size:13px;color:var(--text2)">About</span><textarea style="min-height:84px;resize:none;background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:13px 15px;color:var(--text);font-size:15px;outline:none;line-height:1.5">Slow mornings, long walks, and conversations that mean something.</textarea></label>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:11px">
+              <div style="font-size:11px;letter-spacing:1px;color:var(--text3);font-weight:600">PRIVACY</div>
+              <div onClick="{{ toggleDiscreet }}" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 15px"><div><div style="font-size:14.5px">Discreet mode</div><div style="font-size:12px;color:var(--text3);margin-top:2px">Hide activity &amp; last-seen</div></div><span style="width:46px;height:27px;border-radius:20px;background:{{ discreetBg }};position:relative;display:inline-block;transition:background .2s;flex:none"><span style="position:absolute;top:3px;left:{{ discreetKnob }};width:21px;height:21px;border-radius:50%;background:#f0e8d8;transition:left .2s"></span></span></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 15px"><div style="font-size:14.5px">Who can see you</div><span style="font-size:13px;color:var(--gold-t)">Trusted &#9662;</span></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 15px"><div style="font-size:14.5px">Read receipts</div><span style="font-size:13px;color:var(--text2)">On &#9662;</span></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:11px">
+              <div style="font-size:11px;letter-spacing:1px;color:var(--text3);font-weight:600">TRUST &amp; SAFETY</div>
+              <div onClick="{{ go_locked }}" style="cursor:pointer;display:flex;align-items:center;gap:11px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 15px"><span style="width:30px;height:30px;border-radius:9px;background:var(--sage-bg);color:var(--sage-t);display:flex;align-items:center;justify-content:center;font-size:13px;flex:none">&#9670;</span><div style="flex:1"><div style="font-size:14.5px">Verify phone</div><div style="font-size:12px;color:var(--text3);margin-top:1px">Unlocks private media &amp; video</div></div><span style="font-size:13px;color:var(--gold-t)">Verify</span></div>
+              <div style="display:flex;align-items:center;gap:11px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 15px"><span style="width:30px;height:30px;border-radius:9px;background:rgba(245,235,215,.05);color:var(--text2);display:flex;align-items:center;justify-content:center;font-size:14px;flex:none">&#9851;</span><div style="flex:1;font-size:14.5px">Blocked &amp; reported</div><span style="font-size:13px;color:var(--text2)">&#8250;</span></div>
+            </div>
+            <span style="text-align:center;font-size:14px;color:var(--rose-t);padding:8px">Sign out</span>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ============ NOTIFICATIONS ============ -->
+      <sc-if value="{{ is_notifs }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:1;min-height:0;display:flex;flex-direction:column">
+          <div style="flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 18px 12px">
+            <span onClick="{{ go_home }}" style="cursor:pointer;width:38px;height:38px;border-radius:50%;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--text2)">&#8249;</span>
+            <span style="font-family:var(--serif);font-size:22px">Notifications</span>
+            <span style="font-size:12.5px;color:var(--gold-t)">Mark read</span>
+          </div>
+          <div style="flex:1;min-height:0;overflow-y:auto;padding:6px 16px 24px;display:flex;flex-direction:column;gap:8px">
+            <div style="font-size:11px;letter-spacing:1px;color:var(--text3);font-weight:600;padding:6px 4px">TODAY</div>
+            <div onClick="{{ go_requests }}" style="cursor:pointer;display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--gold);border-radius:15px;padding:13px 14px"><span style="width:38px;height:38px;border-radius:11px;background:var(--sage-bg);color:var(--sage-t);display:flex;align-items:center;justify-content:center;font-size:15px;flex:none">&#9670;</span><div style="flex:1"><div style="font-size:14px;line-height:1.4"><b style="font-weight:600">Elena V.</b> wants to connect</div><div style="font-size:12px;color:var(--text3);margin-top:2px">12m ago</div></div><span style="width:8px;height:8px;border-radius:50%;background:var(--gold);flex:none"></span></div>
+            <div onClick="{{ go_thread }}" style="cursor:pointer;display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:15px;padding:13px 14px"><span style="width:38px;height:38px;border-radius:11px;background:var(--gold-bg);color:var(--gold-t);display:flex;align-items:center;justify-content:center;font-size:15px;flex:none">&#9826;</span><div style="flex:1"><div style="font-size:14px;line-height:1.4"><b style="font-weight:600">Daniel K.</b> resonated with your signal</div><div style="font-size:12px;color:var(--text3);margin-top:2px">1h ago</div></div></div>
+            <div onClick="{{ go_buddychat }}" style="cursor:pointer;display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:15px;padding:13px 14px"><span style="width:38px;height:38px;border-radius:11px;background:var(--gold-bg);color:var(--gold-t);display:flex;align-items:center;justify-content:center;font-size:15px;flex:none">&#10022;</span><div style="flex:1"><div style="font-size:14px;line-height:1.4"><b style="font-weight:600">Your Buddy</b> sent a check-in</div><div style="font-size:12px;color:var(--text3);margin-top:2px">3h ago</div></div></div>
+            <div style="font-size:11px;letter-spacing:1px;color:var(--text3);font-weight:600;padding:10px 4px 6px">EARLIER</div>
+            <div onClick="{{ go_events }}" style="cursor:pointer;display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:15px;padding:13px 14px"><span style="width:38px;height:38px;border-radius:11px;background:var(--gold-bg);color:var(--gold-t);display:flex;align-items:center;justify-content:center;font-size:15px;flex:none">&#9737;</span><div style="flex:1"><div style="font-size:14px;line-height:1.4"><b style="font-weight:600">Rooftop drinks</b> starts in 2 hours</div><div style="font-size:12px;color:var(--text3);margin-top:2px">Yesterday</div></div></div>
+            <div onClick="{{ go_single }}" style="cursor:pointer;display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:15px;padding:13px 14px"><span style="width:38px;height:38px;border-radius:11px;background:var(--rose-bg);color:var(--rose-t);display:flex;align-items:center;justify-content:center;font-size:15px;flex:none">&#10022;</span><div style="flex:1"><div style="font-size:14px;line-height:1.4">A new <b style="font-weight:600">Single of the Week</b> is featured</div><div style="font-size:12px;color:var(--text3);margin-top:2px">2d ago</div></div></div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ============ LOCKED / GATED ============ -->
+      <sc-if value="{{ is_locked }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:1;min-height:0;display:flex;flex-direction:column">
+          <div style="flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 18px 10px;border-bottom:1px solid var(--line)">
+            <span onClick="{{ go_home }}" style="cursor:pointer;width:38px;height:38px;border-radius:50%;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--text2)">&#8249;</span>
+            <span style="font-size:14px;color:var(--text2);font-weight:600">Gated actions</span>
+            <span style="width:38px"></span>
+          </div>
+          <div style="flex:1;min-height:0;overflow-y:auto;padding:18px 18px 28px;display:flex;flex-direction:column;gap:13px">
+            <div style="font-size:14px;color:var(--text2);line-height:1.55;margin-bottom:2px">Higher-trust actions stay calmly locked until you&rsquo;re ready. Here&rsquo;s what opens them.</div>
+            <div style="display:flex;flex-direction:column;gap:11px;border:1px solid var(--line2);border-radius:16px;padding:16px;background:repeating-linear-gradient(45deg,#221d18,#221d18 10px,#1f1a15 10px,#1f1a15 20px)">
+              <div style="display:flex;align-items:center;gap:11px"><span style="width:38px;height:38px;border-radius:50%;background:var(--gold-bg);color:var(--gold-t);display:flex;align-items:center;justify-content:center;font-size:17px;flex:none">&#9993;</span><div><div style="font-size:15px;font-weight:600">Verify email to post</div><div style="font-size:12.5px;color:var(--text2);margin-top:2px">Confirms you&rsquo;re a real member</div></div></div>
+              <span onClick="{{ go_verify }}" style="cursor:pointer;text-align:center;font-size:14px;font-weight:600;padding:11px;border-radius:12px;background:var(--gold);color:#231c11">Verify email</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:11px;border:1px solid var(--line2);border-radius:16px;padding:16px;background:repeating-linear-gradient(45deg,#221d18,#221d18 10px,#1f1a15 10px,#1f1a15 20px)">
+              <div style="display:flex;align-items:center;gap:11px"><span style="width:38px;height:38px;border-radius:50%;background:var(--sage-bg);color:var(--sage-t);display:flex;align-items:center;justify-content:center;font-size:17px;flex:none">&#9742;</span><div><div style="font-size:15px;font-weight:600">Phone verification required</div><div style="font-size:12.5px;color:var(--text2);margin-top:2px">Needed before private media &amp; video</div></div></div>
+              <span style="text-align:center;font-size:14px;font-weight:600;padding:11px;border-radius:12px;border:1px solid var(--sage);color:var(--sage-t)">Verify phone</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:11px;border:1px solid var(--line2);border-radius:16px;padding:16px;opacity:.85"><span style="width:38px;height:38px;border-radius:50%;background:rgba(245,235,215,.05);color:var(--text2);display:flex;align-items:center;justify-content:center;font-size:17px;flex:none">&#128274;</span><div><div style="font-size:15px;font-weight:600">Consent needed before private media</div><div style="font-size:12.5px;color:var(--text2);margin-top:2px">Both people opt in, every time</div></div></div>
+            <div style="display:flex;align-items:center;gap:11px;border:1px solid var(--line2);border-radius:16px;padding:16px;opacity:.85"><span style="width:38px;height:38px;border-radius:50%;background:rgba(245,235,215,.05);color:var(--text2);display:flex;align-items:center;justify-content:center;font-size:17px;flex:none">&#9658;</span><div><div style="font-size:15px;font-weight:600">Video opens only after mutual approval</div><div style="font-size:12.5px;color:var(--text2);margin-top:2px">No surprise calls &mdash; ever</div></div></div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ============ EMPTY ============ -->
+      <sc-if value="{{ is_empty }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:1;min-height:0;display:flex;flex-direction:column">
+          <div style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:2px 20px 12px"><span style="font-family:var(--serif);font-size:26px">Chats</span></div>
+          <div style="flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:36px;gap:20px">
+            <div style="position:relative;width:104px;height:104px"><div style="position:absolute;inset:0;border:1px solid var(--line2);border-radius:50%"></div><div style="position:absolute;inset:20px;border:1px solid var(--line2);border-radius:50%"></div><div style="position:absolute;inset:40px;border:1px solid var(--gold);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--gold-t);font-size:18px">&#9863;</div></div>
+            <div><div style="font-family:var(--serif);font-size:24px;line-height:1.15">No conversations yet</div><div style="font-size:14.5px;color:var(--text2);margin-top:9px;line-height:1.6;max-width:262px">When you connect with someone, your quiet conversations live here. The circle stays small on purpose.</div></div>
+            <span onClick="{{ go_explore }}" style="cursor:pointer;font-size:15px;font-weight:600;padding:13px 24px;border-radius:14px;background:var(--gold);color:#231c11">Explore people</span>
+          </div>
+          <div style="flex:none;position:absolute;left:0;right:0;bottom:0;display:flex;align-items:flex-end;justify-content:space-around;padding:11px 16px 26px;background:linear-gradient(to top,var(--bg0) 72%,transparent);border-top:1px solid var(--line)">
+            <span onClick="{{ go_home }}" style="cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--text3)"><span style="font-size:19px">&#8962;</span>Home</span>
+            <span onClick="{{ go_explore }}" style="cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--text3)"><span style="font-size:19px">&#9906;</span>Explore</span>
+            <span onClick="{{ openComposer }}" style="cursor:pointer;width:52px;height:52px;border-radius:50%;background:var(--gold);color:#231c11;display:flex;align-items:center;justify-content:center;font-size:30px;margin-bottom:6px;box-shadow:0 8px 20px -6px rgba(201,164,92,.7)">+</span>
+            <span style="display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--text);font-weight:600"><span style="font-size:19px">&#9863;</span>Chats</span>
+            <span onClick="{{ go_profile }}" style="cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--text3)"><span style="width:21px;height:21px;border-radius:50%;background:var(--av)"></span>You</span>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ============ LOADING ============ -->
+      <sc-if value="{{ is_loading }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:1;min-height:0;display:flex;flex-direction:column">
+          <div style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:2px 20px 12px"><span style="font-family:var(--serif);font-size:28px">Evyta</span><span style="width:22px;height:22px;border-radius:50%;border:2px solid var(--line2);border-top-color:var(--gold);animation:evSpin .8s linear infinite"></span></div>
+          <div style="flex:1;min-height:0;overflow:hidden;padding:16px 16px;display:flex;flex-direction:column;gap:15px">
+            <div style="display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:13px 15px"><span style="width:36px;height:36px;border-radius:50%;background:var(--surface2);flex:none"></span><span style="flex:1;height:12px;border-radius:6px;background:var(--surface2)"></span></div>
+            <div style="border:1px solid var(--line);border-radius:20px;background:var(--surface);padding:16px;display:flex;flex-direction:column;gap:13px"><div style="display:flex;align-items:center;gap:11px"><span style="width:44px;height:44px;border-radius:50%;background:var(--surface2);flex:none"></span><div style="flex:1;display:flex;flex-direction:column;gap:7px"><span style="width:46%;height:12px;border-radius:6px;background:var(--surface2)"></span><span style="width:30%;height:10px;border-radius:5px;background:var(--surface2)"></span></div></div><span style="width:100%;height:11px;border-radius:6px;background:var(--surface2)"></span><span style="width:80%;height:11px;border-radius:6px;background:var(--surface2)"></span><span style="width:55%;height:11px;border-radius:6px;background:var(--surface2)"></span></div>
+            <div style="border:1px solid var(--line);border-radius:20px;background:var(--surface);padding:16px;display:flex;flex-direction:column;gap:13px"><div style="display:flex;align-items:center;gap:11px"><span style="width:44px;height:44px;border-radius:50%;background:var(--surface2);flex:none"></span><div style="flex:1;display:flex;flex-direction:column;gap:7px"><span style="width:40%;height:12px;border-radius:6px;background:var(--surface2)"></span><span style="width:26%;height:10px;border-radius:5px;background:var(--surface2)"></span></div></div><span style="width:90%;height:11px;border-radius:6px;background:var(--surface2)"></span><span style="width:65%;height:11px;border-radius:6px;background:var(--surface2)"></span></div>
+            <div style="text-align:center;font-size:12.5px;color:var(--text3);margin-top:4px">Gathering your circle&hellip;</div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ============ ERROR / SUCCESS ============ -->
+      <sc-if value="{{ is_status }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:1;min-height:0;display:flex;flex-direction:column">
+          <div style="flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 18px 12px"><span onClick="{{ go_home }}" style="cursor:pointer;width:38px;height:38px;border-radius:50%;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--text2)">&#8249;</span><span style="font-size:14px;color:var(--text2);font-weight:600">Status states</span><span style="width:38px"></span></div>
+          <div style="flex:1;min-height:0;overflow-y:auto;padding:14px 18px 24px;display:flex;flex-direction:column;gap:22px">
+            <div style="display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px;border:1px solid var(--sage);border-radius:20px;padding:26px 22px;background:linear-gradient(180deg,rgba(155,171,116,.12),transparent)">
+              <span style="width:58px;height:58px;border-radius:50%;background:var(--sage);color:#1c2113;display:flex;align-items:center;justify-content:center;font-size:26px">&#10003;</span>
+              <div><div style="font-family:var(--serif);font-size:23px">Request sent</div><div style="font-size:14px;color:var(--text2);margin-top:7px;line-height:1.55;max-width:250px">Elena will see your hello privately. We&rsquo;ll let you know if she opens the door.</div></div>
+              <span onClick="{{ go_home }}" style="cursor:pointer;font-size:14.5px;font-weight:600;padding:12px 22px;border-radius:13px;background:var(--gold);color:#231c11">Back to feed</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;background:var(--sage-bg);border:1px solid rgba(155,171,116,.4);border-radius:14px;padding:13px 15px"><span style="width:30px;height:30px;border-radius:50%;background:var(--sage);color:#1c2113;display:flex;align-items:center;justify-content:center;font-size:14px;flex:none">&#10003;</span><span style="font-size:14px;color:var(--text)">Saved &middot; your profile is up to date</span></div>
+            <div>
+              <div style="font-size:11px;letter-spacing:1px;color:var(--text3);font-weight:600;margin-bottom:11px">SOMETHING WENT WRONG</div>
+              <div style="display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px;border:1px solid var(--rose);border-radius:20px;padding:26px 22px;background:linear-gradient(180deg,rgba(192,138,160,.1),transparent)">
+                <span style="width:58px;height:58px;border-radius:50%;background:var(--rose-bg);color:var(--rose-t);display:flex;align-items:center;justify-content:center;font-size:26px;border:1px solid var(--rose)">!</span>
+                <div><div style="font-family:var(--serif);font-size:23px">Couldn&rsquo;t connect</div><div style="font-size:14px;color:var(--text2);margin-top:7px;line-height:1.55;max-width:250px">Something interrupted the connection. Your draft is safe &mdash; try again in a moment.</div></div>
+                <span style="cursor:pointer;font-size:14.5px;font-weight:600;padding:12px 22px;border-radius:13px;border:1px solid var(--rose);color:var(--rose-t)">Try again</span>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;background:var(--rose-bg);border:1px solid rgba(192,138,160,.4);border-radius:14px;padding:13px 15px"><span style="width:30px;height:30px;border-radius:50%;background:var(--rose);color:#231016;display:flex;align-items:center;justify-content:center;font-size:14px;flex:none">!</span><span style="font-size:14px;color:var(--text)">Network lost &middot; reconnecting&hellip;</span></div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ============ ADMIN SHELL ============ -->
+      <sc-if value="{{ is_admin }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:1;min-height:0;display:flex;flex-direction:column">
+          <div style="flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 18px 11px;border-bottom:1px solid var(--line)">
+            <span onClick="{{ go_home }}" style="cursor:pointer;width:38px;height:38px;border-radius:50%;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--text2)">&#8249;</span>
+            <span style="font-size:13px;color:var(--text2);font-weight:600;letter-spacing:.5px">ADMIN · INTERNAL</span>
+            <span style="width:38px"></span>
+          </div>
+          <div style="flex:1;min-height:0;overflow-y:auto;padding:16px 16px 24px;display:flex;flex-direction:column;gap:16px">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px">
+              <div style="background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:13px;text-align:center"><div style="font-family:var(--serif);font-size:22px;color:var(--gold-t)">12</div><div style="font-size:11px;color:var(--text3);margin-top:2px">Pending</div></div>
+              <div style="background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:13px;text-align:center"><div style="font-family:var(--serif);font-size:22px;color:var(--rose-t)">3</div><div style="font-size:11px;color:var(--text3);margin-top:2px">Reports</div></div>
+              <div style="background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:13px;text-align:center"><div style="font-family:var(--serif);font-size:22px;color:var(--sage-t)">486</div><div style="font-size:11px;color:var(--text3);margin-top:2px">Members</div></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:9px">
+              <div style="font-size:11px;letter-spacing:1px;color:var(--text3);font-weight:600">VERIFICATION QUEUE</div>
+              <div style="background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:13px 15px;display:flex;align-items:center;gap:11px"><span style="width:36px;height:36px;border-radius:50%;background:var(--av);flex:none"></span><div style="flex:1"><div style="font-size:14px;font-weight:600">Applicant #4821</div><div style="font-size:12px;color:var(--text3)">ID + selfie submitted · 2h</div></div><div style="display:flex;gap:7px"><span style="cursor:pointer;font-size:12px;font-weight:600;padding:7px 13px;border-radius:11px;background:var(--sage);color:#1c2113">Approve</span><span style="cursor:pointer;font-size:12px;padding:7px 11px;border-radius:11px;border:1px solid var(--line2);color:var(--text2)">Hold</span></div></div>
+              <div style="background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:13px 15px;display:flex;align-items:center;gap:11px"><span style="width:36px;height:36px;border-radius:50%;background:var(--av);flex:none"></span><div style="flex:1"><div style="font-size:14px;font-weight:600">Applicant #4822</div><div style="font-size:12px;color:var(--text3)">Awaiting selfie · 5h</div></div><span style="font-size:11px;color:var(--gold-t);border:1px solid var(--line2);border-radius:11px;padding:6px 11px">Pending</span></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:9px">
+              <div style="font-size:11px;letter-spacing:1px;color:var(--text3);font-weight:600">REPORTS</div>
+              <div style="background:var(--surface);border:1px solid var(--rose);border-radius:14px;padding:13px 15px;display:flex;align-items:center;gap:11px"><span style="width:30px;height:30px;border-radius:9px;background:var(--rose-bg);color:var(--rose-t);display:flex;align-items:center;justify-content:center;font-size:14px;flex:none">!</span><div style="flex:1"><div style="font-size:14px;font-weight:600">Spam report · user 2204</div><div style="font-size:12px;color:var(--text3)">Flagged by 2 members</div></div><span style="cursor:pointer;font-size:12px;font-weight:600;color:var(--rose-t)">Review</span></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:9px">
+              <div style="font-size:11px;letter-spacing:1px;color:var(--text3);font-weight:600">SINGLE OF THE WEEK</div>
+              <div style="background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:13px 15px;display:flex;align-items:center;gap:11px"><span style="width:36px;height:36px;border-radius:50%;background:var(--av);border:1.5px solid var(--rose);flex:none"></span><div style="flex:1"><div style="font-size:14px;font-weight:600">Elena V. · live now</div><div style="font-size:12px;color:var(--text3)">6 days remaining</div></div><span style="cursor:pointer;font-size:12px;font-weight:600;color:var(--gold-t)">Change</span></div>
+            </div>
+            <div style="text-align:center;font-size:11.5px;color:var(--text3)">Internal preview · not part of the member app</div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ============ SOON / LOCKED ============ -->
+      <sc-if value="{{ isSoon }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px 36px;gap:18px">
+          <div style="width:64px;height:64px;border-radius:50%;background:var(--surface);border:1px solid var(--line2);display:flex;align-items:center;justify-content:center;font-size:26px;color:var(--gold-t)">&#9716;</div>
+          <div style="font-family:var(--serif);font-size:25px;line-height:1.2">Coming soon</div>
+          <div style="font-size:14.5px;color:var(--text2);line-height:1.6;max-width:260px">This part of the circle is still being built with care. We&rsquo;d rather ship it right than rush it. You&rsquo;ll be the first to know.</div>
+          <span onClick="{{ goHome }}" style="cursor:pointer;margin-top:6px;font-size:15px;font-weight:600;padding:12px 22px;border-radius:14px;border:1px solid var(--line2);color:var(--text)">Back to Home</span>
+        </div>
+      </sc-if>
+
+      <!-- ============ GLOBAL CONNECT REQUEST SHEET ============ -->
+      <sc-if value="{{ connectSheetOpen }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;inset:0;z-index:30">
+          <div onClick="{{ closeConnectSheet }}" style="position:absolute;inset:0;background:rgba(8,6,5,.62);animation:evFade .25s ease"></div>
+          <div style="position:absolute;left:0;right:0;bottom:0;background:var(--bg1);border-top:1px solid var(--line2);border-radius:26px 26px 0 0;padding:26px 22px 26px;display:flex;flex-direction:column;gap:14px;box-shadow:0 -20px 50px -20px rgba(0,0,0,.7);animation:evUp .32s cubic-bezier(.22,1,.36,1)">
+            <span style="width:42px;height:5px;border-radius:3px;background:var(--line2);position:absolute;left:50%;transform:translateX(-50%);top:9px"></span>
+            <div style="display:flex;align-items:center;gap:12px">
+              <span style="width:48px;height:48px;border-radius:50%;background:var(--av);border:1px solid var(--line2);flex:none"></span>
+              <div><div style="font-family:var(--serif);font-size:21px">Send a quiet hello</div><div style="font-size:12.5px;color:var(--text2);margin-top:2px">A short note travels better than a blank request.</div></div>
+            </div>
+            <textarea placeholder="Optional &mdash; one honest line about why." style="min-height:74px;resize:none;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:13px 15px;color:var(--text);font-size:15px;outline:none;line-height:1.5"></textarea>
+            <div style="display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--text2)"><span style="font-size:14px">&#128274;</span>They only see this if you connect. No notification spam.</div>
+            <div style="display:flex;gap:11px;margin-top:2px"><span onClick="{{ closeConnectSheet }}" style="cursor:pointer;flex:none;padding:14px 20px;border:1px solid var(--line2);border-radius:15px;font-size:15px;color:var(--text2)">Cancel</span><span onClick="{{ sendConnect }}" style="cursor:pointer;flex:1;text-align:center;padding:14px;background:var(--gold);color:#231c11;border-radius:15px;font-size:15px;font-weight:700">Send request</span></div>
+          </div>
+        </div>
+      </sc-if>
+
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{
+  &quot;$preview&quot;: { &quot;width&quot;: 680, &quot;height&quot;: 980 },
+  &quot;accent&quot;: { &quot;editor&quot;: &quot;color&quot;, &quot;default&quot;: &quot;#bf9136&quot;, &quot;options&quot;: [&quot;#bf9136&quot;, &quot;#c9a45c&quot;, &quot;#c08aa0&quot;, &quot;#9bab74&quot;] }
+}">
+class Component extends DCLogic {
+  state = {
+    screen: 'splash', theme: 'dark', mode: 'register',
+    tab: 'for', composerOpen: false, audienceIdx: 0,
+    r1: { on: false, n: 4 }, r2: { on: false, n: 7 }, c1: false, c2: false, joined: false,
+    pConnected: false, sheetOpen: false, shareMine: true, revealed: false,
+    tr: { resonate: { on: false, n: 12 }, support: { on: false, n: 5 }, join: { on: false, n: 3 }, curious: { on: false, n: 7 } },
+    cr1: { on: false, n: 4 }, connectSheetOpen: false, mediaConsent: false, videoApproved: false, convoSheet: null,
+    buddyConsent: false, discreetMode: true,
+  };
+
+  renderVals() {
+    const s = this.state;
+    const go = (screen) => () => this.setState({ screen, composerOpen: false, sheetOpen: false });
+    const navBg = (k) => (s.screen === k ? 'rgba(201,164,92,.2)' : 'rgba(245,235,215,.04)');
+    const dim = (cats) => (cats.includes(s.tab) ? 'flex' : 'none');
+    const audiences = ['Trusted members', 'Connections only', 'Everyone in your circle'];
+    const connectVal = (req) => req
+      ? { bg: 'rgba(155,171,116,.16)', border: 'rgba(155,171,116,.45)', color: '#aebd85', label: 'Requested' }
+      : { bg: 'transparent', border: 'var(--gold)', color: 'var(--gold-t)', label: 'Connect' };
+    const c1v = connectVal(s.c1), c2v = connectVal(s.c2);
+    const tabColor = (k) => (s.tab === k ? 'var(--text)' : 'var(--text3)');
+    const tabBorder = (k) => (s.tab === k ? 'var(--gold)' : 'transparent');
+    const reg = s.mode === 'register';
+    const r = s.revealed;
+
+    const out = {
+      accent: this.props.accent ?? '#bf9136',
+      // screens
+      isSplash: s.screen === 'splash', isAuth: s.screen === 'auth', isVerify: s.screen === 'verify',
+      isFirst: s.screen === 'first', isHome: s.screen === 'home', isProfile: s.screen === 'profile', isSoon: s.screen === 'soon',
+      goSplash: go('splash'), goAuth: go('auth'), goVerify: go('verify'), goFirst: go('first'),
+      goHome: go('home'), goProfile: go('profile'), goSoon: go('soon'),
+      navSplash: navBg('splash'), navAuth: navBg('auth'), navVerify: navBg('verify'), navFirst: navBg('first'),
+      navHome: navBg('home'), navProfile: navBg('profile'), navSoon: navBg('soon'),
+      // theme
+      theme: s.theme, themeLabel: s.theme === 'dark' ? 'Dark' : 'Light',
+      toggleTheme: () => this.setState((p) => ({ theme: p.theme === 'dark' ? 'light' : 'dark' })),
+      // auth
+      isRegister: reg,
+      authTitle: reg ? 'Join the circle' : 'Welcome back',
+      authSub: reg ? 'A quiet, trust-first community. Tell us a little and we\u2019ll take it from there.' : 'Good to see you again. Pick up where you left off.',
+      authCta: reg ? 'Request access' : 'Continue',
+      setRegister: () => this.setState({ mode: 'register' }),
+      setLogin: () => this.setState({ mode: 'login' }),
+      regBg: reg ? 'var(--gold)' : 'transparent', regColor: reg ? '#231c11' : 'var(--text2)',
+      logBg: reg ? 'transparent' : 'var(--gold)', logColor: reg ? 'var(--text2)' : '#231c11',
+      authPrimary: () => this.setState((p) => ({ screen: p.mode === 'register' ? 'verify' : 'home' })),
+      // home tabs
+      tabFor: () => this.setState({ tab: 'for' }), tabPlans: () => this.setState({ tab: 'plans' }), tabPeople: () => this.setState({ tab: 'people' }),
+      cFor: tabColor('for'), cPlans: tabColor('plans'), cPeople: tabColor('people'),
+      bFor: tabBorder('for'), bPlans: tabBorder('plans'), bPeople: tabBorder('people'),
+      dPeople: dim(['for', 'people']), dPlans: dim(['for', 'plans']),
+      // reactions
+      react1: () => this.setState((p) => ({ r1: { on: !p.r1.on, n: p.r1.on ? p.r1.n - 1 : p.r1.n + 1 } })),
+      react2: () => this.setState((p) => ({ r2: { on: !p.r2.on, n: p.r2.on ? p.r2.n - 1 : p.r2.n + 1 } })),
+      g1: s.r1.on ? '\u25C6' : '\u25C7', n1: s.r1.n, col1: s.r1.on ? 'var(--gold-t)' : 'var(--text2)',
+      g2: s.r2.on ? '\u25C6' : '\u25C7', n2: s.r2.n, col2: s.r2.on ? 'var(--gold-t)' : 'var(--text2)',
+      connect1: () => this.setState((p) => ({ c1: !p.c1 })), connect2: () => this.setState((p) => ({ c2: !p.c2 })),
+      u1bg: c1v.bg, u1border: c1v.border, u1color: c1v.color, u1label: c1v.label,
+      u2bg: c2v.bg, u2border: c2v.border, u2color: c2v.color, u2label: c2v.label,
+      joinEvent: () => this.setState((p) => ({ joined: !p.joined })),
+      ejBg: s.joined ? 'rgba(155,171,116,.16)' : 'var(--gold)', ejBorder: s.joined ? 'rgba(155,171,116,.45)' : 'var(--gold)',
+      ejColor: s.joined ? '#aebd85' : '#231c11', ejLabel: s.joined ? 'Requested' : 'Ask to join',
+      // composer
+      composerOpen: s.composerOpen, openComposer: () => this.setState({ composerOpen: true }), closeComposer: () => this.setState({ composerOpen: false }),
+      cycleAudience: () => this.setState((p) => ({ audienceIdx: (p.audienceIdx + 1) % 3 })), audience: audiences[s.audienceIdx],
+      // profile connect
+      toggleConnect: () => this.setState((p) => ({ pConnected: !p.pConnected })),
+      connBg: s.pConnected ? 'rgba(155,171,116,.16)' : 'var(--gold)', connBorder: s.pConnected ? 'rgba(155,171,116,.45)' : 'var(--gold)',
+      connColor: s.pConnected ? '#aebd85' : '#231c11', connLabel: s.pConnected ? 'Request sent' : 'Request to connect',
+      // profile reveal
+      tileBg: r ? 'var(--av)' : 'repeating-linear-gradient(45deg,#2a241d,#2a241d 7px,#242019 7px,#242019 14px)',
+      tileIcon: r ? '' : '\uD83D\uDD12', revLabel: r ? 'Revealed · mutual' : 'Locked until you connect',
+      revLabelIcon: r ? '\u25C6' : '\uD83D\uDD12', revLabelColor: r ? '#aebd85' : 'var(--text3)', revCtaShow: r ? 'none' : 'flex',
+      sheetOpen: s.sheetOpen, openSheet: () => { if (!s.revealed) this.setState({ sheetOpen: true }); }, closeSheet: () => this.setState({ sheetOpen: false }),
+      toggleShare: () => this.setState((p) => ({ shareMine: !p.shareMine })), switchBg: s.shareMine ? 'var(--gold)' : 'rgba(245,235,215,.18)', knobLeft: s.shareMine ? '22px' : '3px',
+      revealBtn: s.shareMine ? 'Reveal & share' : 'Reveal only', doReveal: () => this.setState({ revealed: true, sheetOpen: false }),
+    };
+    Object.keys(s.tr).forEach((k) => {
+      const st = s.tr[k];
+      out['tr_' + k + '_bg'] = st.on ? 'var(--gold-bg)' : 'transparent';
+      out['tr_' + k + '_bd'] = st.on ? 'var(--gold)' : 'var(--line2)';
+      out['tr_' + k + '_col'] = st.on ? 'var(--gold-t)' : 'var(--text2)';
+      out['tr_' + k + '_n'] = st.n;
+      out['react_' + k] = () => this.setState((p) => ({ tr: { ...p.tr, [k]: { on: !p.tr[k].on, n: p.tr[k].on ? p.tr[k].n - 1 : p.tr[k].n + 1 } } }));
+    });
+    out.react_c1 = () => this.setState((p) => ({ cr1: { on: !p.cr1.on, n: p.cr1.on ? p.cr1.n - 1 : p.cr1.n + 1 } }));
+    out.c1col = s.cr1.on ? 'var(--gold-t)' : 'var(--text3)';
+    out.c1n = s.cr1.n;
+    out.openConnectSheet = () => this.setState({ connectSheetOpen: true });
+    out.closeConnectSheet = () => this.setState({ connectSheetOpen: false });
+    out.connectSheetOpen = s.connectSheetOpen;
+    const mc = s.mediaConsent;
+    out.mediaTileBg = mc ? 'var(--av)' : 'repeating-linear-gradient(45deg,#2a241d,#2a241d 7px,#242019 7px,#242019 14px)';
+    out.mediaTileIcon = mc ? '\u25C8' : '\uD83D\uDD12';
+    out.mediaTileLabel = mc ? 'Private photo · visible to you' : 'Private photo · tap to view';
+    out.mediaCaption = mc ? 'Shared only inside this conversation' : 'Maya shared a private photo';
+    const va = s.videoApproved;
+    out.videoIconColor = va ? 'var(--gold-t)' : 'var(--text3)';
+    out.videoChipBg = va ? 'var(--gold-bg)' : 'var(--surface2)';
+    out.videoChipColor = va ? 'var(--gold-t)' : 'var(--text3)';
+    out.videoTitle = va ? 'Video call unlocked' : 'Video call locked';
+    out.videoTitleColor = va ? 'var(--gold-t)' : 'var(--text)';
+    out.videoSub = va ? 'You both approved. Tap to start anytime.' : 'Opens only after you both approve.';
+    out.openMediaSheet = () => { if (!s.mediaConsent) this.setState({ convoSheet: 'media' }); };
+    out.openVideoSheet = () => { if (!s.videoApproved) this.setState({ convoSheet: 'video' }); };
+    out.closeConvoSheet = () => this.setState({ convoSheet: null });
+    out.convoSheetOpen = !!s.convoSheet;
+    out.sheetIcon = s.convoSheet === 'video' ? '\u25B6' : '\uD83D\uDD12';
+    out.sheetTitle = s.convoSheet === 'video' ? 'Approve video calling?' : 'View private photo?';
+    out.sheetBody = s.convoSheet === 'video'
+      ? 'Video opens only when you both approve. You can revoke access anytime.'
+      : 'Maya shared this only inside this conversation. Viewing means she may choose to see yours too \u2014 reveal access can be revoked, and screenshots can\u2019t be fully prevented.';
+    out.sheetCta = s.convoSheet === 'video' ? 'Approve video' : 'View photo';
+    out.sheetConfirm = () => this.setState((p) => (p.convoSheet === 'video' ? { videoApproved: true, convoSheet: null } : { mediaConsent: true, convoSheet: null }));
+    const bc = s.buddyConsent;
+    out.toggleBuddyConsent = () => this.setState((p) => ({ buddyConsent: !p.buddyConsent }));
+    out.bcBorder = bc ? 'var(--gold)' : 'var(--line2)';
+    out.bcBg = bc ? 'var(--gold)' : 'transparent';
+    out.bcCheck = bc ? '\u2713' : '';
+    out.bcSubmitBg = bc ? 'var(--gold)' : 'transparent';
+    out.bcSubmitColor = bc ? '#231c11' : 'var(--text3)';
+    out.bcSubmitLabel = bc ? 'Send request' : 'Confirm understanding to continue';
+    out.submitBuddyReq = () => { if (s.buddyConsent) this.setState({ screen: 'buddy' }); };
+    out.toggleDiscreet = () => this.setState((p) => ({ discreetMode: !p.discreetMode }));
+    out.discreetBg = s.discreetMode ? 'var(--gold)' : 'rgba(245,235,215,.18)';
+    out.discreetKnob = s.discreetMode ? '22px' : '3px';
+    out.sendConnect = () => this.setState({ connectSheetOpen: false, screen: 'status' });
+    const screens = ['splash','auth','verify','first','home','thread','explore','profile','settings','requests','chats','convo','buddy','buddyreq','buddychat','single','events','notifs','locked','empty','loading','status','soon','admin'];
+    screens.forEach((k) => { out['nav_' + k] = navBg(k); out['go_' + k] = go(k); out['is_' + k] = s.screen === k; });
+    return out;
+  }
+}
+</script>
+</body>
+</html>

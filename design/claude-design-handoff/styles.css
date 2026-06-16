@@ -1,0 +1,217 @@
+/* =====================================================================
+   EVYTA — DESIGN TOKENS & COMPONENT STYLES
+   North-star design system, extracted verbatim from the approved
+   prototype (Evyta Complete.dc.html). Values are the source of truth.
+
+   The prototype itself uses inline styles for instant streaming; this
+   file is the canonical token + component reference for the real app.
+   Map these into your CSS-in-JS / Tailwind theme — do not eyeball.
+   ===================================================================== */
+
+/* ---------------------------------------------------------------------
+   1. DESIGN TOKENS — DARK (default, ship this first)
+   --------------------------------------------------------------------- */
+:root {
+  /* Surfaces — warm espresso, never pure black */
+  --ev-bg-canvas:   #0c0a08;   /* outer app canvas / deepest */
+  --ev-bg-0:        #15110e;   /* screen background */
+  --ev-bg-1:        #1d1813;   /* sheets / elevated panels */
+  --ev-surface:     #221d18;   /* cards */
+  --ev-surface-2:   #262019;   /* nested fills, skeletons */
+  --ev-raise:       #2c251d;   /* highest card layer */
+
+  /* Hairlines */
+  --ev-line:        rgba(245,235,215,.09);  /* dividers, default borders */
+  --ev-line-2:      rgba(245,235,215,.15);  /* stronger borders */
+
+  /* Text */
+  --ev-text:        #f0e8d8;   /* primary ivory */
+  --ev-text-2:      #a99d8c;   /* secondary / muted */
+  --ev-text-3:      #8d8473;   /* tertiary / labels */
+
+  /* Gold — primary action + Buddy (rare, special) */
+  --ev-gold:        #c9a45c;
+  --ev-gold-text:   #d8b873;   /* gold on dark, for text/icons */
+  --ev-gold-bg:     rgba(201,164,92,.16);
+  --ev-on-gold:     #231c11;   /* text/icon on a gold fill */
+
+  /* Sage — verified / trust */
+  --ev-sage:        #9bab74;
+  --ev-sage-text:   #aebd85;
+  --ev-sage-bg:     rgba(155,171,116,.15);
+  --ev-on-sage:     #1c2113;
+
+  /* Rose/plum — intimate / social (Single of the Week) */
+  --ev-rose:        #c08aa0;
+  --ev-rose-text:   #d3a3b6;
+  --ev-rose-bg:     rgba(192,138,160,.15);
+  --ev-on-rose:     #231016;
+
+  /* Avatar placeholder fill */
+  --ev-avatar:      linear-gradient(135deg,#3c332a,#2a241d);
+
+  /* Type families */
+  --ev-serif:       'Newsreader', Georgia, serif;   /* wordmark + display only */
+  --ev-sans:        'Hanken Grotesk', system-ui, sans-serif; /* UI + body */
+
+  /* Radius scale */
+  --ev-r-pill:      20px;   /* chips, badges */
+  --ev-r-input:     13px;
+  --ev-r-card:      18px;
+  --ev-r-card-lg:   22px;
+  --ev-r-sheet:     26px;   /* bottom-sheet top corners */
+  --ev-r-phone:     46px;
+
+  /* Spacing scale (px) — used as gaps/padding throughout */
+  --ev-s-1: 4px;  --ev-s-2: 8px;  --ev-s-3: 11px; --ev-s-4: 14px;
+  --ev-s-5: 16px; --ev-s-6: 18px; --ev-s-7: 22px; --ev-s-8: 26px;
+
+  /* Shadows */
+  --ev-shadow-gold:   0 8px 20px -6px rgba(201,164,92,.7);   /* FAB / gold seal */
+  --ev-shadow-sheet:  0 -20px 50px -20px rgba(0,0,0,.7);     /* bottom sheets */
+  --ev-shadow-phone:  0 40px 90px -40px rgba(0,0,0,.9);      /* device frame */
+  --ev-scrim:         rgba(8,6,5,.62);                       /* sheet backdrop */
+
+  /* Motion */
+  --ev-ease-sheet:  cubic-bezier(.22,1,.36,1);
+
+  /* Decorative locked / private-media texture */
+  --ev-locked-tile: repeating-linear-gradient(45deg,#2a241d,#2a241d 7px,#242019 7px,#242019 14px);
+  --ev-locked-card: repeating-linear-gradient(45deg,#221d18,#221d18 10px,#1f1a15 10px,#1f1a15 20px);
+}
+
+/* ---------------------------------------------------------------------
+   2. DESIGN TOKENS — WARM LIGHT (future / optional, do not ship yet)
+   Applied by setting data-ev-theme="light" on a container.
+   --------------------------------------------------------------------- */
+[data-ev-theme="light"] {
+  --ev-bg-0:      #efe7d6;
+  --ev-bg-1:      #f4ecde;
+  --ev-surface:   #fbf5ea;
+  --ev-surface-2: #f6eee0;
+  --ev-line:      rgba(60,45,28,.12);
+  --ev-line-2:    rgba(60,45,28,.2);
+  --ev-text:      #2c241b;
+  --ev-text-2:    #6f6556;
+  --ev-text-3:    #938775;
+  --ev-gold:      #a87f2e;
+  --ev-gold-text: #8a6722;
+  --ev-gold-bg:   rgba(168,127,46,.14);
+  --ev-sage:      #6f7d4e;
+  --ev-sage-text: #566237;
+  --ev-sage-bg:   rgba(111,125,78,.16);
+  --ev-rose:      #a6657f;
+  --ev-rose-text: #8a4d66;
+  --ev-rose-bg:   rgba(166,101,127,.14);
+  --ev-avatar:    linear-gradient(135deg,#e2d7c1,#d2c4aa);
+}
+
+/* ---------------------------------------------------------------------
+   3. KEYFRAMES
+   --------------------------------------------------------------------- */
+@keyframes ev-up   { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes ev-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes ev-spin { to { transform: rotate(360deg); } }
+
+/* ---------------------------------------------------------------------
+   4. COMPONENT CLASSES
+   Faithful class equivalents of the prototype's inline styles. Same
+   values — provided so the design system can be lifted as-is.
+   --------------------------------------------------------------------- */
+
+/* Base text */
+.ev-app      { font-family: var(--ev-sans); color: var(--ev-text); background: var(--ev-bg-0); -webkit-font-smoothing: antialiased; }
+.ev-display  { font-family: var(--ev-serif); line-height: 1.1; }   /* headings / wordmark */
+
+/* Buttons -------------------------------------------------------------- */
+.ev-btn-primary {            /* gold, the single primary action per view */
+  background: var(--ev-gold); color: var(--ev-on-gold);
+  border-radius: 15px; padding: 14px 16px; font-size: 15px; font-weight: 700;
+  text-align: center; border: none; cursor: pointer;
+}
+.ev-btn-secondary {          /* outline */
+  background: transparent; color: var(--ev-text);
+  border: 1px solid var(--ev-line-2); border-radius: 15px;
+  padding: 13px 18px; font-size: 15px; font-weight: 600; cursor: pointer;
+}
+.ev-btn-gold-outline {       /* gold outline — Buddy / connect affordances */
+  background: transparent; color: var(--ev-gold-text);
+  border: 1px solid var(--ev-gold); border-radius: 13px;
+  padding: 12px 16px; font-size: 14px; font-weight: 600; cursor: pointer;
+}
+.ev-btn-sent {               /* request-sent / requested confirmation */
+  background: var(--ev-sage-bg); color: var(--ev-sage-text);
+  border: 1px solid rgba(155,171,116,.45); border-radius: 15px;
+  padding: 13px; font-size: 15px; font-weight: 600;
+}
+
+/* Chips / pills -------------------------------------------------------- */
+.ev-chip      { font-size: 13px; padding: 7px 13px; border-radius: var(--ev-r-pill);
+                border: 1px solid var(--ev-line-2); color: var(--ev-text); }
+.ev-chip-on   { border-color: var(--ev-gold); background: var(--ev-gold-bg); color: var(--ev-gold-text); }
+.ev-label     { font-size: 11px; letter-spacing: 1px; font-weight: 600; color: var(--ev-text-3); } /* "OPEN TO" style */
+
+/* Inputs --------------------------------------------------------------- */
+.ev-input, .ev-textarea {
+  background: var(--ev-surface); border: 1px solid var(--ev-line);
+  border-radius: var(--ev-r-input); padding: 13px 15px;
+  color: var(--ev-text); font-size: 15px; font-family: inherit; outline: none;
+}
+.ev-textarea { resize: none; line-height: 1.5; min-height: 84px; }
+.ev-input::placeholder, .ev-textarea::placeholder { color: var(--ev-text-3); }
+
+/* Cards ---------------------------------------------------------------- */
+.ev-card     { background: var(--ev-surface); border: 1px solid var(--ev-line); border-radius: var(--ev-r-card); }
+.ev-card-pad { padding: 16px; }
+/* Signal/post card: colored trust rail on the left (4px). Set rail color: */
+.ev-rail-sage    { box-shadow: inset 4px 0 0 0 var(--ev-sage); }
+.ev-rail-gold    { box-shadow: inset 4px 0 0 0 var(--ev-gold); }
+.ev-rail-neutral { box-shadow: inset 4px 0 0 0 var(--ev-line-2); }
+
+/* Trust badges (seal/pill). Order when shown together: Verified → Buddy → Connected */
+.ev-badge { display: inline-flex; align-items: center; gap: 6px;
+            font-size: 12.5px; font-weight: 600; padding: 5px 12px 5px 6px;
+            border-radius: var(--ev-r-pill); }
+.ev-badge-verified  { background: var(--ev-sage-bg); color: var(--ev-sage-text); border: 1px solid rgba(155,171,116,.35); }
+.ev-badge-buddy     { background: var(--ev-gold-bg); color: var(--ev-gold-text); border: 1px solid rgba(201,164,92,.4); font-weight: 700; } /* rare, special */
+.ev-badge-connected { background: rgba(245,235,215,.05); color: var(--ev-text-2); border: 1px solid var(--ev-line-2); }
+/* The seal glyph inside each badge is a small circle, ~18px; Buddy's is a
+   filled gold circle with --ev-shadow-gold. See COMPONENTS.md. */
+
+/* Bottom sheet --------------------------------------------------------- */
+.ev-sheet-scrim { position: absolute; inset: 0; background: var(--ev-scrim); animation: ev-fade .25s ease; }
+.ev-sheet {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  background: var(--ev-bg-1); border-top: 1px solid var(--ev-line-2);
+  border-radius: var(--ev-r-sheet) var(--ev-r-sheet) 0 0;
+  padding: 24px 22px 26px; box-shadow: var(--ev-shadow-sheet);
+  animation: ev-up .32s var(--ev-ease-sheet);
+}
+.ev-sheet-grabber { width: 42px; height: 5px; border-radius: 3px; background: var(--ev-line-2);
+                    position: absolute; left: 50%; transform: translateX(-50%); top: 9px; }
+
+/* Bottom navigation ---------------------------------------------------- */
+.ev-bottomnav {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  display: flex; align-items: flex-end; justify-content: space-around;
+  padding: 11px 16px 26px; border-top: 1px solid var(--ev-line);
+  background: linear-gradient(to top, var(--ev-bg-0) 72%, transparent);
+}
+.ev-navitem        { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; color: var(--ev-text-3); cursor: pointer; }
+.ev-navitem-active { color: var(--ev-text); font-weight: 600; }
+.ev-fab {            /* center plus — compose/create */
+  width: 52px; height: 52px; border-radius: 50%;
+  background: var(--ev-gold); color: var(--ev-on-gold);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 30px; margin-bottom: 6px; box-shadow: var(--ev-shadow-gold);
+}
+
+/* Locked / private-media tiles ---------------------------------------- */
+.ev-tile-locked { background: var(--ev-locked-tile); }
+.ev-card-locked { background: var(--ev-locked-card); border: 1px solid var(--ev-line-2); }
+
+/* Status / skeleton ---------------------------------------------------- */
+.ev-spinner  { width: 20px; height: 20px; border-radius: 50%;
+               border: 2px solid var(--ev-line-2); border-top-color: var(--ev-gold);
+               animation: ev-spin .9s linear infinite; }
+.ev-skeleton { background: var(--ev-surface-2); border-radius: 6px; }
