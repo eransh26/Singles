@@ -5,6 +5,7 @@ import { getUnreadNotificationCounts } from "@/lib/notifications";
 import { MemberNav } from "./member-nav";
 import { MemberHeaderActions } from "./member-header-actions";
 import { MemberHeaderFrame } from "./member-header-frame";
+import { MobileBottomNav } from "@/components/shell/mobile-bottom-nav";
 import { NotificationActivityClient } from "@/components/notification-activity-client";
 import { ensureDefaultFeatureFlags, FEATURE_FLAG_KEYS, getFeatureAvailability } from "@/lib/feature-flags";
 
@@ -26,7 +27,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   ];
 
   return (
-    <div className="min-h-screen bg-background text-foreground pt-[var(--member-shell-top-offset)] md:pt-[var(--member-shell-top-offset-md)]">
+    <div className="min-h-screen bg-background text-foreground pt-[var(--member-shell-top-offset)] pb-[var(--member-shell-bottom-offset)] md:pb-0 md:pt-[var(--member-shell-top-offset-md)]">
       <NotificationActivityClient />
       <MemberHeaderFrame>
         <header className="fixed inset-x-0 top-0 z-40 border-b border-transparent bg-[linear-gradient(180deg,rgba(37,29,24,0.78),rgba(30,24,20,0.52))] text-[color:var(--lux-text)] shadow-[0_8px_20px_rgba(18,12,9,0.1)] backdrop-blur-xl" data-testid="member-shell-header">
@@ -41,12 +42,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
                 </div>
               </div>
 
-              <div className="member-header-nav flex min-w-0 flex-1 justify-center overflow-hidden">
+              <div className="member-header-nav hidden min-w-0 flex-1 justify-center overflow-hidden md:flex">
                 <MemberNav items={navigation} />
               </div>
 
               <div className="flex min-w-[128px] flex-none items-center justify-end">
-                <MemberHeaderActions />
+                <MemberHeaderActions notificationCount={counts.total} />
               </div>
             </div>
           </div>
@@ -59,6 +60,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <Link className="hover:text-[color:var(--lux-text)]" href="/terms">Terms</Link>
         </div>
       </footer>
+      <MobileBottomNav />
     </div>
   );
 }
