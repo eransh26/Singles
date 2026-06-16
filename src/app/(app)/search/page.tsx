@@ -18,8 +18,6 @@ import { DiscoveryMemberCard } from "@/components/discovery/discovery-member-car
 
 import { SectionHeader } from "@/components/discovery/section-header";
 
-import { HomeBottomNav } from "@/components/home/bottom-nav";
-
 import { HomeSignalCard } from "@/components/home/signal-card";
 
 import { HomeTopBar } from "@/components/home/top-bar";
@@ -823,9 +821,6 @@ export default async function SearchPage({
 
       </div>
 
-
-
-      <HomeBottomNav />
 
     </main>
 

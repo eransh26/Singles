@@ -5,7 +5,6 @@ import { getPromotedPlacement } from "@/lib/promotions";
 import { SectionHeader } from "@/components/discovery/section-header";
 import { EventFilterChips } from "@/components/events/event-filter-chips";
 import { EventSignalCard } from "@/components/events/event-signal-card";
-import { HomeBottomNav } from "@/components/home/bottom-nav";
 import { HomeTopBar } from "@/components/home/top-bar";
 
 type EventsTab = "all" | "tonight" | "upcoming" | "circle" | "private";
@@ -416,8 +415,6 @@ export default async function EventsPage({
       <div className="mt-8 text-center text-[11px] uppercase tracking-[0.2em] text-white/36">
         Need a wider discovery sweep? <a className="text-white/62 underline-offset-4 hover:text-white hover:underline" href={buildEventsQueryHref("all", query)}>Stay with event signals</a> or keep moving through <a className="text-white/62 underline-offset-4 hover:text-white hover:underline" href="/search">Explore</a>.
       </div>
-
-      <HomeBottomNav />
     </main>
   );
 }

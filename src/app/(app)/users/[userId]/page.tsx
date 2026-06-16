@@ -41,8 +41,6 @@ import { ContextChips } from "@/components/discovery/context-chips";
 
 import { SectionHeader } from "@/components/discovery/section-header";
 
-import { HomeBottomNav } from "@/components/home/bottom-nav";
-
 import { HomeTopBar } from "@/components/home/top-bar";
 
 import { ProfileActivityCard } from "@/components/profile/profile-activity-card";
@@ -978,9 +976,6 @@ export default async function MemberProfilePage({
 
       </div>
 
-
-
-      <HomeBottomNav />
 
     </main>
 

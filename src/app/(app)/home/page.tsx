@@ -23,7 +23,6 @@ import { getViewerEngagementState } from "@/lib/engagement-loop";
 import { HomeComposer } from "./home-composer";
 import { PostAuthorActions } from "@/components/post-author-actions";
 import { SingleOfWeekViewBeacon } from "@/components/single-of-week-view-beacon";
-import { HomeBottomNav } from "@/components/home/bottom-nav";
 import { HomeFeedCard } from "@/components/home/feed-card";
 import { OpportunityRail } from "@/components/home/opportunity-rail";
 import { HomeSignalCard } from "@/components/home/signal-card";
@@ -622,8 +621,6 @@ export default async function HomePage({
           ) : null}
         </section>
       </div>
-
-      <HomeBottomNav />
     </main>
   );
 }
