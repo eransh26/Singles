@@ -12,16 +12,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const counts = await getUnreadNotificationCounts(viewer.id);
 
   return (
-    <div className="ev-app-frame relative flex min-h-screen flex-col text-[color:var(--ev-text)]" data-testid="member-shell">
+    <div className="ev-member-shell text-[color:var(--ev-text)]" data-testid="member-shell">
       <NotificationActivityClient />
-      <header
-        className="fixed left-1/2 top-0 z-40 w-full max-w-[var(--ev-app-width)] -translate-x-1/2 border-b border-[color:var(--ev-line)] bg-[color:var(--ev-bg-0)]/85 backdrop-blur-xl"
-        data-testid="member-shell-header"
-      >
+
+      <header className="flex-none border-b border-[color:var(--ev-line)] bg-[color:var(--ev-bg-0)]/85 backdrop-blur-xl" data-testid="member-shell-header">
         <div className="flex h-[3.55rem] items-center justify-between gap-3 px-4">
           <Link
             aria-label="Evyta home"
-            className="ev-display text-[1.55rem] font-medium tracking-tight text-[color:var(--ev-text)]"
+            className="ev-display shrink-0 text-[1.5rem] font-medium tracking-tight text-[color:var(--ev-text)]"
             href="/home"
           >
             Evyta
@@ -30,12 +28,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </div>
       </header>
 
-      <div className="flex-1 pt-[var(--member-shell-top-offset)] pb-[var(--member-shell-bottom-offset)] md:pt-[var(--member-shell-top-offset-md)]">{children}</div>
-
-      <footer className="flex justify-center gap-4 px-4 pb-[calc(var(--member-shell-bottom-offset)+0.25rem)] pt-3 text-[11px] uppercase tracking-[0.14em] text-[color:var(--ev-text-3)]">
-        <Link className="hover:text-[color:var(--ev-text)]" href="/privacy">Privacy</Link>
-        <Link className="hover:text-[color:var(--ev-text)]" href="/terms">Terms</Link>
-      </footer>
+      <div className="ev-member-scroll" data-testid="member-scroll">
+        {children}
+        <footer className="flex justify-center gap-4 px-4 pb-6 pt-4 text-[11px] uppercase tracking-[0.14em] text-[color:var(--ev-text-3)]">
+          <Link className="hover:text-[color:var(--ev-text)]" href="/privacy">Privacy</Link>
+          <Link className="hover:text-[color:var(--ev-text)]" href="/terms">Terms</Link>
+        </footer>
+      </div>
 
       <MobileBottomNav />
     </div>

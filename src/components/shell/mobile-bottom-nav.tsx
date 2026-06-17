@@ -29,15 +29,12 @@ export function MobileBottomNav() {
 
   return (
     <>
-      <nav
-        className="ev-bottomnav fixed bottom-0 left-1/2 z-40 w-full max-w-[var(--ev-app-width)] -translate-x-1/2"
-        data-testid="home-bottom-nav"
-      >
-        <div className="flex items-end justify-around px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-3">
+      <nav className="ev-bottomnav z-40 flex-none" data-testid="home-bottom-nav">
+        <div className="grid grid-cols-5 place-items-center px-1 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pt-2">
           <NavTab tab={HOME} active={HOME.isActive(pathname)} />
           <NavTab tab={EXPLORE} active={EXPLORE.isActive(pathname)} />
-          <button aria-label="Create" className="ev-fab mb-1.5" onClick={() => setComposerOpen(true)} type="button">
-            <Plus className="h-7 w-7" strokeWidth={2} />
+          <button aria-label="Create" className="ev-fab" onClick={() => setComposerOpen(true)} type="button">
+            <Plus className="h-6 w-6" strokeWidth={2} />
           </button>
           <NavTab tab={CHATS} active={CHATS.isActive(pathname)} />
           <NavTab tab={YOU} active={YOU.isActive(pathname)} />
@@ -85,9 +82,9 @@ function NavTab({ tab, active }: { tab: NavTabConfig; active: boolean }) {
   const Icon = tab.icon;
 
   return (
-    <Link className={cn("ev-navitem", active && "ev-navitem-active")} href={tab.href}>
-      <Icon className="h-[22px] w-[22px]" strokeWidth={active ? 2 : 1.6} />
-      <span>{tab.label}</span>
+    <Link className={cn("ev-navitem w-full min-w-0", active && "ev-navitem-active")} href={tab.href}>
+      <Icon className="h-[22px] w-[22px] flex-none" strokeWidth={active ? 2 : 1.6} />
+      <span className="w-full truncate text-center">{tab.label}</span>
     </Link>
   );
 }
